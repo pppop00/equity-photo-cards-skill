@@ -4,7 +4,7 @@ description: >-
   Turns equity research HTML (and optional sibling JSON) into six fixed-layout social images
   (e.g. Xiaohongshu / Douyin) by filling predefined card slots in `*.card_slots.json`, then
   validating and rendering with Python. Use whenever the user has report HTML to convert into
-  slot-based PNGs, fixed 1080×1350 cards, `card_slots.json`, `validate_cards.py`, or
+  slot-based PNGs, fixed-layout cards (default export 2160×2700; logical layout 1080×1350), `card_slots.json`, `validate_cards.py`, or
   `generate_social_cards.py` — even if they only say “put this HTML into the picture templates.”
   Mandatory path — agents must produce a complete `card_slots.json`; CLI requires `--slots`;
   no heuristic-only export.
@@ -12,7 +12,7 @@ description: >-
 
 # Equity Photo Cards
 
-**What you are building:** Agents consume **equity research HTML** (and optional sibling JSON), write copy into a **fixed set of named slots** (`*.card_slots.json`), and the renderer places that text into **predetermined image frames** (six cards, 1080×1350) — not a bespoke layout per company.
+**What you are building:** Agents consume **equity research HTML** (and optional sibling JSON), write copy into a **fixed set of named slots** (`*.card_slots.json`), and the renderer places that text into **predetermined image frames** (six cards; **logical** layout 1080×1350, **default PNG export** 2160×2700 for zoom-friendly assets) — not a bespoke layout per company.
 
 ## Skill layout (skill-creator anatomy)
 

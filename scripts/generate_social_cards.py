@@ -14,8 +14,14 @@ from typing import Any
 from bs4 import BeautifulSoup
 from PIL import Image, ImageDraw, ImageFont
 
-W = 1080
-H = 1350
+# Logical layout size (design / validation coordinates). Layout code uses this space.
+EXPORT_W, EXPORT_H = 1080, 1350
+# Internal render scale; default PNG export is W×H (e.g. 2160×2700 when LAYOUT_SCALE=2).
+LAYOUT_SCALE = 2
+W = EXPORT_W * LAYOUT_SCALE
+H = EXPORT_H * LAYOUT_SCALE
+# When True, finalize_export() downscales to EXPORT_W×EXPORT_H. Default False = full canvas for zoom-friendly PNGs.
+_EXPORT_DOWN_SAMPLE_TO_LOGICAL: bool = False
 
 BG = "#FCFCFD"
 TEXT = "#111827"
@@ -62,6 +68,73 @@ LEADING_PUNCT = set("，。；：、,.!?！？）》】」』）")
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp"}
 WORD_TOKEN = re.compile(r"^[A-Za-z0-9.+/%$-]+$")
 TEXT_RENDER_SCALE = 6
+
+
+class ScaledDraw:
+    """Layout uses logical (EXPORT_W×EXPORT_H) coordinates; underlying buffer is W×H."""
+
+    def __init__(self, draw: ImageDraw.ImageDraw, scale: int):
+        self._draw = draw
+        self._s = scale
+
+    @property
+    def _image(self) -> Image.Image:
+        return self._draw._image
+
+    def textlength(self, text: str, font=None, **kwargs: Any) -> float:
+        return self._draw.textlength(text, font=font, **kwargs)
+
+    def line(self, xy: tuple[int, ...], fill: str | None = None, width: int = 0, **kwargs: Any) -> None:
+        s = self._s
+        self._draw.line([int(c * s) for c in xy], fill=fill, width=max(1, width * s) if width else width, **kwargs)
+
+    def rounded_rectangle(
+        self,
+        xy: tuple[int, int, int, int],
+        radius: int = 0,
+        fill: str | None = None,
+        outline: str | None = None,
+        width: int = 1,
+        **kwargs: Any,
+    ) -> None:
+        s = self._s
+        x0, y0, x1, y1 = xy
+        self._draw.rounded_rectangle(
+            (x0 * s, y0 * s, x1 * s, y1 * s),
+            radius=radius * s,
+            fill=fill,
+            outline=outline,
+            width=width * s,
+            **kwargs,
+        )
+
+    def ellipse(
+        self,
+        xy: tuple[int, int, int, int],
+        fill: str | None = None,
+        outline: str | None = None,
+        width: int = 0,
+        **kwargs: Any,
+    ) -> None:
+        s = self._s
+        x0, y0, x1, y1 = xy
+        self._draw.ellipse(
+            (x0 * s, y0 * s, x1 * s, y1 * s),
+            fill=fill,
+            outline=outline,
+            width=width * s,
+            **kwargs,
+        )
+
+
+def finalize_export(img: Image.Image) -> Image.Image:
+    if _EXPORT_DOWN_SAMPLE_TO_LOGICAL and LAYOUT_SCALE > 1:
+        return img.resize((EXPORT_W, EXPORT_H), Image.Resampling.LANCZOS).convert("RGB")
+    return img.convert("RGB")
+
+
+def logical_font_size(font_obj: ImageFont.FreeTypeFont) -> int:
+    return max(1, font_obj.size // LAYOUT_SCALE)
 SENTENCE_END = "。！？"
 STIFF_OPENERS = (
     "核心论点在于：",
@@ -378,13 +451,13 @@ class ReportData:
 
 
 def f(size: int, bold: bool = False) -> ImageFont.FreeTypeFont:
-    return ImageFont.truetype(ARIAL, size=size)
+    return ImageFont.truetype(ARIAL, size=size * LAYOUT_SCALE)
 
 
 def _fl(size: int, bold: bool = False) -> ImageFont.FreeTypeFont:
     """Latin font for the given size (same as f() on macOS, DejaVu on Linux)."""
     path = _LATIN_BOLD_PATH if bold else _LATIN_FONT_PATH
-    return ImageFont.truetype(path, size=size)
+    return ImageFont.truetype(path, size=size * LAYOUT_SCALE)
 
 
 def _is_cjk_char(ch: str) -> bool:
@@ -538,11 +611,14 @@ def wrap(draw: ImageDraw.ImageDraw, text: str, font_obj: ImageFont.FreeTypeFont,
     tokens = re.findall(r"[A-Za-z0-9.+/%$-]+|[\u4e00-\u9fff]|[^\s]", clean(text))
     lines: list[str] = []
     cur_tokens: list[str] = []
-    size = font_obj.size
+    logical_size = logical_font_size(font_obj)
+    max_px = width * LAYOUT_SCALE
     for token in tokens:
         trial = join_tokens(cur_tokens + [token])
-        measure = _mixed_textlength(trial, size) if not _SINGLE_FONT_MODE else draw.textlength(trial, font=font_obj)
-        if measure <= width or not cur_tokens:
+        measure = (
+            _mixed_textlength(trial, logical_size) if not _SINGLE_FONT_MODE else draw.textlength(trial, font=font_obj)
+        )
+        if measure <= max_px or not cur_tokens:
             cur_tokens.append(token)
         else:
             if token in LEADING_PUNCT and cur_tokens:
@@ -566,83 +642,87 @@ def has_bad_linebreak(text: str, width: int, font_obj: ImageFont.FreeTypeFont, d
 
 
 def draw_text(draw: ImageDraw.ImageDraw, xy: tuple[int, int], text: str, font_obj: ImageFont.FreeTypeFont, fill: str) -> None:
+    px = xy[0] * LAYOUT_SCALE
+    py = xy[1] * LAYOUT_SCALE
+    pad = 4 * LAYOUT_SCALE
     if _SINGLE_FONT_MODE:
         # macOS: single Unicode font, use original fast path
         base = draw._image
         bbox = font_obj.getbbox(text)
         width = max(1, bbox[2] - bbox[0])
         height = max(1, bbox[3] - bbox[1])
-        pad = 4
         scale = TEXT_RENDER_SCALE
         hq_font = ImageFont.truetype(font_obj.path, size=font_obj.size * scale)
         hq = Image.new("RGBA", ((width + pad * 2) * scale, (height + pad * 2) * scale), (255, 255, 255, 0))
         hq_draw = ImageDraw.Draw(hq)
         hq_draw.text(((pad - bbox[0]) * scale, (pad - bbox[1]) * scale), text, font=hq_font, fill=fill)
         down = hq.resize((width + pad * 2, height + pad * 2), Image.Resampling.LANCZOS)
-        base.alpha_composite(down, (xy[0] - pad, xy[1] - pad))
+        base.alpha_composite(down, (px - pad, py - pad))
         return
 
     # Linux split-font path: render char-by-char with CJK / Latin font selection.
     # PIL's getbbox returns (x0, y0, x1, y1) relative to the drawing origin, with all
     # values POSITIVE and increasing downward. Drawing all chars at the same y=0 naturally
     # bottom-aligns Latin characters (they share the same y1 within the em square).
-    size = font_obj.size
-    pad = 4
+    phys_size = font_obj.size
+    logical_size = logical_font_size(font_obj)
     scale = TEXT_RENDER_SCALE
 
     # Build char list with HQ scaled fonts; measure canvas dimensions
     char_entries: list[tuple[str, ImageFont.FreeTypeFont, tuple[int, int, int, int]]] = []
     total_w = 0
     max_y1 = 0  # Maximum bottom extent across all chars (determines canvas height)
-    min_y0 = 999
     for ch in text:
-        cf = _char_font(ch, size)
-        hq_cf = ImageFont.truetype(cf.path, size=size * scale)
+        cf = _char_font(ch, logical_size)
+        hq_cf = ImageFont.truetype(cf.path, size=phys_size * scale)
         bb = hq_cf.getbbox(ch)
         char_entries.append((ch, hq_cf, bb))
         total_w += bb[2] - bb[0]
         max_y1 = max(max_y1, bb[3])
-        min_y0 = min(min_y0, bb[1])
 
     if total_w <= 0:
         return
 
-    canvas_w = total_w + pad * 2 * scale
-    canvas_h = max_y1 + pad * 2 * scale
+    pad_logical = 4
+    pad_out = pad_logical * LAYOUT_SCALE
+    canvas_w = total_w + pad_logical * 2 * scale * LAYOUT_SCALE
+    canvas_h = max_y1 + pad_logical * 2 * scale * LAYOUT_SCALE
     hq = Image.new("RGBA", (canvas_w, canvas_h), (255, 255, 255, 0))
     hq_draw = ImageDraw.Draw(hq)
 
     # Draw all characters at the same y=pad*scale; PIL positions each glyph
     # from (x, y+bb[1]) to (x, y+bb[3]), giving natural bottom alignment.
-    cx = pad * scale
-    y0 = pad * scale
+    cx = pad_logical * scale * LAYOUT_SCALE
+    y0 = pad_logical * scale * LAYOUT_SCALE
     for ch, hq_cf, bb in char_entries:
         hq_draw.text((cx - bb[0], y0), ch, font=hq_cf, fill=fill)
         cx += bb[2] - bb[0]
 
-    out_w = total_w // scale + pad * 2
-    out_h = max_y1 // scale + pad * 2
+    out_w = total_w // scale + pad_out * 2
+    out_h = max_y1 // scale + pad_out * 2
     down = hq.resize((out_w, out_h), Image.Resampling.LANCZOS)
-    draw._image.alpha_composite(down, (xy[0] - pad, xy[1] - pad))
+    draw._image.alpha_composite(down, (px - pad, py - pad))
 
 
 def line_raster_height(draw: ImageDraw.ImageDraw, font_obj: ImageFont.FreeTypeFont, line: str) -> int:
-    """Pixel height of one draw_text() line (must match vertical advance in block())."""
+    """Logical pixel height of one draw_text() line (must match vertical advance in block())."""
     if not clean(line):
         return 0
-    pad = 4
+    pad_out = 4 * LAYOUT_SCALE
     scale = TEXT_RENDER_SCALE
-    size = font_obj.size
+    phys_size = font_obj.size
+    logical_size = logical_font_size(font_obj)
     if _SINGLE_FONT_MODE:
         bbox = font_obj.getbbox(line)
-        return max(1, bbox[3] - bbox[1]) + TEXT_COMPOSITE_PAD
+        return max(1, (bbox[3] - bbox[1]) // LAYOUT_SCALE + TEXT_COMPOSITE_PAD)
     max_y1 = 0
     for ch in line:
-        cf = _char_font(ch, size)
-        hq_cf = ImageFont.truetype(cf.path, size=size * scale)
+        cf = _char_font(ch, logical_size)
+        hq_cf = ImageFont.truetype(cf.path, size=phys_size * scale)
         bb = hq_cf.getbbox(ch)
         max_y1 = max(max_y1, bb[3])
-    return max(1, max_y1 // scale + 2 * pad)
+    inner = max(1, max_y1 // scale + 2 * pad_out)
+    return max(1, inner // LAYOUT_SCALE)
 
 
 def block(
@@ -669,10 +749,11 @@ def block(
 
 def fit_font(draw: ImageDraw.ImageDraw, text: str, max_width: int, start_size: int, min_size: int) -> ImageFont.FreeTypeFont:
     size = start_size
+    max_px = max_width * LAYOUT_SCALE
     while size > min_size:
         font_obj = f(size, True)
         measure = _mixed_textlength(text, size, bold=True) if not _SINGLE_FONT_MODE else draw.textlength(text, font=font_obj)
-        if measure <= max_width:
+        if measure <= max_px:
             return font_obj
         size -= 2
     return f(min_size, True)
@@ -985,7 +1066,7 @@ def cash_flow(data: ReportData) -> dict[str, Any]:
     if "capex_purchases" in cf:
         return cf
     normalized = dict(cf)
-    if "capex" in cf:
+    if "capex" in cf and cf["capex"] is not None:
         normalized["capex_purchases"] = abs(float(cf["capex"]))
     return normalized
 
@@ -2074,7 +2155,7 @@ def hardcode_logic_issues(data: ReportData) -> list[str]:
 
 def validate_report(data: ReportData, brand: str) -> None:
     img = Image.new("RGB", (W, H), BG)
-    draw = ImageDraw.Draw(img)
+    draw = ScaledDraw(ImageDraw.Draw(img), LAYOUT_SCALE)
     issues: list[str] = []
     if data.card_slots and data.card_slots.porter_scores is not None and len(data.card_slots.porter_scores) != 5:
         issues.append("When card_slots.porter_scores is set, it must contain exactly five integers.")
@@ -2300,12 +2381,14 @@ def paste_logo(img: Image.Image, path: Path | None, box: tuple[int, int, int, in
         logo = Image.open(path).convert("RGBA")
     except OSError:
         return
-    max_w = box[2] - box[0]
-    max_h = box[3] - box[1]
+    s = LAYOUT_SCALE
+    x0, y0, x1, y1 = box[0] * s, box[1] * s, box[2] * s, box[3] * s
+    max_w = x1 - x0
+    max_h = y1 - y0
     logo.thumbnail((max_w, max_h))
     canvas = Image.new("RGBA", img.size, (255, 255, 255, 0))
-    x = box[0] + (max_w - logo.width) // 2
-    y = box[1] + (max_h - logo.height) // 2
+    x = x0 + (max_w - logo.width) // 2
+    y = y0 + (max_h - logo.height) // 2
     canvas.alpha_composite(logo, (x, y))
     img.alpha_composite(canvas)
 
@@ -2380,7 +2463,7 @@ def rate_metrics(data: ReportData) -> list[tuple[str, str, str]]:
 
 def card_1(data: ReportData) -> Image.Image:
     img = background()
-    d = ImageDraw.Draw(img)
+    d = ScaledDraw(ImageDraw.Draw(img), LAYOUT_SCALE)
     header(d, 1)
     draw_text(d, (72, 198), "每天学习一个公司", f(58, True), TEXT)
     company_font = fit_font(d, display_name(data.company_cn), 860, 96, 58)
@@ -2394,12 +2477,12 @@ def card_1(data: ReportData) -> Image.Image:
     draw_text(d, (108, 786), "公司看点", f(34, True), TEXT)
     block(d, company_focus_paragraph(data), 108, 842, 860, f(FONT_PANEL_BODY), "#344054", 12, 7)
     footer(d, data)
-    return img.convert("RGB")
+    return finalize_export(img)
 
 
 def card_2(data: ReportData) -> Image.Image:
     img = background()
-    d = ImageDraw.Draw(img)
+    d = ScaledDraw(ImageDraw.Draw(img), LAYOUT_SCALE)
     header(d, 2)
     draw_text(d, (72, 198), "公司背景 + 行业介绍", f(58, True), TEXT)
     panel(d, (72, 314, 598, 1224))
@@ -2423,12 +2506,12 @@ def card_2(data: ReportData) -> Image.Image:
     draw_text(d, (656, 1018), "一句结论", f(30, True), TEXT)
     block(d, conclusion_block(data), 656, 1066, 300, f(FONT_CONCLUSION), "#344054", 12, 4)
     footer(d, data)
-    return img.convert("RGB")
+    return finalize_export(img)
 
 
 def card_3(data: ReportData) -> Image.Image:
     img = background()
-    d = ImageDraw.Draw(img)
+    d = ScaledDraw(ImageDraw.Draw(img), LAYOUT_SCALE)
     header(d, 3)
     draw_text(d, (72, 198), "实际收入分析", f(58, True), TEXT)
     panel(d, (72, 314, 1008, 856))
@@ -2454,12 +2537,12 @@ def card_3(data: ReportData) -> Image.Image:
     draw_text(d, (108, 942), "收入分析", f(34, True), TEXT)
     bullets(d, revenue_explainer_points(data), 108, CARD3_EXPLAINER_START_Y, 820, 3, 3, 12)
     footer(d, data)
-    return img.convert("RGB")
+    return finalize_export(img)
 
 
 def card_4(data: ReportData) -> Image.Image:
     img = background()
-    d = ImageDraw.Draw(img)
+    d = ScaledDraw(ImageDraw.Draw(img), LAYOUT_SCALE)
     header(d, 4)
     draw_text(d, (72, 198), "实际业务 + 未来展望", f(58, True), TEXT)
     panel(d, (72, 314, 506, 1220))
@@ -2483,12 +2566,12 @@ def card_4(data: ReportData) -> Image.Image:
     )
     block(d, judgement, 602, 1076, 316, judgement_font, "#344054", 10, CARD4_JUDGEMENT_MAX_LINES)
     footer(d, data)
-    return img.convert("RGB")
+    return finalize_export(img)
 
 
 def card_5(data: ReportData, brand: str) -> Image.Image:
     img = background()
-    d = ImageDraw.Draw(img)
+    d = ScaledDraw(ImageDraw.Draw(img), LAYOUT_SCALE)
     header(d, 5)
     draw_text(d, (72, 214), brand, f(110, True), TEXT)
     subtitle = (
@@ -2513,12 +2596,12 @@ def card_5(data: ReportData, brand: str) -> Image.Image:
         d.ellipse((x, y, x + s, y + s), outline=RED, width=3)
     paste_logo(img, find_logo_asset(data), (840, 240, 1010, 520))
     footer(d, data)
-    return img.convert("RGB")
+    return finalize_export(img)
 
 
 def card_6(data: ReportData) -> Image.Image:
     img = Image.new("RGBA", (W, H), "#101318")
-    d = ImageDraw.Draw(img)
+    d = ScaledDraw(ImageDraw.Draw(img), LAYOUT_SCALE)
     draw_text(d, (72, 64), "发帖文案", f(FONT_BULLET, True), "#F8FAFC")
     draw_text(d, (72, 104), "TITLE / CONTENT / HASHTAGS", f(FONT_HEADER_SUBTITLE), "#94A3B8")
     draw_text(d, (72, 190), post_title(data), f(FONT_POST_TITLE, True), "#F8FAFC")
@@ -2532,7 +2615,7 @@ def card_6(data: ReportData) -> Image.Image:
     d.rounded_rectangle((72, y + 10, 1008, y + 210), radius=28, fill="#171B22")
     draw_text(d, (102, y + 42), post_hashtags(data), f(FONT_POST_TAG), "#F8FAFC")
     draw_text(d, (72, 1288), f"{display_name(data.company_cn)} | 发帖文案图", f(FONT_POST_FOOTER), "#94A3B8")
-    return img.convert("RGB")
+    return finalize_export(img)
 
 
 def render_one(
@@ -2578,6 +2661,7 @@ _DEFAULT_OUTPUT_ROOT = _SKILL_REPO_ROOT / "output"
 
 
 def main() -> None:
+    global _EXPORT_DOWN_SAMPLE_TO_LOGICAL
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", required=True, help="HTML file or folder.")
     parser.add_argument(
@@ -2592,11 +2676,20 @@ def main() -> None:
         help="Path to card_slots.json (single HTML), or a directory of <stem>.card_slots.json (batch).",
     )
     parser.add_argument(
+        "--export-logical-size",
+        action="store_true",
+        help=(
+            "Export 1080×1350 PNGs (downscaled). Default: full render size "
+            f"(W×H = {EXPORT_W * LAYOUT_SCALE}×{EXPORT_H * LAYOUT_SCALE} with current LAYOUT_SCALE={LAYOUT_SCALE})."
+        ),
+    )
+    parser.add_argument(
         "--no-copy-slots",
         action="store_true",
         help="Do not copy card_slots.json into output/<stem>/ next to PNGs (default: copy for a single-folder bundle).",
     )
     args = parser.parse_args()
+    _EXPORT_DOWN_SAMPLE_TO_LOGICAL = args.export_logical_size
 
     src = Path(args.input).expanduser().resolve()
     out_root = Path(args.output_root).expanduser().resolve()

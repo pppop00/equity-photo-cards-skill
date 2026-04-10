@@ -20,7 +20,7 @@ Agent skill and Python tooling that turn **equity research HTML** (plus optional
 | Card 5 | Brand close + three memory points |
 | Card 6 | Social post copy image (title, body, hashtags) |
 
-Canvas: **1080 × 1350**. Details: [references/design-spec.md](references/design-spec.md).
+Layout coordinates: **1080 × 1350** (logical). Default PNG export: **2160 × 2700** (full render resolution; use `generate_social_cards.py --export-logical-size` for 1080×1350). Details: [references/design-spec.md](references/design-spec.md).
 
 ## Repository layout
 
