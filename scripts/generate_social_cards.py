@@ -210,7 +210,7 @@ AUDIT_COMMON_EN_TERMS = {
 
 @dataclass
 class CardSlotOverrides:
-    """Optional slot copy from the content + layout agents; overrides heuristic templates when fields are set."""
+    """Slot copy from the content + layout agents. The skill requires a complete file for every export (no heuristic-only path)."""
 
     schema_version: int = 1
     intro_sentence: str | None = None
@@ -262,6 +262,36 @@ class CardSlotOverrides:
         return CardSlotOverrides(**kwargs)
 
 
+def assert_card_slots_complete(slots: CardSlotOverrides) -> None:
+    """Reject incomplete JSON so exports never fall back to template copy for missing slots."""
+
+    def need_str(label: str, val: str | None) -> None:
+        if not clean(val or ""):
+            raise ValueError(f"card_slots.json missing or empty required field: {label}")
+
+    def need_list(label: str, items: list[str] | None, min_n: int) -> None:
+        if not items:
+            raise ValueError(f"card_slots.json missing required list: {label} (need {min_n} items).")
+        n = len([x for x in items if clean(x)])
+        if n < min_n:
+            raise ValueError(f"card_slots.json {label} needs at least {min_n} non-empty entries (got {n}).")
+
+    need_str("intro_sentence", slots.intro_sentence)
+    need_str("company_focus_paragraph", slots.company_focus_paragraph)
+    need_list("background_bullets", slots.background_bullets, 4)
+    need_str("industry_paragraph", slots.industry_paragraph)
+    need_str("conclusion_block", slots.conclusion_block)
+    need_list("revenue_explainer_points", slots.revenue_explainer_points, 3)
+    need_list("current_business_points", slots.current_business_points, 4)
+    need_list("future_watch_points", slots.future_watch_points, 4)
+    need_str("judgement_paragraph", slots.judgement_paragraph)
+    need_str("brand_statement", slots.brand_statement)
+    need_list("memory_points", slots.memory_points, 3)
+    need_str("post_title", slots.post_title)
+    need_list("post_content_lines", slots.post_content_lines, 4)
+    need_list("hashtags", slots.hashtags, 3)
+
+
 def load_card_slots(path: Path) -> CardSlotOverrides:
     p = path.expanduser().resolve()
     if not p.is_file():
@@ -269,7 +299,28 @@ def load_card_slots(path: Path) -> CardSlotOverrides:
     raw = json.loads(p.read_text(encoding="utf-8"))
     if not isinstance(raw, dict):
         raise ValueError("card_slots JSON root must be an object")
-    return CardSlotOverrides.from_json_dict(raw)
+    slots = CardSlotOverrides.from_json_dict(raw)
+    assert_card_slots_complete(slots)
+    return slots
+
+
+def resolve_slots_path(html_path: Path, slots_arg: Path, *, multiple_html: bool) -> Path:
+    """Single HTML: --slots is the JSON file, or a directory containing <stem>.card_slots.json.
+    Multiple HTML: --slots must be a directory with one <stem>.card_slots.json per report."""
+    p = slots_arg.expanduser().resolve()
+    if p.is_dir():
+        cand = p / f"{html_path.stem}.card_slots.json"
+        if not cand.is_file():
+            raise SystemExit(f"Expected slots file for {html_path.name}: {cand} (not found).")
+        return cand
+    if p.is_file():
+        if multiple_html:
+            raise SystemExit(
+                "Multiple HTML files in --input: pass --slots as a directory that contains "
+                f"<stem>.card_slots.json (e.g. {html_path.stem}.card_slots.json for each report)."
+            )
+        return p
+    raise SystemExit(f"--slots path does not exist: {p}")
 
 
 @dataclass
@@ -2364,10 +2415,9 @@ def card_6(data: ReportData) -> Image.Image:
     return img.convert("RGB")
 
 
-def render_one(path: Path, output_root: Path, brand: str, slots_path: Path | None = None) -> list[Path]:
+def render_one(path: Path, output_root: Path, brand: str, slots_path: Path) -> list[Path]:
     data = parse_html(path)
-    if slots_path is not None:
-        data.card_slots = load_card_slots(slots_path)
+    data.card_slots = load_card_slots(slots_path)
     set_currency_label(data)
     validate_report(data, brand)
     out_dir = output_root / data.stem
@@ -2407,19 +2457,20 @@ def main() -> None:
     parser.add_argument("--brand", default="金融豹", help="Brand name.")
     parser.add_argument(
         "--slots",
-        default=None,
-        help="Optional card_slots.json from content/layout agents (same file used for all HTML in batch).",
+        required=True,
+        help="Path to card_slots.json (single HTML), or a directory of <stem>.card_slots.json (batch).",
     )
     args = parser.parse_args()
 
     src = Path(args.input).expanduser().resolve()
     out_root = Path(args.output_root).expanduser().resolve()
     out_root.mkdir(parents=True, exist_ok=True)
-    slots_path = Path(args.slots).expanduser().resolve() if args.slots else None
     files = input_files(src)
     if not files:
         raise SystemExit(f"No HTML files found at: {src}")
+    multiple = len(files) > 1
     for html in files:
+        slots_path = resolve_slots_path(html, Path(args.slots), multiple_html=multiple)
         render_one(html, out_root, args.brand, slots_path)
         print(f"generated: {html}")
 

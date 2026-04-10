@@ -14,6 +14,7 @@ Validation belongs inside the generation loop:
 
 ## Required Checks
 
+- `card_slots.json` must pass **`assert_card_slots_complete`** (all required slot keys populated) before layout checks run
 - Company display name must use the short Chinese company name, not the full legal name with `公司`
 - Footer must be exactly `公司名 | 日期`
 - Font family must stay in the Arial family
@@ -46,28 +47,18 @@ Validation belongs inside the generation loop:
 
 ## Execution
 
-Validation step:
+`--slots` is **required** for both tools. Pass a **JSON file** (single HTML) or a **directory** of `<stem>.card_slots.json` when `--input` lists multiple HTML files. The loader rejects incomplete slot files before these checks run.
 
 ```bash
-python3 scripts/validate_cards.py --input "/abs/path/to/report.html" --brand "金融豹"
-```
+python3 scripts/validate_cards.py \
+  --input "/abs/path/to/Company_Research_CN.html" \
+  --slots "/abs/path/to/Company_Research_CN.card_slots.json" \
+  --brand "金融豹"
 
-With **agent slot file**:
-
-```bash
-python3 scripts/validate_cards.py --input "/abs/path/to/report.html" --slots "/abs/path/card_slots.json" --brand "金融豹"
-```
-
-Generation step:
-
-```bash
-python3 scripts/generate_social_cards.py --input "/abs/path/to/report.html" --brand "金融豹"
-```
-
-With slots:
-
-```bash
-python3 scripts/generate_social_cards.py --input "/abs/path/to/report.html" --slots "/abs/path/card_slots.json" --brand "金融豹"
+python3 scripts/generate_social_cards.py \
+  --input "/abs/path/to/Company_Research_CN.html" \
+  --slots "/abs/path/to/Company_Research_CN.card_slots.json" \
+  --brand "金融豹"
 ```
 
 (Renderer defaults to this skill repo’s `output/<report_stem>/`; pass `--output-root` to override.)

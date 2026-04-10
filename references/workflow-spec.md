@@ -291,20 +291,20 @@ Expected final output:
 
 If validation fails, do not export.
 
-## 10. Standard copy pipeline (required for each new report)
+## 10. Standard copy pipeline (only path; enforced in CLI)
 
-**This is the normal path for every new Equity Research HTML package.** Skipping it and calling `generate_social_cards.py` without `--slots` uses built-in heuristics (`company_theme`, canned phrases, `fit_copy`) and is **not** the standardized deliverable — treat that only as smoke test or emergency fallback.
+**Every** export uses **`--slots`**. Incomplete JSON is rejected at load time (`assert_card_slots_complete` in `scripts/generate_social_cards.py`) so body copy cannot silently fall back to `company_theme` / `fit_copy` heuristics.
 
-**Problem those heuristics cause:** They often **compress away** rich narrative already present in your HTML, so different companies do not get a consistent “full report → six cards” treatment unless copy is materialized in JSON first.
+**Required slot keys (non-empty; list lengths as shown):** `intro_sentence`, `company_focus_paragraph`, `background_bullets` (≥4), `industry_paragraph`, `conclusion_block`, `revenue_explainer_points` (≥3), `current_business_points` (≥4), `future_watch_points` (≥4), `judgement_paragraph`, `brand_statement`, `memory_points` (≥3), `post_title`, `post_content_lines` (≥4), `hashtags` (≥3). **`porter_scores`** is optional (exactly five integers if present); otherwise Porter scores come from the HTML package.
 
 **Standard flow (every new `*_Research_CN.html`):**
 
-1. **Content production agent** reads the full HTML package (and sibling JSON). It outputs **`card_slots.json`** in the **same report folder** (recommended name: `<stem>.card_slots.json` or `card_slots.json`) — see [content-production-agent.md](./content-production-agent.md) and [card-slots.schema.json](./card-slots.schema.json). Every non-null field must be **traceable** to the report (no invented numbers).
-2. **Layout / fill agent** takes `card_slots.json` plus [design-spec.md](./design-spec.md) and [validation-agent.md](./validation-agent.md). It trims, splits bullets, or rephrases **only** to satisfy character budgets, line caps, and voice rules — without changing facts. It updates `card_slots.json`.
-3. Run `python3 scripts/validate_cards.py --input …/Report_CN.html --slots …/card_slots.json` until clean.
-4. Run `python3 scripts/generate_social_cards.py --input …/Report_CN.html --slots …/card_slots.json`.
+1. **Content production agent** writes **`html_stem.card_slots.json`** beside the HTML — see [content-production-agent.md](./content-production-agent.md) and [card-slots.schema.json](./card-slots.schema.json).
+2. **Layout fill agent** refines copy per [design-spec.md](./design-spec.md) and [validation-agent.md](./validation-agent.md).
+3. `python3 scripts/validate_cards.py --input …/Report_CN.html --slots …` until clean.
+4. `python3 scripts/generate_social_cards.py --input …/Report_CN.html --slots …`.
 
-**Partial overrides:** You may emit JSON with only some keys set; omitted keys fall back to renderer heuristics for **those** slots only — use sparingly; the goal is still a **complete** `card_slots.json` for production.
+**`--slots` argument:** For **one** HTML file, pass the JSON file path **or** the **folder** that contains `<stem>.card_slots.json`. For **several** HTML files under `--input`, `--slots` **must** be a **directory** containing one `<stem>.card_slots.json` per HTML.
 
 Hand-off overview: [agent-slot-pipeline.md](./agent-slot-pipeline.md).
 

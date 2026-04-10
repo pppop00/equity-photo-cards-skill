@@ -2,9 +2,9 @@
 
 Agent skill and Python tooling that turn **equity research HTML** (plus optional sibling JSON) into **six fixed-layout social images** (e.g. Xiaohongshu / Douyin), with slot-based copy and **layout validation** before export.
 
-**中文简介：** 将权益类研报 HTML 规范化为固定 **6 张卡片** 的图文素材。**标准流程**是：先由两层 Agent 生成与 HTML 同目录的 **`card_slots.json`**，再带 `--slots` 做校验与出图；不带 `--slots` 的启发式文案仅作冒烟/应急，**不算**与 PDD 示例同级的标准化产出。
+**中文简介：** 将权益类研报 HTML 规范化为固定 **6 张卡片** 的图文素材。**唯一支持路径：** 两层 Agent 生成 **完整** `html_stem.card_slots.json` → `validate_cards.py` 与 `generate_social_cards.py` **必须带 `--slots`**；脚本在加载时会拒绝缺字段的 JSON，**不存在**「不写 slots、只靠 Python 模板糊字」的出口。
 
-**Standard path (each new report):** Content agent → layout agent → `card_slots.json` next to `*_Research_CN.html` → `validate_cards.py --slots` → `generate_social_cards.py --slots`. Omit `--slots` only for quick tests.
+**Pipeline:** Content agent → layout agent → complete `*.card_slots.json` → validate → render (both commands require `--slots`).
 
 - **Repository:** [pppop00/equity-photo-cards-skill](https://github.com/pppop00/equity-photo-cards-skill)  
 - **License:** [Apache-2.0](LICENSE)
@@ -63,9 +63,11 @@ On other systems, install a compatible font and adjust the `ARIAL` path in `scri
 
 Run **`validate_cards`** from the **repository root** so `scripts/` imports resolve. **`generate_social_cards`** may be run from any working directory: unless you pass `--output-root`, PNG sets are written under this repo’s **`output/<report_stem>/`** (path is fixed relative to the script location, not your shell cwd).
 
-### Standard: validate + render **with** `card_slots.json`
+### Validate + render (`--slots` 必填)
 
-Produce the JSON with [content-production-agent.md](references/content-production-agent.md) and [layout-fill-agent.md](references/layout-fill-agent.md); keep it next to the HTML (e.g. `Amazon_Research_CN.card_slots.json`).
+Produce a **complete** JSON per [content-production-agent.md](references/content-production-agent.md) and [layout-fill-agent.md](references/layout-fill-agent.md). Incomplete files fail at load (`assert_card_slots_complete`).
+
+**单份 HTML：** `--slots` 传 **`Company_Research_CN.card_slots.json` 的路径**，或传其**所在目录**（脚本会找 `<stem>.card_slots.json`）。
 
 ```bash
 python3 scripts/validate_cards.py \
@@ -79,23 +81,9 @@ python3 scripts/generate_social_cards.py \
   --brand "金融豹"
 ```
 
-Partial JSON is allowed for early drafts; for production you still want a **complete** slot file. Override output with `--output-root /other/path` if needed.
+**批量多只 HTML：** `--input` 指向含多个 `*.html` 的目录时，`--slots` **必须为目录**，且内含与每个 `stem` 对应的 `<stem>.card_slots.json`。
 
-### Smoke test: no `--slots` (non-standard)
-
-Omit `--slots` only to sanity-check layout; copy will use Python heuristics, not the agent pipeline.
-
-```bash
-python3 scripts/validate_cards.py \
-  --input "/absolute/path/to/Company_Research_CN.html" \
-  --brand "金融豹"
-
-python3 scripts/generate_social_cards.py \
-  --input "/absolute/path/to/Company_Research_CN.html" \
-  --brand "金融豹"
-```
-
-**Batch:** One HTML usually needs **one** `card_slots.json`; do not point a single `--slots` at many unrelated reports unless intentional. Script per report folder or loop in CI.
+Override output with `--output-root /other/path` if needed.
 
 Optional JSON next to the HTML (when your report package provides them): `financial_data.json`, `financial_analysis.json`, `porter_analysis.json`. The workflow is described in [references/workflow-spec.md](references/workflow-spec.md).
 

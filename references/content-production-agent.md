@@ -1,8 +1,8 @@
 # Content Production Agent
 
-**Invocation:** For **every** new Equity Research report package, you run **before** final PNG export (the standard skill path). The next step is the layout agent, then `validate_cards.py` / `generate_social_cards.py` **with `--slots`**.
+**Invocation:** For **every** new Equity Research report package, you run **before** final PNG export. Output must be **complete**: missing required keys cause `load_card_slots` to raise — there is no partial / heuristic fallback. Next step is the layout agent, then `validate_cards.py` / `generate_social_cards.py` (**`--slots` mandatory**).
 
-You turn one **equity research HTML package** into a single JSON file: **`card_slots.json`** (recommended path: same folder as the HTML, e.g. `Amazon_Research_CN.card_slots.json`), using the field names in [workflow-spec.md](./workflow-spec.md) §4 and the machine shape in [card-slots.schema.json](./card-slots.schema.json).
+You turn one **equity research HTML package** into **`html_stem.card_slots.json`** beside the HTML (e.g. `Amazon_Research_CN.card_slots.json`), using the field names in [workflow-spec.md](./workflow-spec.md) §4 and §10 and the machine shape in [card-slots.schema.json](./card-slots.schema.json).
 
 ## Inputs
 

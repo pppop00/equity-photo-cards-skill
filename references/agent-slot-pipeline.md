@@ -1,6 +1,6 @@
 # Agent Slot Pipeline (overview)
 
-**Default for every new report:** this pipeline is how the skill is meant to run end-to-end. Rendering **without** `--slots` is a non-standard shortcut.
+**Only supported path:** validators and renderer require **`--slots`** and a **complete** `card_slots.json`. There is no CLI-supported heuristic-only export.
 
 End state: six PNGs with **human-grade** Chinese copy **without** losing facts from the research HTML.
 
