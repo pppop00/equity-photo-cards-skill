@@ -291,18 +291,20 @@ Expected final output:
 
 If validation fails, do not export.
 
-## 10. Two-Agent Copy Pipeline (recommended)
+## 10. Standard copy pipeline (required for each new report)
 
-**Problem:** The built-in Python renderer still applies industry heuristics (`company_theme`, canned phrases, aggressive `fit_copy`), which can **compress away** rich narrative already present in your Equity Research HTML.
+**This is the normal path for every new Equity Research HTML package.** Skipping it and calling `generate_social_cards.py` without `--slots` uses built-in heuristics (`company_theme`, canned phrases, `fit_copy`) and is **not** the standardized deliverable — treat that only as smoke test or emergency fallback.
 
-**Recommended flow for publication-quality cards:**
+**Problem those heuristics cause:** They often **compress away** rich narrative already present in your HTML, so different companies do not get a consistent “full report → six cards” treatment unless copy is materialized in JSON first.
 
-1. **Content production agent** reads the full HTML package (and sibling JSON). It outputs one file: `card_slots.json` — see [content-production-agent.md](./content-production-agent.md) and [card-slots.schema.json](./card-slots.schema.json). Every non-null field must be **traceable** to the report (no invented numbers).
+**Standard flow (every new `*_Research_CN.html`):**
+
+1. **Content production agent** reads the full HTML package (and sibling JSON). It outputs **`card_slots.json`** in the **same report folder** (recommended name: `<stem>.card_slots.json` or `card_slots.json`) — see [content-production-agent.md](./content-production-agent.md) and [card-slots.schema.json](./card-slots.schema.json). Every non-null field must be **traceable** to the report (no invented numbers).
 2. **Layout / fill agent** takes `card_slots.json` plus [design-spec.md](./design-spec.md) and [validation-agent.md](./validation-agent.md). It trims, splits bullets, or rephrases **only** to satisfy character budgets, line caps, and voice rules — without changing facts. It updates `card_slots.json`.
 3. Run `python3 scripts/validate_cards.py --input …/Report_CN.html --slots …/card_slots.json` until clean.
 4. Run `python3 scripts/generate_social_cards.py --input …/Report_CN.html --slots …/card_slots.json`.
 
-**Partial overrides:** You may emit JSON with only the slots you care about; omitted keys keep the renderer’s heuristic fill for those slots.
+**Partial overrides:** You may emit JSON with only some keys set; omitted keys fall back to renderer heuristics for **those** slots only — use sparingly; the goal is still a **complete** `card_slots.json` for production.
 
 Hand-off overview: [agent-slot-pipeline.md](./agent-slot-pipeline.md).
 

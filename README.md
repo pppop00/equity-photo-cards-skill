@@ -2,7 +2,9 @@
 
 Agent skill and Python tooling that turn **equity research HTML** (plus optional sibling JSON) into **six fixed-layout social images** (e.g. Xiaohongshu / Douyin), with slot-based copy and **layout validation** before export.
 
-**中文简介：** 将权益类研报 HTML 规范化为固定 **6 张卡片** 的图文素材；包含 Agent 工作流说明（`SKILL.md`）、版式与设计规范、以及 Python 渲染与校验脚本。
+**中文简介：** 将权益类研报 HTML 规范化为固定 **6 张卡片** 的图文素材。**标准流程**是：先由两层 Agent 生成与 HTML 同目录的 **`card_slots.json`**，再带 `--slots` 做校验与出图；不带 `--slots` 的启发式文案仅作冒烟/应急，**不算**与 PDD 示例同级的标准化产出。
+
+**Standard path (each new report):** Content agent → layout agent → `card_slots.json` next to `*_Research_CN.html` → `validate_cards.py --slots` → `generate_social_cards.py --slots`. Omit `--slots` only for quick tests.
 
 - **Repository:** [pppop00/equity-photo-cards-skill](https://github.com/pppop00/equity-photo-cards-skill)  
 - **License:** [Apache-2.0](LICENSE)
@@ -61,57 +63,39 @@ On other systems, install a compatible font and adjust the `ARIAL` path in `scri
 
 Run **`validate_cards`** from the **repository root** so `scripts/` imports resolve. **`generate_social_cards`** may be run from any working directory: unless you pass `--output-root`, PNG sets are written under this repo’s **`output/<report_stem>/`** (path is fixed relative to the script location, not your shell cwd).
 
-**Validate** (check layout / content constraints against parsed HTML):
+### Standard: validate + render **with** `card_slots.json`
+
+Produce the JSON with [content-production-agent.md](references/content-production-agent.md) and [layout-fill-agent.md](references/layout-fill-agent.md); keep it next to the HTML (e.g. `Amazon_Research_CN.card_slots.json`).
+
+```bash
+python3 scripts/validate_cards.py \
+  --input "/absolute/path/to/Company_Research_CN.html" \
+  --slots "/absolute/path/to/Company_Research_CN.card_slots.json" \
+  --brand "金融豹"
+
+python3 scripts/generate_social_cards.py \
+  --input "/absolute/path/to/Company_Research_CN.html" \
+  --slots "/absolute/path/to/Company_Research_CN.card_slots.json" \
+  --brand "金融豹"
+```
+
+Partial JSON is allowed for early drafts; for production you still want a **complete** slot file. Override output with `--output-root /other/path` if needed.
+
+### Smoke test: no `--slots` (non-standard)
+
+Omit `--slots` only to sanity-check layout; copy will use Python heuristics, not the agent pipeline.
 
 ```bash
 python3 scripts/validate_cards.py \
   --input "/absolute/path/to/Company_Research_CN.html" \
   --brand "金融豹"
-```
-
-**Render** — single HTML file (defaults to repo `output/`):
-
-```bash
-python3 /absolute/path/to/equity-photo-cards-skill/scripts/generate_social_cards.py \
-  --input "/absolute/path/to/Company_Research_CN.html" \
-  --brand "金融豹"
-```
-
-Or from repo root:
-
-```bash
-python3 scripts/generate_social_cards.py \
-  --input "/absolute/path/to/Company_Research_CN.html" \
-  --brand "金融豹"
-```
-
-**Render** — batch all `*.html` in a folder:
-
-```bash
-python3 scripts/generate_social_cards.py \
-  --input "/absolute/path/to/html-folder" \
-  --brand "金融豹"
-```
-
-Override output location only when needed: `--output-root /other/path`.
-
-### Agent-written copy (`--slots`)
-
-When the built-in summarizer loses too much narrative, produce a **`card_slots.json`** (see `references/content-production-agent.md` + `layout-fill-agent.md`), validate, then render:
-
-```bash
-python3 scripts/validate_cards.py \
-  --input "/absolute/path/to/Company_Research_CN.html" \
-  --slots "/absolute/path/card_slots.json" \
-  --brand "金融豹"
 
 python3 scripts/generate_social_cards.py \
   --input "/absolute/path/to/Company_Research_CN.html" \
-  --slots "/absolute/path/card_slots.json" \
   --brand "金融豹"
 ```
 
-Partial JSON is allowed: only filled keys override the heuristic template.
+**Batch:** One HTML usually needs **one** `card_slots.json`; do not point a single `--slots` at many unrelated reports unless intentional. Script per report folder or loop in CI.
 
 Optional JSON next to the HTML (when your report package provides them): `financial_data.json`, `financial_analysis.json`, `porter_analysis.json`. The workflow is described in [references/workflow-spec.md](references/workflow-spec.md).
 

@@ -1,6 +1,8 @@
 # Content Production Agent
 
-You turn one **equity research HTML package** into a single JSON file: **`card_slots.json`**, using the field names in [workflow-spec.md](./workflow-spec.md) §4 and the machine shape in [card-slots.schema.json](./card-slots.schema.json).
+**Invocation:** For **every** new Equity Research report package, you run **before** final PNG export (the standard skill path). The next step is the layout agent, then `validate_cards.py` / `generate_social_cards.py` **with `--slots`**.
+
+You turn one **equity research HTML package** into a single JSON file: **`card_slots.json`** (recommended path: same folder as the HTML, e.g. `Amazon_Research_CN.card_slots.json`), using the field names in [workflow-spec.md](./workflow-spec.md) §4 and the machine shape in [card-slots.schema.json](./card-slots.schema.json).
 
 ## Inputs
 

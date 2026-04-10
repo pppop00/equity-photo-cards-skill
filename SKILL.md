@@ -1,6 +1,6 @@
 ---
 name: equity-photo-cards
-description: Convert one or more equity research HTML outputs into 6 social-post assets for Xiaohongshu or Douyin. Use when Codex has repeatable equity-research HTML reports and needs a fixed card template, structured content planning, strict copy compression, and deterministic layout validation before export.
+description: Convert equity research HTML into 6 social-post assets for Xiaohongshu or Douyin. Standard path is two-agent slot copy (card_slots.json) then validated render; use for every new report package from Equity Research HTML + sibling JSON.
 ---
 
 # Equity Photo Cards
@@ -38,12 +38,14 @@ Use this skill as:
 
 1. `HTML/JSON -> structured report facts`
 2. `structured report facts -> fixed card slot plan`
-3. `slot plan -> copy` (**LLM agents** may write `card_slots.json`; otherwise renderer heuristics)
-4. `copy -> hardcode / logic audit`
-5. `audited copy -> validation / rewrite loop`
-6. `validated copy -> exported cards`
+3. `slot plan -> copy` as **`card_slots.json`** written by the **content** then **layout** agents ([agent-slot-pipeline.md](./references/agent-slot-pipeline.md)) — **this is the standard for every new report**, not optional
+4. `copy -> hardcode / logic audit` (on the final slot text)
+5. `audited copy -> validation / rewrite loop` (`validate_cards.py` **with `--slots`**)
+6. `validated copy -> exported cards` (`generate_social_cards.py` **with `--slots`**)
 
-**Rich HTML reports:** Prefer the two-agent slot pipeline ([agent-slot-pipeline.md](./references/agent-slot-pipeline.md)) and `--slots card_slots.json` so narrative from the HTML is not collapsed by built-in `company_theme` / `fit_copy` shortcuts.
+**Heuristic renderer (no `--slots`):** The Python script can still fill slots with `company_theme` / `fit_copy` templates when `--slots` is omitted. Use that only for **smoke tests or emergencies**, not as the shipped workflow. It is **not** the same quality or standard as agent-filled `card_slots.json`, and rich HTML will often read “模板化”.
+
+**File convention:** For `SomeCompany_Research_CN.html`, write **`SomeCompany_Research_CN.card_slots.json` or `card_slots.json` in the same folder** as the report package so humans and scripts can find it consistently (pass the path explicitly to `--slots` either way).
 
 The important boundary is this:
 
@@ -104,8 +106,10 @@ If the source uses different names such as `revenue_growth_yoy_pct` vs `yoy_reve
 
 The slot schema is defined in [references/workflow-spec.md](./references/workflow-spec.md). Use it every time.
 
-### 5. Copy Generation
+### 5. Copy Generation (standard = materialize `card_slots.json`)
 
+- **Production:** Run the **content production agent** then the **layout fill agent** so all body copy lives in **`card_slots.json`** before any PNG export. See [content-production-agent.md](./references/content-production-agent.md) and [layout-fill-agent.md](./references/layout-fill-agent.md).
+- Do **not** skip straight to `generate_social_cards.py` without `--slots` for final deliverables — that bypasses the standardized copy layer.
 - Write copy slot by slot, not card by card in one pass
 - Use report facts first, thematic framing second
 - It is acceptable to standardize voice cues such as `说白了` or `别只看`, but the substance after that cue must come from the current report package
@@ -135,8 +139,8 @@ Rewrite priority:
 
 ### 7. Export
 
-- Only export once the validator passes
-- Export all 6 images for the report as one set
+- Only export once the validator passes with the **intended** `card_slots.json` (`validate_cards.py --input … --slots …`)
+- Export all 6 images for the report as one set (`generate_social_cards.py --input … --slots …`)
 - Keep the file naming convention stable
 
 ## Fixed Card Schema
@@ -197,37 +201,29 @@ Do not change code merely because one company's current wording feels bland. Fir
 
 ## Renderer Usage
 
-Validation first:
+**Standard (every new report):** validate and render **with** `card_slots.json` next to the HTML (adjust paths):
 
 ```bash
 python3 scripts/validate_cards.py \
   --input "/abs/path/Tesla_Research_CN.html" \
+  --slots "/abs/path/Tesla_Research_CN.card_slots.json" \
   --brand "金融豹"
-```
 
-Single file (PNG sets default to this skill repo’s `output/<stem>/`):
-
-```bash
 python3 scripts/generate_social_cards.py \
   --input "/abs/path/Tesla_Research_CN.html" \
+  --slots "/abs/path/Tesla_Research_CN.card_slots.json" \
   --brand "金融豹"
 ```
 
-With **agent-produced copy** (same `card_slots.json` reused if you batch multiple HTML files — only use when appropriate):
+PNG sets default to this skill repo’s `output/<stem>/` unless you pass `--output-root`.
+
+**Folder batch:** Each HTML in a folder can use the **same** `--slots` path only if one JSON intentionally applies to every file (rare). Normally **one HTML → one `card_slots.json`**; batch by scripting a loop per report folder.
+
+**Heuristic fallback (non-standard):** Omit `--slots` only for quick layout/smoke tests. Do not treat the result as the canonical social set for a real report.
 
 ```bash
-python3 scripts/generate_social_cards.py \
-  --input "/abs/path/Tesla_Research_CN.html" \
-  --slots "/abs/path/card_slots.json" \
-  --brand "金融豹"
-```
-
-Folder batch:
-
-```bash
-python3 scripts/generate_social_cards.py \
-  --input "/abs/path/to/html-folder" \
-  --brand "金融豹"
+python3 scripts/validate_cards.py --input "/abs/path/Tesla_Research_CN.html" --brand "金融豹"
+python3 scripts/generate_social_cards.py --input "/abs/path/Tesla_Research_CN.html" --brand "金融豹"
 ```
 
 Use `--output-root` only to override the default output directory.
