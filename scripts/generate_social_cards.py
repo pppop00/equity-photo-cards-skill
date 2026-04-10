@@ -5,6 +5,7 @@ import argparse
 import json
 import math
 import re
+import shutil
 from datetime import datetime
 from dataclasses import dataclass
 from pathlib import Path
@@ -1070,7 +1071,15 @@ def set_currency_label(data: "ReportData") -> None:
 
 
 def money_text(value: float) -> str:
-    return f"{yi(value):.1f} 亿{_CURRENCY_LABEL}"
+    """Format millions of reporting currency for cards. yi = millions / 100 => 亿."""
+    y = yi(value)
+    # One decimal is wrong for small caps: 1.9M net -> 0.019亿 -> "0.0亿". Use 2 decimals in 0.01–0.1亿, 万 below.
+    if y < 0.01:
+        wan = value * 100.0
+        return f"{wan:.0f} 万{_CURRENCY_LABEL}"
+    if y < 0.1:
+        return f"{y:.2f} 亿{_CURRENCY_LABEL}"
+    return f"{y:.1f} 亿{_CURRENCY_LABEL}"
 
 
 def pct_text(value: Any, signed: bool = False) -> str:
@@ -1884,6 +1893,43 @@ def wrapped_block_height(lines: list[str], font_obj: ImageFont.FreeTypeFont, lin
     return len(lines) * font_obj.size + max(0, len(lines) - 1) * line_gap
 
 
+def raster_text_block_height(
+    draw: ImageDraw.ImageDraw,
+    lines: list[str],
+    font_obj: ImageFont.FreeTypeFont,
+    line_gap: int,
+) -> int:
+    """Total pixel height of stacked lines as rendered by block(); must match vertical advance."""
+    if not lines:
+        return 0
+    total = 0
+    for i, line in enumerate(lines):
+        total += line_raster_height(draw, font_obj, line)
+        if i < len(lines) - 1:
+            total += line_gap
+    return total
+
+
+def block_final_y(
+    draw: ImageDraw.ImageDraw,
+    text: str,
+    y: int,
+    width: int,
+    font_obj: ImageFont.FreeTypeFont,
+    line_gap: int,
+    max_lines: int | None,
+) -> int:
+    """Same vertical advance as block() return y, without drawing (for layout validation)."""
+    lines = wrap(draw, clean(text), font_obj, width)
+    if max_lines is not None and len(lines) > max_lines:
+        lines = lines[:max_lines]
+    for i, line in enumerate(lines):
+        y += line_raster_height(draw, font_obj, line)
+        if i < len(lines) - 1:
+            y += line_gap
+    return y
+
+
 def fit_block_font(
     draw: ImageDraw.ImageDraw,
     text: str,
@@ -1900,8 +1946,8 @@ def fit_block_font(
         font_obj = f(size, bold)
         lines = wrap(draw, clean(text), font_obj, width)
         if max_lines is not None and len(lines) > max_lines:
-            continue
-        if wrapped_block_height(lines, font_obj, line_gap) <= max_height:
+            lines = lines[:max_lines]
+        if raster_text_block_height(draw, lines, font_obj, line_gap) <= max_height:
             return font_obj
     return f(min_size, bold)
 
@@ -2052,6 +2098,18 @@ def validate_report(data: ReportData, brand: str) -> None:
         issues.append("Card 2 industry paragraph exceeds its section box.")
     if has_bad_linebreak(industry, 446, f(FONT_PANEL_BODY), draw):
         issues.append("Card 2 industry paragraph contains a punctuation-led line break.")
+    y_card2 = 424
+    for _bp in bg_points:
+        y_card2 = block_final_y(draw, _bp, y_card2, 422, f(FONT_BULLET), 12, 4)
+        y_card2 += 24
+    industry_title_y_sim = max(728, y_card2 + 6)
+    industry_body_y_sim = industry_title_y_sim + 58
+    card2_industry_end_y = block_final_y(draw, industry, industry_body_y_sim, 446, f(FONT_PANEL_BODY), 13, 11)
+    if card2_industry_end_y > 1224:
+        issues.append(
+            "Card 2 industry paragraph overflows the left panel (same dynamic layout as card_2: bullets push 行业层面 down). "
+            "Shorten background_bullets or industry_paragraph."
+        )
     if left_card_height < 360:
         issues.append("Card 2 left card is too sparse and leaves obvious whitespace.")
     conclusion = conclusion_block(data)
@@ -2117,8 +2175,11 @@ def validate_report(data: ReportData, brand: str) -> None:
         issues.append("Card 4 judgement paragraph exceeds its character budget.")
     if len(judgement_lines) > CARD4_JUDGEMENT_MAX_LINES:
         issues.append("Card 4 judgement paragraph exceeds its line budget.")
-    if wrapped_block_height(judgement_lines, judgement_font, 10) > CARD4_JUDGEMENT_BOX_HEIGHT:
-        issues.append("Card 4 judgement paragraph exceeds its box.")
+    jl_vis = judgement_lines[:CARD4_JUDGEMENT_MAX_LINES]
+    if raster_text_block_height(draw, jl_vis, judgement_font, 10) > CARD4_JUDGEMENT_BOX_HEIGHT:
+        issues.append(
+            "Card 4 judgement paragraph exceeds its beige box height (raster line heights can exceed font.size estimates; shorten copy)."
+        )
     if has_bad_linebreak(judgement, 316, judgement_font, draw):
         issues.append("Card 4 judgement paragraph contains a punctuation-led line break.")
 
@@ -2415,7 +2476,14 @@ def card_6(data: ReportData) -> Image.Image:
     return img.convert("RGB")
 
 
-def render_one(path: Path, output_root: Path, brand: str, slots_path: Path) -> list[Path]:
+def render_one(
+    path: Path,
+    output_root: Path,
+    brand: str,
+    slots_path: Path,
+    *,
+    copy_slots_to_output: bool = True,
+) -> list[Path]:
     data = parse_html(path)
     data.card_slots = load_card_slots(slots_path)
     set_currency_label(data)
@@ -2435,6 +2503,10 @@ def render_one(path: Path, output_root: Path, brand: str, slots_path: Path) -> l
         out = out_dir / name
         img.save(out, quality=95)
         paths.append(out)
+    if copy_slots_to_output:
+        dest = out_dir / slots_path.name
+        shutil.copy2(slots_path, dest)
+        paths.append(dest)
     return paths
 
 
@@ -2460,6 +2532,11 @@ def main() -> None:
         required=True,
         help="Path to card_slots.json (single HTML), or a directory of <stem>.card_slots.json (batch).",
     )
+    parser.add_argument(
+        "--no-copy-slots",
+        action="store_true",
+        help="Do not copy card_slots.json into output/<stem>/ next to PNGs (default: copy for a single-folder bundle).",
+    )
     args = parser.parse_args()
 
     src = Path(args.input).expanduser().resolve()
@@ -2469,9 +2546,10 @@ def main() -> None:
     if not files:
         raise SystemExit(f"No HTML files found at: {src}")
     multiple = len(files) > 1
+    copy_slots = not args.no_copy_slots
     for html in files:
         slots_path = resolve_slots_path(html, Path(args.slots), multiple_html=multiple)
-        render_one(html, out_root, args.brand, slots_path)
+        render_one(html, out_root, args.brand, slots_path, copy_slots_to_output=copy_slots)
         print(f"generated: {html}")
 
 

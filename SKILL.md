@@ -1,9 +1,36 @@
 ---
 name: equity-photo-cards
-description: Convert equity research HTML into 6 social-post assets for Xiaohongshu or Douyin. Mandatory pipeline — complete card_slots.json from content/layout agents, then validate and render with --slots only; no heuristic-only export.
+description: >-
+  Turns equity research HTML (and optional sibling JSON) into six fixed-layout social images
+  (e.g. Xiaohongshu / Douyin) by filling predefined card slots in `*.card_slots.json`, then
+  validating and rendering with Python. Use whenever the user has report HTML to convert into
+  slot-based PNGs, fixed 1080×1350 cards, `card_slots.json`, `validate_cards.py`, or
+  `generate_social_cards.py` — even if they only say “put this HTML into the picture templates.”
+  Mandatory path — agents must produce a complete `card_slots.json`; CLI requires `--slots`;
+  no heuristic-only export.
 ---
 
 # Equity Photo Cards
+
+**What you are building:** Agents consume **equity research HTML** (and optional sibling JSON), write copy into a **fixed set of named slots** (`*.card_slots.json`), and the renderer places that text into **predetermined image frames** (six cards, 1080×1350) — not a bespoke layout per company.
+
+## Skill layout (skill-creator anatomy)
+
+```
+equity-photo-cards/                    # Skill bundle (skill-creator anatomy)
+├── SKILL.md                           # Entry point: workflow + links (keep < ~500 lines; details in references/)
+├── agents/                            # Sub-agent briefs (who writes what before export)
+├── references/
+│   ├── workflow-spec.md               # Pipeline contract + slot keys
+│   ├── workflow-flowchart.md          # Mermaid diagrams for humans (review here)
+│   ├── design-spec.md                 # Visual / copy limits
+│   ├── card-slots.schema.json         # Machine schema for slot JSON
+│   ├── examples/                      # Filled example (e.g. PDD-shaped)
+│   └── templates/                     # Empty-shape starter → copy to <stem>.card_slots.json
+├── scripts/                           # validate_cards.py, generate_social_cards.py (deterministic)
+├── evals/                             # Optional smoke prompts (evals.json)
+└── output/                            # Default PNG output (gitignored; use --output-root to override)
+```
 
 This skill is not a generic image-generation workflow. It is a deterministic report-to-card pipeline:
 
@@ -19,14 +46,24 @@ The goal is that a new company HTML should normally flow through the same pipeli
 
 ## Source Of Truth
 
+**Specifications (read for schema and visuals):**
+
 - Workflow and slot schema: [references/workflow-spec.md](./references/workflow-spec.md)
+- Workflow diagrams — bundle 表 + 端到端 / CLI / 新报告 / 校验分层 / 九步（Mermaid）: [references/workflow-flowchart.md](./references/workflow-flowchart.md)
 - JSON slot contract (machine): [references/card-slots.schema.json](./references/card-slots.schema.json)
-- Two-agent handoff: [references/agent-slot-pipeline.md](./references/agent-slot-pipeline.md)
-- Content production agent brief: [references/content-production-agent.md](./references/content-production-agent.md)
-- Layout fill agent brief: [references/layout-fill-agent.md](./references/layout-fill-agent.md)
+- New-report slot starter (copy → rename to `<stem>.card_slots.json`): [references/templates/card_slots.template.json](./references/templates/card_slots.template.json)
 - Visual and layout rules: [references/design-spec.md](./references/design-spec.md)
-- Hardcode and logic audit policy: [references/hardcode-audit-agent.md](./references/hardcode-audit-agent.md)
-- Validation policy: [references/validation-agent.md](./references/validation-agent.md)
+
+**Agents (who does what before export):**
+
+- Two-agent handoff: [agents/agent-slot-pipeline.md](./agents/agent-slot-pipeline.md)
+- Content production (HTML → draft slots): [agents/content-production-agent.md](./agents/content-production-agent.md)
+- Layout fill (draft → validator-clean): [agents/layout-fill-agent.md](./agents/layout-fill-agent.md)
+- Hardcode and logic audit policy: [agents/hardcode-audit-agent.md](./agents/hardcode-audit-agent.md)
+- Validation policy: [agents/validation-agent.md](./agents/validation-agent.md)
+
+**Tools:**
+
 - Renderer: [scripts/generate_social_cards.py](./scripts/generate_social_cards.py)
 - Validator: [scripts/validate_cards.py](./scripts/validate_cards.py)
 
@@ -38,7 +75,7 @@ Use this skill as:
 
 1. `HTML/JSON -> structured report facts`
 2. `structured report facts -> fixed card slot plan`
-3. `slot plan -> copy` as **`card_slots.json`** written by the **content** then **layout** agents ([agent-slot-pipeline.md](./references/agent-slot-pipeline.md)) — **this is the standard for every new report**, not optional
+3. `slot plan -> copy` as **`card_slots.json`** written by the **content** then **layout** agents ([agent-slot-pipeline.md](./agents/agent-slot-pipeline.md)) — **this is the standard for every new report**, not optional
 4. `copy -> hardcode / logic audit` (on the final slot text)
 5. `audited copy -> validation / rewrite loop` (`validate_cards.py` — **`--slots` 必填**)
 6. `validated copy -> exported cards` (`generate_social_cards.py` — **`--slots` 必填**)
@@ -46,6 +83,8 @@ Use this skill as:
 **No alternate path:** The CLI **does not** accept a run without `--slots`. Incomplete JSON is **rejected** (`assert_card_slots_complete`): every required body slot must be present so export never silently falls back to Python template copy.
 
 **File convention:** **`Company_Research_CN.card_slots.json`** beside **`Company_Research_CN.html`** in the report folder. For a **single** report you may pass `--slots` as either the JSON file path or that **folder** (resolver loads `<stem>.card_slots.json`). For **`--input` 指向多只 HTML**，`--slots` **必须是目录**，且内含与每个 `stem` 对应的 `*.card_slots.json`。
+
+**Why there is no one “universal” filled `card_slots.json`:** The file is **per-company body copy** (facts, wording, hashtags) read by the renderer into **fixed** card frames. The skill ships a **structure template** you copy for each new stem — [references/templates/card_slots.template.json](./references/templates/card_slots.template.json) — plus machine schema [references/card-slots.schema.json](./references/card-slots.schema.json) and a worked example [references/examples/pdd_holdings_card_slots.example.json](./references/examples/pdd_holdings_card_slots.example.json). Agents still **author** `<stem>.card_slots.json` from the HTML package; the template only avoids starting from a blank file.
 
 The important boundary is this:
 
@@ -108,7 +147,7 @@ The slot schema is defined in [references/workflow-spec.md](./references/workflo
 
 ### 5. Copy Generation (standard = materialize `card_slots.json`)
 
-- **Production:** Run the **content production agent** then the **layout fill agent** so all body copy lives in **`card_slots.json`** before any PNG export. See [content-production-agent.md](./references/content-production-agent.md) and [layout-fill-agent.md](./references/layout-fill-agent.md).
+- **Production:** Run the **content production agent** then the **layout fill agent** so all body copy lives in **`card_slots.json`** before any PNG export. See [content-production-agent.md](./agents/content-production-agent.md) and [layout-fill-agent.md](./agents/layout-fill-agent.md).
 - **`card_slots.json` 必须填满** 所有脚本要求的槽位（见 `assert_card_slots_complete`）；不允许依赖内置 `fit_copy` / `company_theme` 自动糊字作为交付物。
 - Write copy slot by slot, not card by card in one pass
 - Use report facts first, thematic framing second
@@ -216,6 +255,8 @@ python3 scripts/generate_social_cards.py \
 ```
 
 PNG sets default to this skill repo’s `output/<stem>/` unless you pass `--output-root`.
+
+**Where `card_slots.json` lives:** The **authoritative** file stays beside the HTML in the report package (version control, re-validation). **`generate_social_cards.py` also copies** that resolved JSON into `output/<stem>/` next to the six PNGs so you have one folder per company for handoff—unless you pass **`--no-copy-slots`**.
 
 **Folder batch（多只 `*.html`）:** `--slots` 传 **父目录**，其中包含 `Tesla_Research_CN.card_slots.json`、`Amazon_Research_CN.card_slots.json` 等与各 HTML **stem 一一对应** 的文件。不得用单个 JSON 路径套批多只无关报告。
 

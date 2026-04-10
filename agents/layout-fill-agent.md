@@ -9,7 +9,7 @@ passes with **zero** issues.
 ## Inputs
 
 - `card_slots.json` (draft)
-- [design-spec.md](./design-spec.md) — canvas, fonts, copy limits
+- [design-spec.md](../references/design-spec.md) — canvas, fonts, copy limits
 - [validation-agent.md](./validation-agent.md) — what the Python validator enforces
 - Same `Report_CN.html` (for sanity checks: company name, tickers, numbers)
 

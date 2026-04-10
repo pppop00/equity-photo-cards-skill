@@ -299,13 +299,15 @@ If validation fails, do not export.
 
 **Standard flow (every new `*_Research_CN.html`):**
 
-1. **Content production agent** writes **`html_stem.card_slots.json`** beside the HTML — see [content-production-agent.md](./content-production-agent.md) and [card-slots.schema.json](./card-slots.schema.json).
-2. **Layout fill agent** refines copy per [design-spec.md](./design-spec.md) and [validation-agent.md](./validation-agent.md).
+1. **Content production agent** writes **`html_stem.card_slots.json`** beside the HTML — see [content-production-agent.md](../agents/content-production-agent.md) and [card-slots.schema.json](./card-slots.schema.json).
+2. **Layout fill agent** refines copy per [design-spec.md](./design-spec.md) and [validation-agent.md](../agents/validation-agent.md).
 3. `python3 scripts/validate_cards.py --input …/Report_CN.html --slots …` until clean.
 4. `python3 scripts/generate_social_cards.py --input …/Report_CN.html --slots …`.
 
 **`--slots` argument:** For **one** HTML file, pass the JSON file path **or** the **folder** that contains `<stem>.card_slots.json`. For **several** HTML files under `--input`, `--slots` **must** be a **directory** containing one `<stem>.card_slots.json` per HTML.
 
-Hand-off overview: [agent-slot-pipeline.md](./agent-slot-pipeline.md).
+Hand-off overview: [agent-slot-pipeline.md](../agents/agent-slot-pipeline.md).
+
+**流程图（Mermaid）:** [workflow-flowchart.md](./workflow-flowchart.md)
 
 Example (PDD-shaped): [examples/pdd_holdings_card_slots.example.json](./examples/pdd_holdings_card_slots.example.json).

@@ -2,7 +2,7 @@
 
 **Invocation:** For **every** new Equity Research report package, you run **before** final PNG export. Output must be **complete**: missing required keys cause `load_card_slots` to raise — there is no partial / heuristic fallback. Next step is the layout agent, then `validate_cards.py` / `generate_social_cards.py` (**`--slots` mandatory**).
 
-You turn one **equity research HTML package** into **`html_stem.card_slots.json`** beside the HTML (e.g. `Amazon_Research_CN.card_slots.json`), using the field names in [workflow-spec.md](./workflow-spec.md) §4 and §10 and the machine shape in [card-slots.schema.json](./card-slots.schema.json).
+You turn one **equity research HTML package** into **`html_stem.card_slots.json`** beside the HTML (e.g. `Amazon_Research_CN.card_slots.json`), using the field names in [workflow-spec.md](../references/workflow-spec.md) §4 and §10 and the machine shape in [card-slots.schema.json](../references/card-slots.schema.json).
 
 ## Inputs
 
@@ -39,10 +39,10 @@ You turn one **equity research HTML package** into **`html_stem.card_slots.json`
 
 ## Length
 
-Do **not** micro-fit in Agent A. Write natural copy; Agent B (layout) will compress to [design-spec.md](./design-spec.md) budgets. If a slot is obviously long, still prefer substance — B will cut repetition first.
+Do **not** micro-fit in Agent A. Write natural copy; Agent B (layout) will compress to [design-spec.md](../references/design-spec.md) budgets. If a slot is obviously long, still prefer substance — B will cut repetition first.
 
 ## Output
 
 Valid JSON only, UTF-8, `schema_version: 1`. Save next to the report or in CI artifacts as `card_slots.json`.
 
-See worked shape: [examples/pdd_holdings_card_slots.example.json](./examples/pdd_holdings_card_slots.example.json).
+See worked shape: [examples/pdd_holdings_card_slots.example.json](../references/examples/pdd_holdings_card_slots.example.json).
