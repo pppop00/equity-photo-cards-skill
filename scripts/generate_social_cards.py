@@ -5,6 +5,7 @@ import argparse
 import json
 import math
 import re
+from datetime import datetime
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -70,6 +71,19 @@ STIFF_OPENERS = (
     "一句判断:",
 )
 HUMAN_MARKERS = ("说白了", "别看", "账单", "印钱", "印钞", "踩油门", "真要看", "本质上", "先别", "盯着", "这就是", "眼下")
+SOURCE_DISCLAIMER_MARKERS = (
+    "不构成买入价位建议",
+    "情景预测不构成",
+    "本报告给",
+    "本报告予",
+    "评级侧重",
+)
+FORBIDDEN_GENERATED_MARKERS = (
+    "不构成买入价位建议",
+    "情景预测不构成",
+    "本报告给",
+    "本报告予",
+)
 
 FONT_HEADER_BRAND = 28
 FONT_HEADER_SUBTITLE = 15
@@ -87,6 +101,7 @@ FONT_PORTER_SCORE = 25
 FONT_CHART_LABEL = 23
 FONT_CHART_VALUE = 28
 FONT_JUDGEMENT = 21
+FONT_JUDGEMENT_MIN = 18
 FONT_POST_TITLE = 42
 FONT_POST_LINE = 29
 FONT_POST_TAG = 23
@@ -104,6 +119,8 @@ LIMIT_CARD3_EXPLAINER_TOTAL_HEIGHT = 223
 LIMIT_CARD4_NOW_BULLET_CHARS = 72
 LIMIT_CARD4_FUTURE_BULLET_CHARS = 62
 LIMIT_CARD4_JUDGEMENT_CHARS = 52
+CARD4_JUDGEMENT_MAX_LINES = 4
+CARD4_JUDGEMENT_BOX_HEIGHT = 100
 
 FORBIDDEN_TEMPLATE_PHRASES = (
     "盘子和押注分得很清楚",
@@ -336,6 +353,11 @@ def display_name(name: str) -> str:
     return name[:-2] if name.endswith("公司") else name
 
 
+def export_date_cn() -> str:
+    now = datetime.now().astimezone()
+    return f"{now.year}年{now.month}月{now.day}日"
+
+
 def hashtag_token(text: str) -> str:
     return "#" + re.sub(r"\s+", "", text.lstrip("#"))
 
@@ -493,6 +515,28 @@ def ensure_terminal_punct(text: str, punct: str = "。") -> str:
     return text if text.endswith(tuple(SENTENCE_END)) else text + punct
 
 
+def sentence_parts(text: str) -> list[str]:
+    return [clean(part) for part in re.findall(r"[^。！？；]+[。！？；]?", clean(text)) if clean(part)]
+
+
+def is_source_disclaimer_sentence(text: str) -> bool:
+    normalized = clean(text)
+    if not normalized:
+        return False
+    if any(marker in normalized for marker in SOURCE_DISCLAIMER_MARKERS):
+        return True
+    return "本报告" in normalized and any(marker in normalized for marker in ("增持", "买入", "评级"))
+
+
+def sanitize_source_text(text: str) -> str:
+    kept: list[str] = []
+    for part in sentence_parts(text):
+        normalized = ensure_terminal_punct(strip_stiff_opener(part))
+        if normalized and not is_source_disclaimer_sentence(normalized):
+            kept.append(normalized)
+    return "".join(kept)
+
+
 def contains_ellipsis(text: str) -> bool:
     return "…" in text or "..." in text
 
@@ -593,6 +637,9 @@ def source_copy_candidates(
 ) -> list[str]:
     candidates: list[str] = []
     for raw in dedupe_texts(texts):
+        raw = sanitize_source_text(raw)
+        if not raw:
+            continue
         base = ensure_terminal_punct(strip_stiff_opener(raw))
         if base:
             candidates.append(prepend_human_opener(base, opener) if opener else base)
@@ -613,7 +660,7 @@ def source_copy_candidates(
 
 
 def combined_source_texts(texts: list[str], max_parts: int = 2) -> list[str]:
-    items = dedupe_texts(texts)
+    items = dedupe_texts([sanitize_source_text(text) for text in texts])
     combined: list[str] = []
     for i in range(len(items)):
         acc = ""
@@ -633,7 +680,7 @@ def dense_source_paragraph(
 ) -> str:
     budget = limit - len(opener or "")
     picked: list[str] = []
-    for text in dedupe_texts(texts):
+    for text in dedupe_texts([sanitize_source_text(text) for text in texts]):
         for sentence in sentence_chunks(text, 4):
             normalized = ensure_terminal_punct(strip_stiff_opener(sentence))
             if not normalized or normalized in picked:
@@ -1291,7 +1338,7 @@ def judgement_paragraph(data: ReportData) -> str:
             "别看数据不差，市场真正算的是投入回报而不是口号",
         ],
     }
-    return fit_copy(source_candidates + candidates.get(theme, candidates["general"]), 52, human=True)
+    return fit_copy(candidates.get(theme, candidates["general"]) + source_candidates, 52, human=True)
 
 
 def brand_statement(data: ReportData) -> str:
@@ -1371,7 +1418,7 @@ def revenue_explainer_points(data: ReportData) -> list[str]:
             LIMIT_CARD3_EXPLAINER_CHARS,
         ),
         fit_copy(
-            source_copy_candidates(executive_texts(data) + porter_section_texts(data, "forward"), 54, opener="说白了，", sentence_options=(1,), human=True) + {
+            {
                 "cn_ecom": ["说白了，真正支撑估值的，不只是今天卖出多少货，而是 Temu 能不能跑通盈利模型、主站能不能守住利润率。"],
                 "ecom_cloud": ["说白了，真正支撑估值的，不只是今天卖出多少货，而是 AWS、广告和卖家服务能不能把利润率继续往上抬。"],
                 "pharma": ["说白了，真正支撑估值的，不只是今天卖了多少药，而是爆款能不能持续放量、后面还有没有新药接棒。"],
@@ -1379,7 +1426,7 @@ def revenue_explainer_points(data: ReportData) -> list[str]:
                 "ev_ai": ["说白了，真正支撑估值的，不是多卖几辆车，而是软件和储能能不能放大利润。"],
                 "software": ["说白了，真正支撑估值的，不是功能多少，而是留存和提价能不能一起兑现。"],
                 "general": ["说白了，真正支撑估值的，不只是今天赚多少钱，而是明天还能不能赚得更快。"],
-            }[theme],
+            }[theme] + source_copy_candidates(executive_texts(data) + porter_section_texts(data, "forward"), 54, opener="说白了，", sentence_options=(1,), human=True),
             LIMIT_CARD3_EXPLAINER_CHARS,
             human=True,
         ),
@@ -1624,6 +1671,34 @@ def measure_bullets(draw: ImageDraw.ImageDraw, items: list[str], width: int, fon
     return total
 
 
+def wrapped_block_height(lines: list[str], font_obj: ImageFont.FreeTypeFont, line_gap: int) -> int:
+    if not lines:
+        return 0
+    return len(lines) * font_obj.size + max(0, len(lines) - 1) * line_gap
+
+
+def fit_block_font(
+    draw: ImageDraw.ImageDraw,
+    text: str,
+    width: int,
+    max_height: int,
+    *,
+    start_size: int,
+    min_size: int,
+    line_gap: int,
+    max_lines: int | None = None,
+    bold: bool = False,
+) -> ImageFont.FreeTypeFont:
+    for size in range(start_size, min_size - 1, -1):
+        font_obj = f(size, bold)
+        lines = wrap(draw, clean(text), font_obj, width)
+        if max_lines is not None and len(lines) > max_lines:
+            continue
+        if wrapped_block_height(lines, font_obj, line_gap) <= max_height:
+            return font_obj
+    return f(min_size, bold)
+
+
 def generated_copy_slots(data: ReportData) -> dict[str, list[str]]:
     return {
         "Card 1 intro sentence": [cover_intro(data)],
@@ -1651,6 +1726,9 @@ def hardcode_logic_issues(data: ReportData) -> list[str]:
     for label, items in slots.items():
         for text in items:
             normalized = clean(text)
+            for marker in FORBIDDEN_GENERATED_MARKERS:
+                if marker in normalized:
+                    issues.append(f"{label} contains rating/disclaimer boilerplate that must not appear in cards: {marker}")
             for phrase in FORBIDDEN_TEMPLATE_PHRASES:
                 if phrase in normalized:
                     issues.append(f"{label} still contains forbidden hardcoded template wording: {phrase}")
@@ -1807,11 +1885,24 @@ def validate_report(data: ReportData, brand: str) -> None:
             issues.append(f"Card 4 right column contains a punctuation-led line break: {point}")
 
     judgement = judgement_paragraph(data)
+    judgement_font = fit_block_font(
+        draw,
+        judgement,
+        316,
+        CARD4_JUDGEMENT_BOX_HEIGHT,
+        start_size=FONT_JUDGEMENT,
+        min_size=FONT_JUDGEMENT_MIN,
+        line_gap=10,
+        max_lines=CARD4_JUDGEMENT_MAX_LINES,
+    )
+    judgement_lines = wrap(draw, judgement, judgement_font, 316)
     if len(judgement) > LIMIT_CARD4_JUDGEMENT_CHARS:
         issues.append("Card 4 judgement paragraph exceeds its character budget.")
-    if measure_block(draw, judgement, 316, f(FONT_JUDGEMENT), 10) > 4 * FONT_JUDGEMENT + 3 * 10:
+    if len(judgement_lines) > CARD4_JUDGEMENT_MAX_LINES:
+        issues.append("Card 4 judgement paragraph exceeds its line budget.")
+    if wrapped_block_height(judgement_lines, judgement_font, 10) > CARD4_JUDGEMENT_BOX_HEIGHT:
         issues.append("Card 4 judgement paragraph exceeds its box.")
-    if has_bad_linebreak(judgement, 316, f(FONT_JUDGEMENT), draw):
+    if has_bad_linebreak(judgement, 316, judgement_font, draw):
         issues.append("Card 4 judgement paragraph contains a punctuation-led line break.")
 
     if measure_block(draw, brand_line, 760, f(52, True), 14) > 3 * 52 + 2 * 14:
@@ -1898,7 +1989,7 @@ def header(draw: ImageDraw.ImageDraw, card_no: int) -> None:
 
 
 def footer(draw: ImageDraw.ImageDraw, data: ReportData) -> None:
-    draw_text(draw, (72, 1288), f"{display_name(data.company_cn)} | {data.date}", f(FONT_FOOTER), MUTED)
+    draw_text(draw, (72, 1288), f"{display_name(data.company_cn)} | {export_date_cn()}", f(FONT_FOOTER), MUTED)
 
 
 def metric(draw: ImageDraw.ImageDraw, x: int, y: int, w: int, label: str, value: str, accent: str) -> None:
@@ -2042,7 +2133,18 @@ def card_4(data: ReportData) -> Image.Image:
     bullets(d, future_watch_points(data), 570, 424, 368, 4, 5, 18, font_size=FONT_BULLET_COMPACT, line_gap=10)
     d.rounded_rectangle((570, 980, 948, 1176), radius=24, fill=PANEL)
     draw_text(d, (602, 1028), "一句判断", f(28, True), TEXT)
-    block(d, judgement_paragraph(data), 602, 1076, 316, f(FONT_JUDGEMENT), "#344054", 10, 4)
+    judgement = judgement_paragraph(data)
+    judgement_font = fit_block_font(
+        d,
+        judgement,
+        316,
+        CARD4_JUDGEMENT_BOX_HEIGHT,
+        start_size=FONT_JUDGEMENT,
+        min_size=FONT_JUDGEMENT_MIN,
+        line_gap=10,
+        max_lines=CARD4_JUDGEMENT_MAX_LINES,
+    )
+    block(d, judgement, 602, 1076, 316, judgement_font, "#344054", 10, CARD4_JUDGEMENT_MAX_LINES)
     footer(d, data)
     return img.convert("RGB")
 
