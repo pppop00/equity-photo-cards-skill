@@ -1381,10 +1381,18 @@ def input_files(src: Path) -> list[Path]:
     return [src] if src.is_file() else sorted(src.glob("*.html"))
 
 
+_SKILL_REPO_ROOT = Path(__file__).resolve().parent.parent
+_DEFAULT_OUTPUT_ROOT = _SKILL_REPO_ROOT / "output"
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", required=True, help="HTML file or folder.")
-    parser.add_argument("--output-root", default="output", help="Output root.")
+    parser.add_argument(
+        "--output-root",
+        default=str(_DEFAULT_OUTPUT_ROOT),
+        help=f"Output root for PNG sets (default: {_DEFAULT_OUTPUT_ROOT})",
+    )
     parser.add_argument("--brand", default="金融豹", help="Brand name.")
     args = parser.parse_args()
 

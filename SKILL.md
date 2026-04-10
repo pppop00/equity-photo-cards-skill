@@ -190,12 +190,11 @@ python3 scripts/validate_cards.py \
   --brand "金融豹"
 ```
 
-Single file:
+Single file (PNG sets default to this skill repo’s `output/<stem>/`):
 
 ```bash
 python3 scripts/generate_social_cards.py \
   --input "/abs/path/Tesla_Research_CN.html" \
-  --output-root output \
   --brand "金融豹"
 ```
 
@@ -204,9 +203,10 @@ Folder batch:
 ```bash
 python3 scripts/generate_social_cards.py \
   --input "/abs/path/to/html-folder" \
-  --output-root output \
   --brand "金融豹"
 ```
+
+Use `--output-root` only to override the default output directory.
 
 ## Maintenance Standard
 

@@ -48,8 +48,10 @@ python3 scripts/validate_cards.py --input "/abs/path/to/report.html" --brand "�
 Generation step:
 
 ```bash
-python3 scripts/generate_social_cards.py --input "/abs/path/to/report.html" --output-root output --brand "金融豹"
+python3 scripts/generate_social_cards.py --input "/abs/path/to/report.html" --brand "金融豹"
 ```
+
+(Renderer defaults to this skill repo’s `output/<report_stem>/`; pass `--output-root` to override.)
 
 ## Failure Policy
 

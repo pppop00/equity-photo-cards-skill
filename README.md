@@ -54,7 +54,7 @@ On other systems, install a compatible font and adjust the `ARIAL` path in `scri
 
 ## Commands
 
-Run from the **repository root** so paths resolve correctly.
+Run **`validate_cards`** from the **repository root** so `scripts/` imports resolve. **`generate_social_cards`** may be run from any working directory: unless you pass `--output-root`, PNG sets are written under this repo’s **`output/<report_stem>/`** (path is fixed relative to the script location, not your shell cwd).
 
 **Validate** (check layout / content constraints against parsed HTML):
 
@@ -64,12 +64,19 @@ python3 scripts/validate_cards.py \
   --brand "金融豹"
 ```
 
-**Render** — single HTML file:
+**Render** — single HTML file (defaults to repo `output/`):
+
+```bash
+python3 /absolute/path/to/equity-photo-cards-skill/scripts/generate_social_cards.py \
+  --input "/absolute/path/to/Company_Research_CN.html" \
+  --brand "金融豹"
+```
+
+Or from repo root:
 
 ```bash
 python3 scripts/generate_social_cards.py \
   --input "/absolute/path/to/Company_Research_CN.html" \
-  --output-root output \
   --brand "金融豹"
 ```
 
@@ -78,9 +85,10 @@ python3 scripts/generate_social_cards.py \
 ```bash
 python3 scripts/generate_social_cards.py \
   --input "/absolute/path/to/html-folder" \
-  --output-root output \
   --brand "金融豹"
 ```
+
+Override output location only when needed: `--output-root /other/path`.
 
 Optional JSON next to the HTML (when your report package provides them): `financial_data.json`, `financial_analysis.json`, `porter_analysis.json`. The workflow is described in [references/workflow-spec.md](references/workflow-spec.md).
 
