@@ -26,6 +26,7 @@ passes with **zero** issues.
 
 - **Card 2 conclusion exceeds box:** Remove parallel clauses; keep subject–verb–object; one period.
 - **Card 1 yellow too short / too long:** Tune `company_focus_paragraph` toward 60–132 Chinese characters with two sharp ideas.
+- **Card 3 explainer exceeds yellow panel:** Height is measured from real glyph bounding boxes; prefer shorter third bullet or fewer wraps. Panel allows a fixed pixel budget — tighten wording before asking for renderer changes.
 - **Card 3 bullet char limit:** Split one long bullet into two shorter ideas *only if* you still output exactly three bullets total (merge elsewhere).
 - **Card 6 “lacks human voice”:** Prefix 说白了 / 别看 / 真要看 on the failing line.
 

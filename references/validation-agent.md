@@ -28,7 +28,7 @@ Validation belongs inside the generation loop:
 - Card 1 `公司看点` must also stay inside its explicit character budget
 - Card 2 `行业层面` must be a complete summarized paragraph, not a clipped fragment
 - Card 2 `行业层面` must stay inside its explicit character budget
-- Card 3 explainer bullets must stay inside both their per-bullet character budget and the yellow panel's total height budget
+- Card 3 explainer bullets must stay inside their per-bullet character budget and the yellow panel's **measured** height budget (validator sums `line_raster_height` per wrapped line, matching `draw_text`, not `font.size` alone; panel bottom y is **1260** with bottom inset reserved)
 - Card 3 title must be `实际收入分析`
 - Card 3 yellow panel title must be `收入分析`
 - Card 2 left card must feel editorially dense: prefer 4 bullets and enough copy to avoid large empty lower-half whitespace

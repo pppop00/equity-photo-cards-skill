@@ -115,7 +115,13 @@ LIMIT_CARD1_FOCUS_CHARS = 132
 LIMIT_CARD2_INDUSTRY_CHARS = 113
 LIMIT_CARD2_BG_BULLET_CHARS = 60
 LIMIT_CARD3_EXPLAINER_CHARS = 58
-LIMIT_CARD3_EXPLAINER_TOTAL_HEIGHT = 223
+# Yellow explainer panel: rounded rect ends at CARD3_EXPLAINER_PANEL_BOTTOM; bullets start at 1002.
+# CARD3_EXPLAINER_BOTTOM_INSET reserves space inside the panel so the last line does not sit on the bottom edge.
+CARD3_EXPLAINER_PANEL_BOTTOM = 1260
+CARD3_EXPLAINER_START_Y = 1002
+CARD3_EXPLAINER_BOTTOM_INSET = 16
+LIMIT_CARD3_EXPLAINER_TOTAL_HEIGHT = CARD3_EXPLAINER_PANEL_BOTTOM - CARD3_EXPLAINER_START_Y - CARD3_EXPLAINER_BOTTOM_INSET
+TEXT_COMPOSITE_PAD = 8  # matches draw_text(): 2 * pad where pad=4
 LIMIT_CARD4_NOW_BULLET_CHARS = 72
 LIMIT_CARD4_FUTURE_BULLET_CHARS = 62
 LIMIT_CARD4_JUDGEMENT_CHARS = 52
@@ -537,6 +543,25 @@ def draw_text(draw: ImageDraw.ImageDraw, xy: tuple[int, int], text: str, font_ob
     draw._image.alpha_composite(down, (xy[0] - pad, xy[1] - pad))
 
 
+def line_raster_height(draw: ImageDraw.ImageDraw, font_obj: ImageFont.FreeTypeFont, line: str) -> int:
+    """Pixel height of one draw_text() line (must match vertical advance in block())."""
+    if not clean(line):
+        return 0
+    pad = 4
+    scale = TEXT_RENDER_SCALE
+    size = font_obj.size
+    if _SINGLE_FONT_MODE:
+        bbox = font_obj.getbbox(line)
+        return max(1, bbox[3] - bbox[1]) + TEXT_COMPOSITE_PAD
+    max_y1 = 0
+    for ch in line:
+        cf = _char_font(ch, size)
+        hq_cf = ImageFont.truetype(cf.path, size=size * scale)
+        bb = hq_cf.getbbox(ch)
+        max_y1 = max(max_y1, bb[3])
+    return max(1, max_y1 // scale + 2 * pad)
+
+
 def block(
     draw: ImageDraw.ImageDraw,
     text: str,
@@ -551,9 +576,11 @@ def block(
     lines = wrap(draw, clean(text), font_obj, width)
     if max_lines is not None and len(lines) > max_lines:
         lines = lines[:max_lines]
-    for line in lines:
+    for i, line in enumerate(lines):
         draw_text(draw, (x, y), line, font_obj, fill)
-        y += font_obj.size + line_gap
+        y += line_raster_height(draw, font_obj, line)
+        if i < len(lines) - 1:
+            y += line_gap
     return y
 
 
@@ -1763,17 +1790,39 @@ def post_hashtags(data: ReportData) -> str:
     return " ".join(keyword_tags(data))
 
 
-def measure_block(draw: ImageDraw.ImageDraw, text: str, width: int, font_obj: ImageFont.FreeTypeFont, line_gap: int) -> int:
-    lines = wrap(draw, text, font_obj, width)
+def measure_block(
+    draw: ImageDraw.ImageDraw,
+    text: str,
+    width: int,
+    font_obj: ImageFont.FreeTypeFont,
+    line_gap: int,
+    max_lines: int | None = None,
+) -> int:
+    lines = wrap(draw, clean(text), font_obj, width)
+    if max_lines is not None and len(lines) > max_lines:
+        lines = lines[:max_lines]
     if not lines:
         return 0
-    return len(lines) * font_obj.size + (len(lines) - 1) * line_gap
+    total = 0
+    for i, line in enumerate(lines):
+        total += line_raster_height(draw, font_obj, line)
+        if i < len(lines) - 1:
+            total += line_gap
+    return total
 
 
-def measure_bullets(draw: ImageDraw.ImageDraw, items: list[str], width: int, font_obj: ImageFont.FreeTypeFont, line_gap: int, gap_after: int) -> int:
+def measure_bullets(
+    draw: ImageDraw.ImageDraw,
+    items: list[str],
+    width: int,
+    font_obj: ImageFont.FreeTypeFont,
+    line_gap: int,
+    gap_after: int,
+    max_lines_per_item: int | None = None,
+) -> int:
     total = 0
     for item in items:
-        total += measure_block(draw, item, width - 24, font_obj, line_gap)
+        total += measure_block(draw, item, width - 24, font_obj, line_gap, max_lines=max_lines_per_item)
         total += gap_after
     return total
 
@@ -1913,29 +1962,33 @@ def validate_report(data: ReportData, brand: str) -> None:
     ]:
         if not is_human_copy(text):
             issues.append(f"{label} must read like a human voice, not analyst template copy.")
-    if measure_block(draw, intro, 860, f(FONT_INTRO), 12) > 2 * FONT_INTRO + 12:
+    intro_font = f(FONT_INTRO)
+    if len(wrap(draw, clean(intro), intro_font, 860)) > 2:
         issues.append("Card 1 intro sentence exceeds 2 lines.")
     if has_bad_linebreak(intro, 860, f(FONT_INTRO), draw):
         issues.append("Card 1 intro sentence contains a punctuation-led line break.")
-    focus_height = measure_block(draw, focus, 860, f(FONT_PANEL_BODY), 12)
+    focus_font = f(FONT_PANEL_BODY)
+    focus_lines = wrap(draw, clean(focus), focus_font, 860)
     if len(focus) < 60:
         issues.append("Card 1 company-focus paragraph is too short.")
     if len(focus) > LIMIT_CARD1_FOCUS_CHARS:
         issues.append("Card 1 company-focus paragraph exceeds its character budget.")
-    if focus_height < 3 * FONT_PANEL_BODY + 2 * 12:
+    if len(focus_lines) < 3:
         issues.append("Card 1 company-focus paragraph leaves too much empty yellow-panel space.")
-    if focus_height > 7 * FONT_PANEL_BODY + 6 * 12:
+    if len(focus_lines) > 7:
         issues.append("Card 1 company-focus paragraph exceeds the allowed panel height.")
     if has_bad_linebreak(focus, 860, f(FONT_PANEL_BODY), draw):
         issues.append("Card 1 company-focus paragraph contains a punctuation-led line break.")
 
-    left_card_height = measure_bullets(draw, bg_points, 446, f(FONT_BULLET), 12, 24) + measure_block(draw, industry, 446, f(FONT_PANEL_BODY), 13)
+    left_card_height = measure_bullets(draw, bg_points, 446, f(FONT_BULLET), 12, 24, max_lines_per_item=4) + measure_block(
+        draw, industry, 446, f(FONT_PANEL_BODY), 13, max_lines=11
+    )
     if len(bg_points) != 4:
         issues.append("Card 2 must contain exactly 4 background bullets.")
     for point in bg_points:
         if not is_complete_copy(point):
             issues.append(f"Card 2 background bullet must be a complete sentence: {point}")
-        if measure_block(draw, point, 422, f(FONT_BULLET), 12) > 4 * FONT_BULLET + 3 * 12:
+        if len(wrap(draw, clean(point), f(FONT_BULLET), 422)) > 4:
             issues.append(f"Card 2 background bullet is too long: {point}")
         if has_bad_linebreak(point, 422, f(FONT_BULLET), draw):
             issues.append(f"Card 2 background bullet contains a punctuation-led line break: {point}")
@@ -1944,20 +1997,20 @@ def validate_report(data: ReportData, brand: str) -> None:
         issues.append("Card 2 industry paragraph is too short.")
     if len(industry) > LIMIT_CARD2_INDUSTRY_CHARS:
         issues.append("Card 2 industry paragraph exceeds its character budget.")
-    if measure_block(draw, industry, 446, f(FONT_PANEL_BODY), 13) > 11 * FONT_PANEL_BODY + 10 * 13:
+    if len(wrap(draw, clean(industry), f(FONT_PANEL_BODY), 446)) > 11:
         issues.append("Card 2 industry paragraph exceeds its section box.")
     if has_bad_linebreak(industry, 446, f(FONT_PANEL_BODY), draw):
         issues.append("Card 2 industry paragraph contains a punctuation-led line break.")
     if left_card_height < 360:
         issues.append("Card 2 left card is too sparse and leaves obvious whitespace.")
     conclusion = conclusion_block(data)
-    if measure_block(draw, conclusion, 300, f(FONT_CONCLUSION), 12) > 4 * FONT_CONCLUSION + 3 * 12:
+    if len(wrap(draw, clean(conclusion), f(FONT_CONCLUSION), 300)) > 4:
         issues.append("Card 2 conclusion exceeds its box.")
 
     if 710 < 438 + 4 * 56 + 28 + 20:
         issues.append("Card 3 metric cards are too close to the revenue rows.")
     explainer_points = revenue_explainer_points(data)
-    explainer_height = measure_bullets(draw, explainer_points, 820, f(FONT_BULLET), 12, 12)
+    explainer_height = measure_bullets(draw, explainer_points, 820, f(FONT_BULLET), 12, 12, max_lines_per_item=3)
     if explainer_height > LIMIT_CARD3_EXPLAINER_TOTAL_HEIGHT:
         issues.append("Card 3 explainer bullets exceed the yellow panel.")
     for point in explainer_points:
@@ -1968,8 +2021,8 @@ def validate_report(data: ReportData, brand: str) -> None:
         if has_bad_linebreak(point, 796, f(FONT_BULLET), draw):
             issues.append(f"Card 3 explainer bullet contains a punctuation-led line break: {point}")
 
-    left_height = measure_bullets(draw, left, 350, f(FONT_BULLET_COMPACT), 10, 18)
-    right_height = measure_bullets(draw, right, 368, f(FONT_BULLET_COMPACT), 10, 18)
+    left_height = measure_bullets(draw, left, 350, f(FONT_BULLET_COMPACT), 10, 18, max_lines_per_item=5)
+    right_height = measure_bullets(draw, right, 368, f(FONT_BULLET_COMPACT), 10, 18, max_lines_per_item=5)
     if sum(len(x) for x in left) < 90:
         issues.append("Card 4 left column is too sparse.")
     if sum(len(x) for x in right) < 90:
@@ -2018,9 +2071,9 @@ def validate_report(data: ReportData, brand: str) -> None:
     if has_bad_linebreak(judgement, 316, judgement_font, draw):
         issues.append("Card 4 judgement paragraph contains a punctuation-led line break.")
 
-    if measure_block(draw, brand_line, 760, f(52, True), 14) > 3 * 52 + 2 * 14:
+    if len(wrap(draw, clean(brand_line), f(52, True), 760)) > 3:
         issues.append("Card 5 main statement exceeds its allowed block.")
-    if measure_bullets(draw, brand_points, 820, f(FONT_BRAND_SUMMARY), 12, 22) > 210:
+    if measure_bullets(draw, brand_points, 820, f(FONT_BRAND_SUMMARY), 12, 22, max_lines_per_item=3) > 210:
         issues.append("Card 5 summary bullets exceed the yellow panel.")
     for point in brand_points:
         if not is_complete_copy(point):
@@ -2028,7 +2081,7 @@ def validate_report(data: ReportData, brand: str) -> None:
         if has_bad_linebreak(point, 796, f(FONT_BRAND_SUMMARY), draw):
             issues.append(f"Card 5 summary bullet contains a punctuation-led line break: {point}")
 
-    if measure_block(draw, title, 860, f(FONT_POST_TITLE, True), 16) > 2 * FONT_POST_TITLE + 16:
+    if len(wrap(draw, clean(title), f(FONT_POST_TITLE, True), 860)) > 2:
         issues.append("Card 6 title exceeds its allowed block.")
     if has_bad_linebreak(title, 860, f(FONT_POST_TITLE, True), draw):
         issues.append("Card 6 title contains a punctuation-led line break.")
@@ -2039,11 +2092,11 @@ def validate_report(data: ReportData, brand: str) -> None:
             issues.append(f"Card 6 content line must be a complete sentence without ellipsis: {line}")
         if not is_human_copy(line) and "真要看" not in line and "钱还在进" not in line:
             issues.append(f"Card 6 content line lacks a human voice: {line}")
-        if measure_block(draw, line, 860, f(FONT_POST_LINE), 14) > 2 * FONT_POST_LINE + 14:
+        if len(wrap(draw, clean(line), f(FONT_POST_LINE), 860)) > 2:
             issues.append(f"Card 6 content line is too long: {line}")
         if has_bad_linebreak(line, 860, f(FONT_POST_LINE), draw):
             issues.append(f"Card 6 content line contains a punctuation-led line break: {line}")
-    if measure_block(draw, tags, 860, f(FONT_POST_TAG), 12) > 4 * FONT_POST_TAG + 3 * 12:
+    if len(wrap(draw, clean(tags), f(FONT_POST_TAG), 860)) > 4:
         issues.append("Card 6 hashtags exceed their section.")
     if has_bad_linebreak(tags, 860, f(FONT_POST_TAG), draw):
         issues.append("Card 6 hashtags contain a punctuation-led line break.")
@@ -2226,9 +2279,9 @@ def card_3(data: ReportData) -> Image.Image:
         draw_text(d, (782, y - 6), f"{value:.1f} 亿{_CURRENCY_LABEL}", f(FONT_CHART_VALUE, True), TEXT)
     for idx, (label, value, color) in enumerate(rate_metrics(data)):
         metric(d, 108 + idx * 242, 710, 220, label, value, color)
-    d.rounded_rectangle((72, 896, 1008, 1225), radius=28, fill=PANEL)
+    d.rounded_rectangle((72, 896, 1008, CARD3_EXPLAINER_PANEL_BOTTOM), radius=28, fill=PANEL)
     draw_text(d, (108, 942), "收入分析", f(34, True), TEXT)
-    bullets(d, revenue_explainer_points(data), 108, 1002, 820, 3, 3, 12)
+    bullets(d, revenue_explainer_points(data), 108, CARD3_EXPLAINER_START_Y, 820, 3, 3, 12)
     footer(d, data)
     return img.convert("RGB")
 
