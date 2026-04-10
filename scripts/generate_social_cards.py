@@ -1051,10 +1051,13 @@ def yi(value: float) -> float:
 
 
 _CURRENCY_LABEL: str = "美元"
+# "millions": value is millions of reporting currency (yi = millions/100).
+# "yi": value is already 亿元人民币 (亿元); sankey / finance() use same scale.
+_MONEY_VALUE_SCALE: str = "millions"
 
 
 def set_currency_label(data: "ReportData") -> None:
-    global _CURRENCY_LABEL
+    global _CURRENCY_LABEL, _MONEY_VALUE_SCALE
     currency = str(get_nested(data.financial_data, "currency", default="USD")).upper()
     mapping = {
         "USD": "美元",
@@ -1068,12 +1071,30 @@ def set_currency_label(data: "ReportData") -> None:
         "GBP": "英镑",
     }
     _CURRENCY_LABEL = mapping.get(currency, "美元")
+    unit = str(get_nested(data.financial_data, "income_statement", "unit", default="")).lower()
+    # e.g. "billions CNY (亿元人民币)" — amounts are already in 亿元
+    _MONEY_VALUE_SCALE = (
+        "yi"
+        if ("亿元" in unit or "亿人民币" in unit) and "百万" not in unit and "万元" not in unit
+        else "millions"
+    )
 
 
 def money_text(value: float) -> str:
-    """Format millions of reporting currency for cards. yi = millions / 100 => 亿."""
+    """Format headline money: millions path uses yi = millions/100; 亿元-native uses value as 亿."""
+    global _MONEY_VALUE_SCALE
+    if _MONEY_VALUE_SCALE == "yi":
+        v = float(value)
+        av = abs(v)
+        if av >= 10000.0:
+            return f"{v / 10000.0:.2f} 万亿{_CURRENCY_LABEL}"
+        if av < 0.01:
+            wan = v * 10000.0
+            return f"{wan:.0f} 万{_CURRENCY_LABEL}"
+        if av < 0.1:
+            return f"{v:.2f} 亿{_CURRENCY_LABEL}"
+        return f"{v:.1f} 亿{_CURRENCY_LABEL}"
     y = yi(value)
-    # One decimal is wrong for small caps: 1.9M net -> 0.019亿 -> "0.0亿". Use 2 decimals in 0.01–0.1亿, 万 below.
     if y < 0.01:
         wan = value * 100.0
         return f"{wan:.0f} 万{_CURRENCY_LABEL}"
