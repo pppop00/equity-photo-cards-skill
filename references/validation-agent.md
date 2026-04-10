@@ -1,15 +1,16 @@
 # Validation Agent
 
-Run this validation pass after card slots have been planned and filled with copy, but before final image export. If any check fails, revise the failing slot copy or slot mapping and validate again until every check passes.
+Run this validation pass after card slots have been planned, filled with copy, and audited for hardcoded wording and logical consistency, but before final image export. If any check fails, revise the failing slot copy or slot mapping and validate again until every check passes.
 
 Validation belongs inside the generation loop:
 
 1. plan card slots
 2. write slot copy
-3. validate
-4. rewrite only the failing slot
-5. validate again
-6. export only after full pass
+3. audit hardcoded wording and logic
+4. validate
+5. rewrite only the failing slot
+6. validate again
+7. export only after full pass
 
 ## Required Checks
 
@@ -24,13 +25,19 @@ Validation belongs inside the generation loop:
 - Commas, periods, semicolons, colons, enumeration commas, and equivalent punctuation must remain attached to the previous line
 - Any line that starts with `，。；：、,.!?` or equivalent closing punctuation fails validation
 - Card 1 `公司看点` must use enough copy to avoid large empty yellow-panel space
+- Card 1 `公司看点` must also stay inside its explicit character budget
 - Card 2 `行业层面` must be a complete summarized paragraph, not a clipped fragment
+- Card 2 `行业层面` must stay inside its explicit character budget
+- Card 3 explainer bullets must stay inside both their per-bullet character budget and the yellow panel's total height budget
+- Card 3 title must be `实际收入分析`
+- Card 3 yellow panel title must be `收入分析`
 - Card 2 left card must feel editorially dense: prefer 4 bullets and enough copy to avoid large empty lower-half whitespace
 - Card 2, Card 4 judgement, Card 5 main statement, and Card 6 content lines must not use ellipses or half-sentences as a layout escape hatch
 - Any paragraph or bullet that is meant to be read as body copy must end as a complete Chinese sentence
 - Card 4 judgement, Card 5 main statement, and Card 6 content must sound like a smart human explaining the company, not like stiff analyst boilerplate
 - Card 4 left and right columns should be filled as much as possible without overflow
 - Card 4 left and right columns must hit a minimum occupied height; obvious dead air is a validation failure
+- Card 4 left and right columns must obey their per-bullet character budgets
 - Card 5 must not include `今天这家公司，特斯拉` or any equivalent preface line
 - Card 6 must include `title`, `content`, and `hashtags`
 - Card 6 content must contain exactly 4 bullet lines

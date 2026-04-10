@@ -11,8 +11,9 @@ This skill is not a generic image-generation workflow. It is a deterministic rep
 2. normalize the facts into a stable internal structure
 3. plan each card's content slots
 4. write publishable copy into those slots
-5. validate layout and rewrite until every card passes
-6. render the final 6 images
+5. audit hardcoded wording and logic before layout
+6. validate layout and rewrite until every card passes
+7. render the final 6 images
 
 The goal is that a new company HTML should normally flow through the same pipeline without adding a company-specific template. Code changes should only be needed when the upstream schema changes or when a truly new business-model pattern requires a new planner branch.
 
@@ -20,6 +21,7 @@ The goal is that a new company HTML should normally flow through the same pipeli
 
 - Workflow and slot schema: [references/workflow-spec.md](./references/workflow-spec.md)
 - Visual and layout rules: [references/design-spec.md](./references/design-spec.md)
+- Hardcode and logic audit policy: [references/hardcode-audit-agent.md](./references/hardcode-audit-agent.md)
 - Validation policy: [references/validation-agent.md](./references/validation-agent.md)
 - Renderer: [scripts/generate_social_cards.py](./scripts/generate_social_cards.py)
 - Validator: [scripts/validate_cards.py](./scripts/validate_cards.py)
@@ -33,8 +35,9 @@ Use this skill as:
 1. `HTML/JSON -> structured report facts`
 2. `structured report facts -> fixed card slot plan`
 3. `slot plan -> copy`
-4. `copy -> validation / rewrite loop`
-5. `validated copy -> exported cards`
+4. `copy -> hardcode / logic audit`
+5. `audited copy -> validation / rewrite loop`
+6. `validated copy -> exported cards`
 
 The important boundary is this:
 
@@ -42,6 +45,7 @@ The important boundary is this:
 - Card structure should live in the slot plan
 - Visual constraints should live in the design spec and validation rules
 - Industry tone should only influence framing and emphasis, not replace factual extraction
+- Unified voice is allowed; hardcoded body copy is not
 
 ## Required Workflow
 
@@ -98,6 +102,9 @@ The slot schema is defined in [references/workflow-spec.md](./references/workflo
 
 - Write copy slot by slot, not card by card in one pass
 - Use report facts first, thematic framing second
+- It is acceptable to standardize voice cues such as `说白了` or `别只看`, but the substance after that cue must come from the current report package
+- Do not reuse the same explanatory sentence across different companies unless it is a true fallback and source text is unavailable
+- Control slot length by explicit character budget first; do not rely on sentence count as the primary guardrail
 - Prefer complete Chinese sentences that sound publishable and human
 - Avoid dead analyst boilerplate and avoid empty editorial fluff
 - If a slot looks sparse, expand the factual explanation before shrinking fonts
@@ -105,10 +112,12 @@ The slot schema is defined in [references/workflow-spec.md](./references/workflo
 
 ### 6. Validation And Rewrite Loop
 
+- Run the hardcode and logic audit before layout validation
 - Run validation before final export
 - If any check fails, rewrite the slot copy and validate again
 - Do not accept a card simply because it renders without crashing
 - A card with weak density, clipped text, broken line wraps, or corpse-like prose is a failure
+- A slot that still reads like reusable template copy, or that contradicts the report facts, is also a failure
 
 Rewrite priority:
 

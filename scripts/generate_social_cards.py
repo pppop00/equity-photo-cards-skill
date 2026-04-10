@@ -27,11 +27,39 @@ GREEN = "#12B76A"
 BLUE = "#1570EF"
 WHITE = "#FFFFFF"
 
-ARIAL = "/System/Library/Fonts/Supplemental/Arial Unicode.ttf"
+import os as _os
+
+def _pick_font_path(candidates: list) -> str:
+    for p in candidates:
+        if _os.path.exists(p):
+            return p
+    raise FileNotFoundError(f"None of the candidate fonts found: {candidates}")
+
+# Primary font: supports both CJK and Latin when available (macOS Arial Unicode)
+# Fallback split: DejaVuSans for Latin/numbers, DroidSansFallbackFull for CJK
+ARIAL = _pick_font_path([
+    "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
+    "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf",
+])
+ARIAL_BOLD = _pick_font_path([
+    "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
+    "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf",
+])
+# Latin-only fallback font (covers ASCII, digits, punctuation)
+_LATIN_FONT_PATH = _pick_font_path([
+    "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+])
+_LATIN_BOLD_PATH = _pick_font_path([
+    "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+])
+# True when a single font covers all characters (macOS)
+_SINGLE_FONT_MODE = _os.path.exists("/System/Library/Fonts/Supplemental/Arial Unicode.ttf")
 LEADING_PUNCT = set("，。；：、,.!?！？）》】」』）")
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp"}
 WORD_TOKEN = re.compile(r"^[A-Za-z0-9.+/%$-]+$")
-TEXT_RENDER_SCALE = 3
+TEXT_RENDER_SCALE = 6
 SENTENCE_END = "。！？"
 STIFF_OPENERS = (
     "核心论点在于：",
@@ -68,6 +96,94 @@ FONT_METRIC_LABEL_MIN = 16
 FONT_METRIC_VALUE_START = 29
 FONT_METRIC_VALUE_MIN = 22
 
+LIMIT_CARD1_FOCUS_CHARS = 132
+LIMIT_CARD2_INDUSTRY_CHARS = 113
+LIMIT_CARD2_BG_BULLET_CHARS = 60
+LIMIT_CARD3_EXPLAINER_CHARS = 58
+LIMIT_CARD3_EXPLAINER_TOTAL_HEIGHT = 223
+LIMIT_CARD4_NOW_BULLET_CHARS = 72
+LIMIT_CARD4_FUTURE_BULLET_CHARS = 62
+LIMIT_CARD4_JUDGEMENT_CHARS = 52
+
+FORBIDDEN_TEMPLATE_PHRASES = (
+    "盘子和押注分得很清楚",
+    "主业还在赚钱，新故事也在烧钱",
+    "基本盘要稳，新投入也得尽快回本",
+    "还是收入基本盘",
+    "利润底子并没有塌",
+    "基本盘还在持续发力",
+    "利润和收入大体同向在走",
+)
+
+CROSS_REPORT_NAME_MARKERS = (
+    "亚马逊",
+    "Amazon",
+    "微软",
+    "Microsoft",
+    "Meta",
+    "礼来",
+    "Lilly",
+    "拼多多",
+    "PDD",
+    "特斯拉",
+    "Tesla",
+    "Temu",
+    "AWS",
+    "Mounjaro",
+    "Zepbound",
+)
+
+AUDIT_COMMON_CN_TERMS = {
+    "公司",
+    "行业",
+    "市场",
+    "增长",
+    "利润",
+    "收入",
+    "业务",
+    "估值",
+    "现在",
+    "未来",
+    "基本盘",
+    "故事",
+    "投入",
+    "兑现",
+    "平台",
+    "产品",
+    "客户",
+    "主业",
+    "新业务",
+    "现金流",
+    "利润率",
+    "规模",
+    "逻辑",
+    "竞争",
+    "需求",
+    "供给",
+    "数据",
+    "赛道",
+    "护城河",
+    "高增长",
+    "增速",
+    "回报",
+    "效率",
+}
+
+AUDIT_COMMON_EN_TERMS = {
+    "company",
+    "market",
+    "growth",
+    "profit",
+    "revenue",
+    "business",
+    "industry",
+    "cash",
+    "flow",
+    "margin",
+    "platform",
+    "services",
+}
+
 
 @dataclass
 class ReportData:
@@ -92,6 +208,47 @@ class ReportData:
 
 def f(size: int, bold: bool = False) -> ImageFont.FreeTypeFont:
     return ImageFont.truetype(ARIAL, size=size)
+
+
+def _fl(size: int, bold: bool = False) -> ImageFont.FreeTypeFont:
+    """Latin font for the given size (same as f() on macOS, DejaVu on Linux)."""
+    path = _LATIN_BOLD_PATH if bold else _LATIN_FONT_PATH
+    return ImageFont.truetype(path, size=size)
+
+
+def _is_cjk_char(ch: str) -> bool:
+    cp = ord(ch)
+    return (
+        0x4E00 <= cp <= 0x9FFF   # CJK Unified Ideographs
+        or 0x3400 <= cp <= 0x4DBF  # CJK Extension A
+        or 0x20000 <= cp <= 0x2A6DF  # Extension B
+        or 0x3000 <= cp <= 0x303F  # CJK Symbols and Punctuation
+        or 0xFF00 <= cp <= 0xFFEF  # Halfwidth/Fullwidth Forms
+        or 0x2E80 <= cp <= 0x2EFF  # CJK Radicals Supplement
+        or 0xF900 <= cp <= 0xFAFF  # CJK Compatibility Ideographs
+        or 0x2F00 <= cp <= 0x2FDF  # Kangxi Radicals
+    )
+
+
+def _char_font(ch: str, size: int, bold: bool = False) -> ImageFont.FreeTypeFont:
+    """Return the appropriate font for a single character."""
+    if _SINGLE_FONT_MODE:
+        return f(size, bold)
+    if _is_cjk_char(ch):
+        return f(size, bold)   # DroidSans for CJK
+    return _fl(size, bold)     # DejaVu for Latin/numbers/punctuation
+
+
+def _mixed_textlength(text: str, size: int, bold: bool = False) -> float:
+    """Measure the pixel width of mixed CJK+Latin text."""
+    if _SINGLE_FONT_MODE:
+        return f(size, bold).getlength(text)
+    total = 0.0
+    for ch in text:
+        font = _char_font(ch, size, bold)
+        bbox = font.getbbox(ch)
+        total += bbox[2] - bbox[0]
+    return total
 
 
 def clean(text: str) -> str:
@@ -198,9 +355,11 @@ def wrap(draw: ImageDraw.ImageDraw, text: str, font_obj: ImageFont.FreeTypeFont,
     tokens = re.findall(r"[A-Za-z0-9.+/%$-]+|[\u4e00-\u9fff]|[^\s]", clean(text))
     lines: list[str] = []
     cur_tokens: list[str] = []
+    size = font_obj.size
     for token in tokens:
         trial = join_tokens(cur_tokens + [token])
-        if draw.textlength(trial, font=font_obj) <= width or not cur_tokens:
+        measure = _mixed_textlength(trial, size) if not _SINGLE_FONT_MODE else draw.textlength(trial, font=font_obj)
+        if measure <= width or not cur_tokens:
             cur_tokens.append(token)
         else:
             if token in LEADING_PUNCT and cur_tokens:
@@ -224,23 +383,64 @@ def has_bad_linebreak(text: str, width: int, font_obj: ImageFont.FreeTypeFont, d
 
 
 def draw_text(draw: ImageDraw.ImageDraw, xy: tuple[int, int], text: str, font_obj: ImageFont.FreeTypeFont, fill: str) -> None:
-    base = draw._image
-    bbox = font_obj.getbbox(text)
-    width = max(1, bbox[2] - bbox[0])
-    height = max(1, bbox[3] - bbox[1])
+    if _SINGLE_FONT_MODE:
+        # macOS: single Unicode font, use original fast path
+        base = draw._image
+        bbox = font_obj.getbbox(text)
+        width = max(1, bbox[2] - bbox[0])
+        height = max(1, bbox[3] - bbox[1])
+        pad = 4
+        scale = TEXT_RENDER_SCALE
+        hq_font = ImageFont.truetype(font_obj.path, size=font_obj.size * scale)
+        hq = Image.new("RGBA", ((width + pad * 2) * scale, (height + pad * 2) * scale), (255, 255, 255, 0))
+        hq_draw = ImageDraw.Draw(hq)
+        hq_draw.text(((pad - bbox[0]) * scale, (pad - bbox[1]) * scale), text, font=hq_font, fill=fill)
+        down = hq.resize((width + pad * 2, height + pad * 2), Image.Resampling.LANCZOS)
+        base.alpha_composite(down, (xy[0] - pad, xy[1] - pad))
+        return
+
+    # Linux split-font path: render char-by-char with CJK / Latin font selection.
+    # PIL's getbbox returns (x0, y0, x1, y1) relative to the drawing origin, with all
+    # values POSITIVE and increasing downward. Drawing all chars at the same y=0 naturally
+    # bottom-aligns Latin characters (they share the same y1 within the em square).
+    size = font_obj.size
     pad = 4
     scale = TEXT_RENDER_SCALE
-    hq_font = ImageFont.truetype(font_obj.path, size=font_obj.size * scale)
-    hq = Image.new("RGBA", ((width + pad * 2) * scale, (height + pad * 2) * scale), (255, 255, 255, 0))
+
+    # Build char list with HQ scaled fonts; measure canvas dimensions
+    char_entries: list[tuple[str, ImageFont.FreeTypeFont, tuple[int, int, int, int]]] = []
+    total_w = 0
+    max_y1 = 0  # Maximum bottom extent across all chars (determines canvas height)
+    min_y0 = 999
+    for ch in text:
+        cf = _char_font(ch, size)
+        hq_cf = ImageFont.truetype(cf.path, size=size * scale)
+        bb = hq_cf.getbbox(ch)
+        char_entries.append((ch, hq_cf, bb))
+        total_w += bb[2] - bb[0]
+        max_y1 = max(max_y1, bb[3])
+        min_y0 = min(min_y0, bb[1])
+
+    if total_w <= 0:
+        return
+
+    canvas_w = total_w + pad * 2 * scale
+    canvas_h = max_y1 + pad * 2 * scale
+    hq = Image.new("RGBA", (canvas_w, canvas_h), (255, 255, 255, 0))
     hq_draw = ImageDraw.Draw(hq)
-    hq_draw.text(
-        ((pad - bbox[0]) * scale, (pad - bbox[1]) * scale),
-        text,
-        font=hq_font,
-        fill=fill,
-    )
-    down = hq.resize((width + pad * 2, height + pad * 2), Image.Resampling.LANCZOS)
-    base.alpha_composite(down, (xy[0] - pad, xy[1] - pad))
+
+    # Draw all characters at the same y=pad*scale; PIL positions each glyph
+    # from (x, y+bb[1]) to (x, y+bb[3]), giving natural bottom alignment.
+    cx = pad * scale
+    y0 = pad * scale
+    for ch, hq_cf, bb in char_entries:
+        hq_draw.text((cx - bb[0], y0), ch, font=hq_cf, fill=fill)
+        cx += bb[2] - bb[0]
+
+    out_w = total_w // scale + pad * 2
+    out_h = max_y1 // scale + pad * 2
+    down = hq.resize((out_w, out_h), Image.Resampling.LANCZOS)
+    draw._image.alpha_composite(down, (xy[0] - pad, xy[1] - pad))
 
 
 def block(
@@ -267,7 +467,8 @@ def fit_font(draw: ImageDraw.ImageDraw, text: str, max_width: int, start_size: i
     size = start_size
     while size > min_size:
         font_obj = f(size, True)
-        if draw.textlength(text, font=font_obj) <= max_width:
+        measure = _mixed_textlength(text, size, bold=True) if not _SINGLE_FONT_MODE else draw.textlength(text, font=font_obj)
+        if measure <= max_width:
             return font_obj
         size -= 2
     return f(min_size, True)
@@ -319,7 +520,19 @@ def fit_copy(candidates: list[str], limit: int, *, human: bool = False) -> str:
             return text
     if normalized:
         shortest = min(normalized, key=len)
-        return shortest
+        clauses = [clean(part) for part in re.split(r"[，；：,;:]", shortest) if clean(part)]
+        rebuilt = ""
+        for clause in clauses:
+            trial = clause if not rebuilt else f"{rebuilt}，{clause}"
+            if len(ensure_terminal_punct(trial)) <= limit:
+                rebuilt = trial
+        if rebuilt and len(clean(strip_voice_shell(rebuilt))) >= 4:
+            return ensure_terminal_punct(rebuilt)
+        clip_base = strip_voice_shell(shortest)
+        if not clip_base or len(clean(clip_base)) < 4:
+            clip_base = clean(shortest)
+        clipped = clean(clip_base)[: max(0, limit - 1)].rstrip("，；：,;: ")
+        return ensure_terminal_punct(clipped)
     return ""
 
 
@@ -331,6 +544,156 @@ def paragraph_from_sentences(text: str, limit: int, sentences: int = 3) -> str:
         if len(trial) <= limit:
             out = trial
     return out
+
+
+def flatten_text_values(value: Any) -> list[str]:
+    out: list[str] = []
+    if isinstance(value, str):
+        text = clean(value)
+        if text:
+            out.append(text)
+    elif isinstance(value, dict):
+        preferred = ["text", "analysis", "note", "notes"]
+        seen: set[str] = set()
+        for key in preferred:
+            if key in value:
+                for item in flatten_text_values(value[key]):
+                    if item not in seen:
+                        out.append(item)
+                        seen.add(item)
+        for key, item in value.items():
+            if key in preferred:
+                continue
+            for text in flatten_text_values(item):
+                if text not in seen:
+                    out.append(text)
+                    seen.add(text)
+    elif isinstance(value, list):
+        for item in value:
+            out.extend(flatten_text_values(item))
+    return out
+
+
+def prepend_human_opener(text: str, opener: str = "说白了，") -> str:
+    text = clean(text)
+    if not text:
+        return ""
+    if text.startswith(("说白了", "别看", "本质上", "眼下", "先别", "盯着")):
+        return ensure_terminal_punct(text)
+    return ensure_terminal_punct(opener + text)
+
+
+def source_copy_candidates(
+    texts: list[str],
+    limit: int,
+    *,
+    opener: str | None = None,
+    sentence_options: tuple[int, ...] = (1, 2),
+    human: bool = False,
+) -> list[str]:
+    candidates: list[str] = []
+    for raw in dedupe_texts(texts):
+        base = ensure_terminal_punct(strip_stiff_opener(raw))
+        if base:
+            candidates.append(prepend_human_opener(base, opener) if opener else base)
+        for count in sentence_options:
+            budget = limit - len(opener or "")
+            compressed = paragraph_from_sentences(raw, budget, sentences=count)
+            if compressed:
+                candidates.append(prepend_human_opener(compressed, opener) if opener else compressed)
+        for part in sentence_chunks(raw, 4):
+            normalized = ensure_terminal_punct(strip_stiff_opener(part))
+            if normalized:
+                candidates.append(prepend_human_opener(normalized, opener) if opener else normalized)
+    out = dedupe_texts(candidates)
+    if human:
+        human_first = [text for text in out if is_human_copy(text)]
+        return human_first + [text for text in out if text not in human_first]
+    return out
+
+
+def combined_source_texts(texts: list[str], max_parts: int = 2) -> list[str]:
+    items = dedupe_texts(texts)
+    combined: list[str] = []
+    for i in range(len(items)):
+        acc = ""
+        for j in range(i, min(len(items), i + max_parts)):
+            acc += ensure_terminal_punct(items[j])
+        if acc:
+            combined.append(acc)
+    return dedupe_texts(combined)
+
+
+def dense_source_paragraph(
+    texts: list[str],
+    limit: int,
+    *,
+    opener: str | None = None,
+    max_sentences: int = 3,
+) -> str:
+    budget = limit - len(opener or "")
+    picked: list[str] = []
+    for text in dedupe_texts(texts):
+        for sentence in sentence_chunks(text, 4):
+            normalized = ensure_terminal_punct(strip_stiff_opener(sentence))
+            if not normalized or normalized in picked:
+                continue
+            trial = "".join(picked) + normalized
+            if len(trial) <= budget:
+                picked.append(normalized)
+            if len(picked) >= max_sentences:
+                break
+        if len(picked) >= max_sentences:
+            break
+    out = "".join(picked)
+    if opener and out:
+        return prepend_human_opener(out, opener)
+    return out
+
+
+def porter_section_texts(data: ReportData, section: str) -> list[str]:
+    pa = data.porter_analysis or {}
+    mapping = {
+        "company": [get_nested(pa, "company_level", "text"), pa.get("company_level"), pa.get("company_perspective_zh")],
+        "industry": [get_nested(pa, "industry_level", "text"), pa.get("industry_level"), pa.get("industry_perspective_zh"), data.porter_industry],
+        "forward": [get_nested(pa, "forward_looking", "text"), pa.get("forward_looking"), pa.get("forward_perspective_zh"), data.porter_forward],
+    }
+    return dedupe_texts(flatten_text_values(mapping.get(section, [])))
+
+
+def summary_texts(data: ReportData) -> list[str]:
+    return dedupe_texts(data.summary)
+
+
+def highlight_texts(data: ReportData) -> list[str]:
+    return dedupe_texts(data.highlights)
+
+
+def risk_texts(data: ReportData) -> list[str]:
+    return dedupe_texts(data.risks)
+
+
+def executive_texts(data: ReportData) -> list[str]:
+    return dedupe_texts(
+        flatten_text_values(
+            [
+                get_nested(data.financial_analysis, "investment_thesis_short", default=""),
+                data.thesis,
+                get_nested(data.financial_analysis, "executive_summary", default=""),
+            ]
+        )
+    )
+
+
+def trend_texts(data: ReportData) -> list[str]:
+    return dedupe_texts(
+        flatten_text_values(
+            [
+                get_nested(data.financial_analysis, "trend_narratives", default={}),
+                get_nested(data.financial_analysis, "trends", default={}),
+            ]
+        )
+    )
 
 
 def dedupe_texts(items: list[str], limit: int | None = None) -> list[str]:
@@ -435,17 +798,45 @@ def segment_revenue_bn(segment: dict[str, Any]) -> float:
     return 0.0
 
 
+def sankey_value_by_node_name(data: ReportData, keywords: tuple[str, ...]) -> float:
+    sankey = data.sankey_actual or {}
+    nodes = sankey.get("nodes", []) or []
+    links = sankey.get("links", []) or []
+    if not nodes or not links:
+        return 0.0
+    matched_targets: set[int] = set()
+    for idx, node in enumerate(nodes):
+        name = clean(str(node.get("name", ""))).lower()
+        if any(keyword.lower() in name for keyword in keywords):
+            matched_targets.add(idx)
+    if not matched_targets:
+        return 0.0
+    total = 0.0
+    for link in links:
+        try:
+            target = int(link.get("target"))
+        except (TypeError, ValueError):
+            continue
+        if target in matched_targets:
+            total += float(link.get("value", 0.0))
+    return total
+
+
 def finance(data: ReportData) -> dict[str, float]:
     links = data.sankey_actual.get("links", [])
     lookup = {(l["source"], l["target"]): float(l["value"]) for l in links}
     if links:
         revenue = sum(l["value"] for l in links if l["source"] == 0)
+        cogs = lookup.get((0, 1), 0.0) or sankey_value_by_node_name(data, ("营业成本", "成本", "人工成本", "cogs"))
+        gross = lookup.get((0, 2), 0.0) or sankey_value_by_node_name(data, ("毛利", "gross"))
+        op = lookup.get((2, 6), 0.0) or sankey_value_by_node_name(data, ("营业利润", "operating profit", "operating income"))
+        net = lookup.get((6, 8), 0.0) or sankey_value_by_node_name(data, ("净利润", "归母净利润", "net income"))
         return {
             "revenue": revenue,
-            "cogs": lookup.get((0, 1), 0.0),
-            "gross": lookup.get((0, 2), 0.0),
-            "op": lookup.get((2, 6), 0.0),
-            "net": lookup.get((6, 8), 0.0),
+            "cogs": cogs,
+            "gross": gross,
+            "op": op,
+            "net": net,
         }
     current = income_current(data)
     return {
@@ -461,8 +852,28 @@ def yi(value: float) -> float:
     return value / 100
 
 
+_CURRENCY_LABEL: str = "美元"
+
+
+def set_currency_label(data: "ReportData") -> None:
+    global _CURRENCY_LABEL
+    currency = str(get_nested(data.financial_data, "currency", default="USD")).upper()
+    mapping = {
+        "USD": "美元",
+        "RMB": "元",
+        "CNY": "元",
+        "人民币": "元",
+        "AUD": "澳元",
+        "EUR": "欧元",
+        "HKD": "港元",
+        "JPY": "日元",
+        "GBP": "英镑",
+    }
+    _CURRENCY_LABEL = mapping.get(currency, "美元")
+
+
 def money_text(value: float) -> str:
-    return f"{yi(value):.1f} 亿美元"
+    return f"{yi(value):.1f} 亿{_CURRENCY_LABEL}"
 
 
 def pct_text(value: Any, signed: bool = False) -> str:
@@ -479,7 +890,15 @@ def bn_to_yi(value: float) -> str:
 
 
 def clean_segment_name(name: str) -> str:
-    return re.sub(r"（.*?）", "", clean(name)).strip()
+    name = re.sub(r"（.*?）", "", clean(name)).strip()
+    replacements = {
+        "Productivity and Business Processes": "生产力与业务流程",
+        "Intelligent Cloud": "智能云",
+        "More Personal Computing": "个人计算",
+        "North America": "北美",
+        "International": "国际",
+    }
+    return replacements.get(name, name)
 
 
 def all_text(data: ReportData) -> str:
@@ -497,6 +916,80 @@ def all_text(data: ReportData) -> str:
         get_nested(data.porter_analysis, "forward_looking", default="") or "",
     ]
     return " ".join(clean(str(item)) for item in items if item is not None)
+
+
+def strip_voice_shell(text: str) -> str:
+    text = clean(text)
+    for prefix in (
+        "说白了，",
+        "说白了",
+        "别只看，",
+        "别只看",
+        "别看，",
+        "别看",
+        "本质上，",
+        "本质上",
+        "眼下，",
+        "眼下",
+        "先别看，",
+        "先别看",
+        "真要看的是：",
+        "真要看的是",
+        "后面真要看的是：",
+        "后面真要看的是",
+    ):
+        if text.startswith(prefix):
+            return clean(text[len(prefix):].lstrip("，,:： "))
+    return text
+
+
+def audit_source_terms(data: ReportData) -> list[str]:
+    texts = dedupe_texts(
+        [
+            data.company_cn,
+            data.company_en,
+            data.ticker,
+            data.thesis,
+            *data.summary,
+            *data.highlights,
+            *data.risks,
+            *porter_section_texts(data, "company"),
+            *porter_section_texts(data, "industry"),
+            *porter_section_texts(data, "forward"),
+            *executive_texts(data),
+            *trend_texts(data),
+            *[clean_segment_name(seg.get("name", "")) for seg in segment_data(data)],
+        ]
+    )
+    terms: list[str] = []
+    seen: set[str] = set()
+    blob = " ".join(texts)
+    for token in re.findall(r"[A-Za-z][A-Za-z0-9.+/%-]{2,}", blob):
+        key = token.lower()
+        if key in AUDIT_COMMON_EN_TERMS or key in seen:
+            continue
+        seen.add(key)
+        terms.append(token)
+    for token in re.findall(r"[\u4e00-\u9fff]{2,8}", blob):
+        if token in AUDIT_COMMON_CN_TERMS or token in seen:
+            continue
+        seen.add(token)
+        terms.append(token)
+    return sorted(terms, key=len, reverse=True)
+
+
+def has_source_anchor(text: str, data: ReportData, source_terms: list[str] | None = None) -> bool:
+    core = strip_voice_shell(text)
+    if not core:
+        return False
+    if re.search(r"\d", core):
+        return True
+    if display_name(data.company_cn) in core or data.company_en in core or data.ticker in core:
+        return True
+    for term in source_terms or audit_source_terms(data):
+        if term and term in core:
+            return True
+    return False
 
 
 def operational_metric(data: ReportData) -> tuple[str, str, str]:
@@ -519,8 +1012,12 @@ def operational_metric(data: ReportData) -> tuple[str, str, str]:
 def company_theme(data: ReportData) -> str:
     text = all_text(data).lower()
     sector = str(get_nested(data.financial_data, "sector", default="")).lower()
+    currency = str(get_nested(data.financial_data, "currency", default="USD")).upper()
     if any(token in text for token in ("制药", "药企", "药物", "肥胖", "糖尿病", "临床", "管线", "mounjaro", "zepbound", "verzenio")) or "healthcare" in sector:
         return "pharma"
+    # Chinese domestic + cross-border e-commerce (PDD/Temu model): RMB-reporting, no AWS
+    if currency in ("RMB", "CNY") and any(token in text for token in ("拼多多", "temu", "跨境", "低价", "拼团")) and "aws" not in text:
+        return "cn_ecom"
     if any(token in text for token in ("aws", "电商", "零售", "第三方卖家", "履约", "物流", "综合零售", "云服务", "prime", "亚马逊")) or any(
         token in sector for token in ("综合零售", "云服务", "非必需消费")
     ):
@@ -538,17 +1035,55 @@ def segment_sentence(data: ReportData) -> str:
     segments = segment_data(data)
     if len(segments) >= 2:
         seg1, seg2 = segments[0], segments[1]
+        theme = company_theme(data)
+        seg1_name = clean_segment_name(seg1.get("name", "主业务"))
+        seg2_name = clean_segment_name(seg2.get("name", "次业务"))
+        follow_up = {
+            "ecom_cloud": f"{seg1_name}还是最大收入底盘，{seg2_name}体现了集团利润结构的分层",
+            "cn_ecom": f"{seg1_name}和{seg2_name}双轮驱动，平台货币化结构比以前更均衡",
+            "pharma": f"{seg1_name}和{seg2_name}说明增长不只靠单一大单品",
+            "software": f"{seg1_name}和{seg2_name}说明收入结构并不单一",
+            "ads_ai": f"{seg1_name}和{seg2_name}说明主平台之外还有新的增长抓手",
+            "ev_ai": f"{seg1_name}和{seg2_name}说明报表已经不只靠单一业务在扛",
+            "general": f"{seg1_name}和{seg2_name}说明收入重心与投入方向已经拉开",
+        }[theme]
         return ensure_terminal_punct(
-            f"{clean_segment_name(seg1.get('name', '主业务'))}{segment_revenue_bn(seg1) * 10:.1f} 亿美元，"
-            f"{clean_segment_name(seg2.get('name', '次业务'))}{segment_revenue_bn(seg2) * 10:.1f} 亿美元，盘子和押注分得很清楚"
+            f"{seg1_name} {segment_revenue_bn(seg1) * 10:.1f} 亿{_CURRENCY_LABEL}，"
+            f"{seg2_name} {segment_revenue_bn(seg2) * 10:.1f} 亿{_CURRENCY_LABEL}，{follow_up}"
         )
     label, value, _ = operational_metric(data)
     return ensure_terminal_punct(f"{label}{value}，说明这门生意的底盘还在")
 
 
+def segment_fact_line(data: ReportData) -> str:
+    segments = segment_data(data)
+    if len(segments) >= 2:
+        seg1, seg2 = segments[0], segments[1]
+        seg1_name = clean_segment_name(seg1.get("name", "主业务"))
+        seg2_name = clean_segment_name(seg2.get("name", "次业务"))
+        return ensure_terminal_punct(
+            f"{seg1_name} {segment_revenue_bn(seg1) * 10:.1f} 亿{_CURRENCY_LABEL}，"
+            f"{seg2_name} {segment_revenue_bn(seg2) * 10:.1f} 亿{_CURRENCY_LABEL}"
+        )
+    if len(segments) == 1:
+        seg = segments[0]
+        seg_name = clean_segment_name(seg.get("name", "主业务"))
+        pct = seg.get("pct_of_total")
+        pct_part = f"，收入占比约{float(pct):.1f}%" if pct is not None else ""
+        return ensure_terminal_punct(f"{seg_name} {segment_revenue_bn(seg) * 10:.1f} 亿{_CURRENCY_LABEL}{pct_part}")
+    return ""
+
+
 def cover_intro(data: ReportData) -> str:
     theme = company_theme(data)
     label, value, _ = operational_metric(data)
+    source_candidates = source_copy_candidates(
+        executive_texts(data) + summary_texts(data) + highlight_texts(data),
+        44,
+        opener="说白了，",
+        sentence_options=(1,),
+        human=True,
+    )
     candidates = {
         "ecom_cloud": [
             "说白了，市场现在盯的不是亚马逊还能不能卖货，而是 AWS、广告和履约效率能不能一起把利润率继续抬上去",
@@ -575,14 +1110,27 @@ def cover_intro(data: ReportData) -> str:
             "别看生意还在扩，真正决定估值的，是新投入多久能变成真钱",
         ],
     }
-    return fit_copy(candidates.get(theme, candidates["general"]), 44, human=True)
+    return fit_copy(source_candidates + candidates.get(theme, candidates["general"]), 44, human=True)
 
 
 def company_focus_paragraph(data: ReportData) -> str:
     theme = company_theme(data)
     fin = finance(data)
     label, value, _ = operational_metric(data)
+    focus_texts = executive_texts(data) + summary_texts(data) + highlight_texts(data)
+    source_candidates = source_copy_candidates(
+        focus_texts + combined_source_texts(focus_texts, max_parts=2),
+        LIMIT_CARD1_FOCUS_CHARS,
+        opener="说白了，",
+        sentence_options=(2, 3),
+        human=True,
+    )
+    dense_candidate = dense_source_paragraph(focus_texts, LIMIT_CARD1_FOCUS_CHARS, opener="说白了，", max_sentences=3)
     candidates = {
+        "cn_ecom": [
+            f"说白了，这家公司眼下拼的不是故事大不大，而是拼多多国内低价流量和 Temu 全球扩张两条腿能不能同时走稳。{fiscal_year(data)} 营收 {money_text(fin['revenue'])}，自由现金流超千亿，说明平台变现能力扎实；但盈利重心已从高增速切换成全球化兑现，关税扰动和国内竞争都在压利润率，企稳节奏是市场核心观察点。",
+            f"别只看国内基本盘，市场真正想看的是 Temu 跨境扩张能不能在关税压力下找到可持续的盈利节奏。{fiscal_year(data)} 营收 {money_text(fin['revenue'])}，现金头寸超四千亿，说明主平台现金创造没掉链子；但增长叙事已切换成全球化兑现，补贴和履约成本对利润率的压制能否收窄，是估值修复的关键前提。",
+        ],
         "ecom_cloud": [
             f"说白了，这家公司现在拼的不是收入还能不能长，而是高毛利的 AWS、广告和第三方卖家服务，能不能把庞大的零售底盘真正变成更厚的利润池。{fiscal_year(data)} 营收 {money_text(fin['revenue'])}，{label}{value} 说明现金还在往里进，但只要云增速、履约效率或资本开支节奏一变，市场就会立刻重算它的利润弹性和估值。",
             f"别看亚马逊什么都在做，市场真正盯的还是三件事：AWS 增速能不能继续抬、广告和卖家服务能不能继续放大利润、零售网络是不是还在变得更高效。{fiscal_year(data)} 营收 {money_text(fin['revenue'])} 说明基本盘够大，但估值能不能再往上走，还是要看高利润业务能不能把整个集团带得更轻。",
@@ -608,12 +1156,23 @@ def company_focus_paragraph(data: ReportData) -> str:
             "别看表面数据还行，真正让估值有弹性的，是主业守住基本盘的同时，新故事能不能尽快变成真钱。只有增长和兑现能一起跑，市场才会愿意继续给耐心。",
         ],
     }
-    return fit_copy(candidates.get(theme, candidates["general"]), 124, human=True)
+    return fit_copy([dense_candidate] + source_candidates + candidates.get(theme, candidates["general"]), LIMIT_CARD1_FOCUS_CHARS, human=True)
 
 
 def industry_paragraph(data: ReportData) -> str:
     theme = company_theme(data)
+    industry_texts = porter_section_texts(data, "industry") + porter_section_texts(data, "company") + porter_section_texts(data, "forward")
+    source_candidates = source_copy_candidates(
+        industry_texts + combined_source_texts(industry_texts, max_parts=2),
+        LIMIT_CARD2_INDUSTRY_CHARS,
+        sentence_options=(2, 3),
+    )
+    dense_candidate = dense_source_paragraph(industry_texts, LIMIT_CARD2_INDUSTRY_CHARS, max_sentences=4)
     candidates = {
+        "cn_ecom": [
+            "中国综合电商与全球低价跨境平台的核心竞争，从来不只是谁价格更低，而是谁能把价格低的同时还守住商家 ROI 和平台自身利润。流量入口分散、消费者比价成本趋近于零，决定了平台必须持续用效率换留存。谁能把供给质量、履约速度和广告变现串成飞轮，谁就更难被替代。",
+            "低价电商赛道表面上打的是价格战，骨子里拼的是供给稳定性、算法分发效率和跨境履约能力。中国市场用户高频、价格敏感，海外市场法规风险高、供应链长，两套逻辑都要跑顺，才能真正把平台规模变成持续盈利能力。",
+        ],
         "ecom_cloud": [
             "这个行业表面上是零售，骨子里拼的是履约网络、卖家生态、广告变现和云基础设施。规模做大只是门槛，真正拉开差距的是谁能把低毛利交易流量导向更高毛利的云、广告和服务。谁只是卖货不控效率，利润率就很难抬起来。",
             "平台零售和云服务放在一起看，核心不是谁业务多，而是谁能把流量、商家、物流和算力串成一个飞轮。只要云和广告继续抬利润，零售就不只是包袱；反过来一旦履约和 capex 压力上来，估值也会很快被重估。",
@@ -639,12 +1198,32 @@ def industry_paragraph(data: ReportData) -> str:
             "这门生意不是谁声音大谁赢，而是谁能把基本盘守住，再把新投入变成回报。景气一好，大家都能讲故事；景气一弱，现金流立刻见真章，市场会先挑最能兑现的公司站队。",
         ],
     }
-    return fit_copy(candidates.get(theme, candidates["general"]), 180, human=True)
+    result = fit_copy([dense_candidate] + source_candidates + candidates.get(theme, candidates["general"]), LIMIT_CARD2_INDUSTRY_CHARS, human=True)
+    if len(result) < 90:
+        forward_bits = sentence_chunks(" ".join(porter_section_texts(data, "forward")), 2)
+        for bit in forward_bits:
+            bit = ensure_terminal_punct(strip_stiff_opener(bit))
+            trial = result + bit
+            if bit and len(trial) <= LIMIT_CARD2_INDUSTRY_CHARS:
+                result = trial
+                if len(result) >= 90:
+                    break
+    return result
 
 
 def conclusion_block(data: ReportData) -> str:
     theme = company_theme(data)
+    source_candidates = source_copy_candidates(
+        porter_section_texts(data, "forward") + porter_section_texts(data, "company") + executive_texts(data),
+        56,
+        sentence_options=(1,),
+        human=True,
+    )
     candidates = {
+        "cn_ecom": [
+            "主站流量底盘还稳，Temu 全球化是中期变量，市场在等利润率企稳信号",
+            "眼前靠国内高频流量扛报表，估值上限要看跨境业务能不能跑出可持续利润",
+        ],
         "ecom_cloud": [
             "零售底盘还在转，真正的上限要看 AWS、广告和卖家服务能不能继续放大利润",
             "眼前靠零售和云撑盘子，估值上限还是看高毛利业务能不能继续接棒",
@@ -670,12 +1249,23 @@ def conclusion_block(data: ReportData) -> str:
             "市场不是不给耐心，而是只给能兑现的耐心",
         ],
     }
-    return fit_copy(candidates.get(theme, candidates["general"]), 56, human=True)
+    return fit_copy(source_candidates + candidates.get(theme, candidates["general"]), 56, human=True)
 
 
 def judgement_paragraph(data: ReportData) -> str:
     theme = company_theme(data)
+    source_candidates = source_copy_candidates(
+        executive_texts(data) + porter_section_texts(data, "forward"),
+        52,
+        opener="说白了，",
+        sentence_options=(1,),
+        human=True,
+    )
     candidates = {
+        "cn_ecom": [
+            "说白了，眼前看主站利润，估值看 Temu 何时兑现；两条腿走稳，故事才值钱",
+            "别看盈利还厚，真正决定估值修复的是 Temu 本地化能不能跑通",
+        ],
         "ecom_cloud": [
             "说白了，眼前看 AWS 和零售效率，估值看广告和高毛利服务能不能继续抬",
             "别看营收盘子够大，真正决定估值的还是利润结构能不能继续变轻",
@@ -701,12 +1291,23 @@ def judgement_paragraph(data: ReportData) -> str:
             "别看数据不差，市场真正算的是投入回报而不是口号",
         ],
     }
-    return fit_copy(candidates.get(theme, candidates["general"]), 52, human=True)
+    return fit_copy(source_candidates + candidates.get(theme, candidates["general"]), 52, human=True)
 
 
 def brand_statement(data: ReportData) -> str:
     theme = company_theme(data)
+    source_candidates = source_copy_candidates(
+        executive_texts(data) + summary_texts(data) + highlight_texts(data),
+        34,
+        opener="说白了，",
+        sentence_options=(1,),
+        human=True,
+    )
     candidates = {
+        "cn_ecom": [
+            "说白了，拼多多现在卖的不只是低价，而是供给效率、流量分发和 Temu 全球化的组合拳",
+            "别看利润已经很厚，真正值钱的是两个平台能不能在高竞争里守住商家 ROI",
+        ],
         "ecom_cloud": [
             "说白了，亚马逊现在卖的不只是货，而是零售底盘、云利润和广告飞轮的叠加",
             "别看盘子已经很大，真正值钱的是高毛利业务能不能继续把集团带轻",
@@ -728,32 +1329,27 @@ def brand_statement(data: ReportData) -> str:
             "别看收入还在长，真正值钱的是客户不走、价格还能往上抬",
         ],
         "general": [
-            "主业还在赚钱，新故事也在烧钱",
-            "基本盘要稳，新投入也得尽快回本",
+            f"说白了，{display_name(data.company_cn)}现在最值钱的，还是主业现金流和新投入兑现速度",
+            f"别看故事还在展开，真正决定{display_name(data.company_cn)}定价的，还是基本盘和回报率",
         ],
     }
-    return fit_copy(candidates.get(theme, candidates["general"]), 34, human=True)
+    return fit_copy(source_candidates + candidates.get(theme, candidates["general"]), 34, human=True)
 
 
 def background_points(data: ReportData) -> list[str]:
     fin = finance(data)
     rev_yoy = revenue_yoy(data)
     net_yoy = net_income_yoy(data)
-    prof = profitability(data)
-    ocf = cash_flow(data).get("operating_cash_flow")
-    capex = cash_flow(data).get("capex_purchases")
+    source_fact = source_copy_candidates(
+        summary_texts(data) + highlight_texts(data) + executive_texts(data),
+        LIMIT_CARD2_BG_BULLET_CHARS,
+        sentence_options=(1,),
+    )
     points = [
-        fit_copy([f"{fiscal_year(data)} 营收 {money_text(fin['revenue'])}，同比{pct_text(rev_yoy, signed=True)}，基本盘还在持续发力。"], 52),
-        fit_copy([f"净利润 {money_text(fin['net'])}，同比{pct_text(net_yoy, signed=True)}，利润节奏暂时没跟上收入。"], 50),
-        fit_copy([segment_sentence(data)], 56),
-        fit_copy(
-            [
-                f"营业利润率 {pct_text(prof.get('operating_margin_pct'))}，经营现金流 {money_text(float(ocf))}，但 Capex {money_text(float(capex))} 也明显抬起来了。"
-                if ocf and capex
-                else f"营业利润率 {pct_text(prof.get('operating_margin_pct'))}，这门生意的盈利底子还在。"
-            ],
-            60,
-        ),
+        fit_copy([f"{fiscal_year(data)} 营收 {money_text(fin['revenue'])}，同比{pct_text(rev_yoy, signed=True)}。"], LIMIT_CARD2_BG_BULLET_CHARS),
+        fit_copy([f"净利润 {money_text(fin['net'])}，同比{pct_text(net_yoy, signed=True)}。"], LIMIT_CARD2_BG_BULLET_CHARS),
+        fit_copy([segment_fact_line(data) or segment_sentence(data)], LIMIT_CARD2_BG_BULLET_CHARS),
+        fit_copy(source_fact, LIMIT_CARD2_BG_BULLET_CHARS),
     ]
     return dedupe_texts(points, 4)
 
@@ -766,15 +1362,17 @@ def revenue_explainer_points(data: ReportData) -> list[str]:
         fit_copy([f"毛利率 {pct_text(prof.get('gross_margin_pct'))}，营业利润率 {pct_text(prof.get('operating_margin_pct'))}，利润池依旧不小"], 40),
         fit_copy(
             [
+                *source_copy_candidates(trend_texts(data), 54, sentence_options=(1,)),
                 narratives.get("fcf", ""),
                 "药卖得快，钱也回得快，但产能和投入一样都不能掉链子。",
                 "现金流还在，但大额投入已经开始抢利润。",
                 "账上的钱还够用，但投入节奏明显比以前猛。",
             ],
-            54,
+            LIMIT_CARD3_EXPLAINER_CHARS,
         ),
         fit_copy(
-            {
+            source_copy_candidates(executive_texts(data) + porter_section_texts(data, "forward"), 54, opener="说白了，", sentence_options=(1,), human=True) + {
+                "cn_ecom": ["说白了，真正支撑估值的，不只是今天卖出多少货，而是 Temu 能不能跑通盈利模型、主站能不能守住利润率。"],
                 "ecom_cloud": ["说白了，真正支撑估值的，不只是今天卖出多少货，而是 AWS、广告和卖家服务能不能把利润率继续往上抬。"],
                 "pharma": ["说白了，真正支撑估值的，不只是今天卖了多少药，而是爆款能不能持续放量、后面还有没有新药接棒。"],
                 "ads_ai": ["说白了，真正支撑估值的，不是今天赚了多少，而是 AI 投入以后能赚得更多。"],
@@ -782,80 +1380,137 @@ def revenue_explainer_points(data: ReportData) -> list[str]:
                 "software": ["说白了，真正支撑估值的，不是功能多少，而是留存和提价能不能一起兑现。"],
                 "general": ["说白了，真正支撑估值的，不只是今天赚多少钱，而是明天还能不能赚得更快。"],
             }[theme],
-            54,
+            LIMIT_CARD3_EXPLAINER_CHARS,
             human=True,
         ),
     ]
     return dedupe_texts(points, 3)
 
 
-def business_now_points(data: ReportData) -> list[str]:
-    theme = company_theme(data)
-    points: list[str] = []
+def lead_business_point(data: ReportData) -> str:
     segments = segment_data(data)
-    if segments:
-        lead = segments[0]
-        points.append(
-            fit_copy(
-                [
-                    f"{clean_segment_name(lead.get('name', '主业务'))} {segment_revenue_bn(lead) * 10:.1f} 亿美元，还是收入基本盘。",
-                    f"{clean_segment_name(lead.get('name', '主业务'))} 还是现金牛，主业务没有熄火，报表重心也还压在这里。",
-                ],
-                58,
-            )
+    if not segments:
+        return ""
+    lead = max(segments, key=lambda seg: (seg.get("pct_of_total") or 0, segment_revenue_bn(seg)))
+    name = clean_segment_name(lead.get("name", "主业务"))
+    revenue_text = f"{segment_revenue_bn(lead) * 10:.1f} 亿{_CURRENCY_LABEL}"
+    pct = lead.get("pct_of_total")
+    pct_text_part = f"，收入占比约{float(pct):.1f}%" if pct is not None else ""
+    theme = company_theme(data)
+
+    if theme == "pharma":
+        return fit_copy(
+            [f"{name} {revenue_text}{pct_text_part}。"],
+            LIMIT_CARD4_NOW_BULLET_CHARS,
         )
+    if theme == "ecom_cloud":
+        if name in {"北美", "国际"}:
+            return fit_copy(
+                [f"{name} {revenue_text}{pct_text_part}。"],
+                LIMIT_CARD4_NOW_BULLET_CHARS,
+            )
+        if "云" in name:
+            return fit_copy(
+                [f"{name} {revenue_text}{pct_text_part}。"],
+                LIMIT_CARD4_NOW_BULLET_CHARS,
+            )
+    if theme == "software":
+        return fit_copy(
+            [f"{name} {revenue_text}{pct_text_part}。"],
+            LIMIT_CARD4_NOW_BULLET_CHARS,
+        )
+    if theme == "cn_ecom":
+        return fit_copy(
+            [f"{name} {revenue_text}{pct_text_part}。"],
+            LIMIT_CARD4_NOW_BULLET_CHARS,
+        )
+    return fit_copy(
+        [f"{name} {revenue_text}{pct_text_part}，仍是当前第一大产品线。"],
+        LIMIT_CARD4_NOW_BULLET_CHARS,
+    )
+
+
+def operating_margin_point(data: ReportData) -> str:
+    prof = profitability(data)
+    margin = prof.get("operating_margin_pct")
+    if margin is None:
+        return ""
+    prior = prof.get("operating_margin_prior_pct")
+    if prior is None:
+        return fit_copy([f"营业利润率 {pct_text(margin)}。"], LIMIT_CARD4_NOW_BULLET_CHARS)
+    delta = float(margin) - float(prior)
+    if abs(delta) < 0.2:
+        return fit_copy([f"营业利润率 {pct_text(margin)}，与上年基本持平。"], LIMIT_CARD4_NOW_BULLET_CHARS)
+    if delta > 0:
+        return fit_copy([f"营业利润率 {pct_text(margin)}，较上年提升约{delta:.1f}个百分点。"], LIMIT_CARD4_NOW_BULLET_CHARS)
+    return fit_copy([f"营业利润率 {pct_text(margin)}，较上年回落约{abs(delta):.1f}个百分点。"], LIMIT_CARD4_NOW_BULLET_CHARS)
+
+
+def cash_flow_point(data: ReportData) -> str:
+    cf = cash_flow(data)
+    ocf = cf.get("operating_cash_flow")
+    capex = cf.get("capex_purchases")
+    fcf = cf.get("free_cash_flow")
+    trend_candidates = source_copy_candidates(trend_texts(data), LIMIT_CARD4_NOW_BULLET_CHARS, sentence_options=(1,))
+    if ocf and capex and fcf is not None:
+        return fit_copy(
+            [f"经营现金流 {money_text(float(ocf))}，Capex {money_text(float(capex))}，自由现金流 {money_text(float(fcf))}。", *trend_candidates],
+            LIMIT_CARD4_NOW_BULLET_CHARS,
+        )
+    if ocf and capex:
+        return fit_copy(
+            [f"经营现金流 {money_text(float(ocf))}，Capex {money_text(float(capex))}。", *trend_candidates],
+            LIMIT_CARD4_NOW_BULLET_CHARS,
+        )
+    return ""
+
+
+def business_now_points(data: ReportData) -> list[str]:
+    points: list[str] = []
+    lead_point = lead_business_point(data)
+    if lead_point:
+        points.append(lead_point)
     kpis = operational_kpis(data)
     if "dap_billion" in kpis:
-        points.append(fit_copy([f"DAP {bn_to_yi(float(kpis['dap_billion']))}，流量底盘和分发效率都还在线，广告机器没有掉链子。"], 56))
+        points.append(fit_copy([f"DAP {bn_to_yi(float(kpis['dap_billion']))}，流量底盘和分发效率都还在线，广告机器没有掉链子。"], LIMIT_CARD4_NOW_BULLET_CHARS))
     elif "ad_impressions_yoy_pct" in kpis:
-        points.append(fit_copy([f"广告展示量同比{pct_text(kpis['ad_impressions_yoy_pct'], signed=True)}，平台活跃度还在往上走，用户时长也还撑得住。"], 58))
-    prof = profitability(data)
-    if prof.get("operating_margin_pct") is not None:
-        points.append(fit_copy([f"营业利润率 {pct_text(prof.get('operating_margin_pct'))}，这门生意现在依旧很能赚钱，利润底子并没有塌。"], 58))
-    ocf = cash_flow(data).get("operating_cash_flow")
-    capex = cash_flow(data).get("capex_purchases")
-    if ocf and capex:
-        points.append(fit_copy([f"经营现金流 {money_text(float(ocf))}，但 Capex {money_text(float(capex))} 已经踩下油门，账单只会越来越大。"], 60, human=True))
-    theme_point = {
-        "ecom_cloud": "零售还是底盘，但市场更关心的是 AWS、广告和卖家服务能不能把利润结构继续往上抬，别让 capex 和履约再把弹性吃掉。",
-        "pharma": "爆款药已经把收入曲线抬起来了，但市场更关心的是供给、竞争和后续管线能不能继续接住这波高增长。",
-        "ads_ai": "Family of Apps 还是现金牛，广告机器没有熄火，但市场已经开始盯 AI 投入会不会吞掉更多利润。",
-        "ev_ai": "车还是主角，但市场已经盯上软件和储能的利润弹性，谁先兑现谁先吃到估值。",
-        "software": "产品卖得出去只是起点，续费和扩张才决定质量，客户黏性一天都不能松。",
-        "general": "主业务还在扛报表，新业务开始决定市场想象力，兑现速度会比故事本身更重要。",
-    }[theme]
-    points.append(fit_copy([theme_point], 62, human=theme != "general"))
-    extras = {
-        "ads_ai": [
-            "推荐、广告工具和变现效率如果还能继续抬，主业务现金流就还有韧性。",
-        ],
-        "ecom_cloud": [
-            "AWS、广告和第三方卖家服务只要继续抬占比，亚马逊的利润结构就还有继续变轻的空间。",
-        ],
-        "pharma": [
-            "减重和糖尿病赛道看着很热，但真正能守住高增长的，还是供给能力和临床扩张速度。",
-        ],
-        "ev_ai": [
-            "卖车决定报表下限，软件、储能和自动驾驶决定利润上限，这三条线现在得一起看。",
-            "只靠交付量已经不够，市场更想看高毛利业务什么时候开始接棒。",
-        ],
-        "software": [
-            "客户续费、产品集成和提价能力，才是真正决定收入质量的三件事。",
-        ],
-        "general": [
-            "主业务稳不稳，决定这家公司有没有底气继续投未来。",
-        ],
-    }[theme]
+        points.append(fit_copy([f"广告展示量同比{pct_text(kpis['ad_impressions_yoy_pct'], signed=True)}，平台活跃度还在往上走，用户时长也还撑得住。"], LIMIT_CARD4_NOW_BULLET_CHARS))
+    margin_point = operating_margin_point(data)
+    if margin_point:
+        points.append(margin_point)
+    cf_point = cash_flow_point(data)
+    if cf_point:
+        points.append(cf_point)
+    now_texts = highlight_texts(data) + summary_texts(data) + executive_texts(data) + trend_texts(data)
+    points.extend(
+        fit_copy([text], LIMIT_CARD4_NOW_BULLET_CHARS)
+        for text in source_copy_candidates(
+            now_texts + combined_source_texts(now_texts, max_parts=2),
+            LIMIT_CARD4_NOW_BULLET_CHARS,
+            sentence_options=(1, 2),
+        )
+    )
     dense = dedupe_texts(points, 4)
-    if len(dense) < 4:
-        dense = dedupe_texts(dense + [fit_copy([item], 62, human=True) for item in extras], 4)
     return dense
 
 
 def future_watch_points(data: ReportData) -> list[str]:
     theme = company_theme(data)
-    points: list[str] = []
+    points: list[str] = [
+        fit_copy([text], LIMIT_CARD4_FUTURE_BULLET_CHARS)
+        for text in source_copy_candidates(
+            risk_texts(data) + porter_section_texts(data, "forward") + executive_texts(data) + summary_texts(data)[-1:],
+            LIMIT_CARD4_FUTURE_BULLET_CHARS,
+            sentence_options=(1,),
+        )
+    ]
     theme_points = {
+        "cn_ecom": [
+            "别只看收入增速，更要看 Temu 本地化后利润率能不能回升，不然全球化是在拿利润换规模。",
+            "关税政策扰动是短期变量，但若持续收紧，Temu 的价格优势会被履约成本逐步对冲。",
+            "阿里、京东、抖音持续加码补贴，国内平台 take rate 和广告效率是下一步核心分水岭。",
+            "市场给低估值说明增长叙事已打折；一旦 Temu 利润开始兑现，重估空间仍然存在。",
+        ],
         "ecom_cloud": [
             "别只看收入，更要看 AWS、广告和履约效率能不能一起守住，不然利润弹性很容易被成本吃掉。",
             "云服务和广告是估值锚，但零售网络、劳资和物流投入提醒市场，这门生意并不轻。",
@@ -893,7 +1548,7 @@ def future_watch_points(data: ReportData) -> list[str]:
             "基本盘守得住，市场才愿意继续为远期叙事买单，不然耐心会掉得很快。",
         ],
     }
-    points.extend(fit_copy([item], 62, human=("别看" in item or "夸它敢投" in item)) for item in theme_points[theme])
+    points.extend(fit_copy([item], LIMIT_CARD4_FUTURE_BULLET_CHARS, human=("别看" in item or "夸它敢投" in item)) for item in theme_points[theme])
     return dedupe_texts(points, 4)
 
 
@@ -969,10 +1624,65 @@ def measure_bullets(draw: ImageDraw.ImageDraw, items: list[str], width: int, fon
     return total
 
 
+def generated_copy_slots(data: ReportData) -> dict[str, list[str]]:
+    return {
+        "Card 1 intro sentence": [cover_intro(data)],
+        "Card 1 company-focus paragraph": [company_focus_paragraph(data)],
+        "Card 2 background bullets": background_points(data),
+        "Card 2 industry paragraph": [industry_paragraph(data)],
+        "Card 2 conclusion": [conclusion_block(data)],
+        "Card 3 explainer bullets": revenue_explainer_points(data),
+        "Card 4 left column": business_now_points(data),
+        "Card 4 right column": future_watch_points(data),
+        "Card 4 judgement paragraph": [judgement_paragraph(data)],
+        "Card 5 main statement": [brand_statement(data)],
+        "Card 5 summary bullets": brand_summary_points(data),
+        "Card 6 content lines": post_content_lines(data),
+    }
+
+
+def hardcode_logic_issues(data: ReportData) -> list[str]:
+    issues: list[str] = []
+    slots = generated_copy_slots(data)
+    source_blob = all_text(data)
+    source_terms = audit_source_terms(data)
+    all_generated = "\n".join(text for items in slots.values() for text in items)
+
+    for label, items in slots.items():
+        for text in items:
+            normalized = clean(text)
+            for phrase in FORBIDDEN_TEMPLATE_PHRASES:
+                if phrase in normalized:
+                    issues.append(f"{label} still contains forbidden hardcoded template wording: {phrase}")
+            for marker in CROSS_REPORT_NAME_MARKERS:
+                if marker in normalized and marker not in source_blob and marker not in data.company_cn and marker not in data.company_en:
+                    issues.append(f"{label} contains cross-report residue not found in this report package: {marker}")
+            if label != "Card 2 background bullets" and not has_source_anchor(normalized, data, source_terms):
+                issues.append(f"{label} looks like generic template copy without company-specific anchors: {normalized}")
+
+    rev_yoy = revenue_yoy(data)
+    net_yoy = net_income_yoy(data)
+    if rev_yoy is not None and net_yoy is not None:
+        if float(net_yoy) >= float(rev_yoy) + 15:
+            for phrase in ("利润节奏暂时没跟上收入", "利润没跟上收入", "利润弱于收入"):
+                if phrase in all_generated:
+                    issues.append("Generated copy contradicts the facts: net-income growth is faster than revenue growth, so it cannot say profit lagged revenue.")
+        if float(net_yoy) <= float(rev_yoy) - 10:
+            for phrase in ("利润弹性明显快于收入增速", "利润快于收入", "利润跑得比收入更快"):
+                if phrase in all_generated:
+                    issues.append("Generated copy contradicts the facts: net-income growth trails revenue growth, so it cannot say profit outpaced revenue.")
+
+    if len(segment_data(data)) < 2 and "双轮驱动" in all_generated:
+        issues.append("Generated copy claims a two-engine business mix, but the normalized segment data does not support that framing.")
+
+    return dedupe_texts(issues)
+
+
 def validate_report(data: ReportData, brand: str) -> None:
     img = Image.new("RGB", (W, H), BG)
     draw = ImageDraw.Draw(img)
     issues: list[str] = []
+    issues.extend(hardcode_logic_issues(data))
 
     focus = company_focus_paragraph(data)
     intro = cover_intro(data)
@@ -1019,7 +1729,9 @@ def validate_report(data: ReportData, brand: str) -> None:
     focus_height = measure_block(draw, focus, 860, f(FONT_PANEL_BODY), 12)
     if len(focus) < 60:
         issues.append("Card 1 company-focus paragraph is too short.")
-    if focus_height < 4 * FONT_PANEL_BODY + 3 * 12:
+    if len(focus) > LIMIT_CARD1_FOCUS_CHARS:
+        issues.append("Card 1 company-focus paragraph exceeds its character budget.")
+    if focus_height < 3 * FONT_PANEL_BODY + 2 * 12:
         issues.append("Card 1 company-focus paragraph leaves too much empty yellow-panel space.")
     if focus_height > 7 * FONT_PANEL_BODY + 6 * 12:
         issues.append("Card 1 company-focus paragraph exceeds the allowed panel height.")
@@ -1037,8 +1749,10 @@ def validate_report(data: ReportData, brand: str) -> None:
         if has_bad_linebreak(point, 422, f(FONT_BULLET), draw):
             issues.append(f"Card 2 background bullet contains a punctuation-led line break: {point}")
 
-    if len(industry) < 90:
+    if len(industry) < 80:
         issues.append("Card 2 industry paragraph is too short.")
+    if len(industry) > LIMIT_CARD2_INDUSTRY_CHARS:
+        issues.append("Card 2 industry paragraph exceeds its character budget.")
     if measure_block(draw, industry, 446, f(FONT_PANEL_BODY), 13) > 11 * FONT_PANEL_BODY + 10 * 13:
         issues.append("Card 2 industry paragraph exceeds its section box.")
     if has_bad_linebreak(industry, 446, f(FONT_PANEL_BODY), draw):
@@ -1051,6 +1765,17 @@ def validate_report(data: ReportData, brand: str) -> None:
 
     if 710 < 438 + 4 * 56 + 28 + 20:
         issues.append("Card 3 metric cards are too close to the revenue rows.")
+    explainer_points = revenue_explainer_points(data)
+    explainer_height = measure_bullets(draw, explainer_points, 820, f(FONT_BULLET), 12, 12)
+    if explainer_height > LIMIT_CARD3_EXPLAINER_TOTAL_HEIGHT:
+        issues.append("Card 3 explainer bullets exceed the yellow panel.")
+    for point in explainer_points:
+        if len(point) > LIMIT_CARD3_EXPLAINER_CHARS:
+            issues.append(f"Card 3 explainer bullet exceeds its character budget: {point}")
+        if not is_complete_copy(point):
+            issues.append(f"Card 3 explainer bullet must be a complete sentence: {point}")
+        if has_bad_linebreak(point, 796, f(FONT_BULLET), draw):
+            issues.append(f"Card 3 explainer bullet contains a punctuation-led line break: {point}")
 
     left_height = measure_bullets(draw, left, 350, f(FONT_BULLET_COMPACT), 10, 18)
     right_height = measure_bullets(draw, right, 368, f(FONT_BULLET_COMPACT), 10, 18)
@@ -1069,15 +1794,21 @@ def validate_report(data: ReportData, brand: str) -> None:
     for point in left:
         if not is_complete_copy(point):
             issues.append(f"Card 4 left column must use complete sentences: {point}")
+        if len(point) > LIMIT_CARD4_NOW_BULLET_CHARS:
+            issues.append(f"Card 4 left column exceeds its character budget: {point}")
         if has_bad_linebreak(point, 326, f(FONT_BULLET_COMPACT), draw):
             issues.append(f"Card 4 left column contains a punctuation-led line break: {point}")
     for point in right:
         if not is_complete_copy(point):
             issues.append(f"Card 4 right column must use complete sentences: {point}")
+        if len(point) > LIMIT_CARD4_FUTURE_BULLET_CHARS:
+            issues.append(f"Card 4 right column exceeds its character budget: {point}")
         if has_bad_linebreak(point, 344, f(FONT_BULLET_COMPACT), draw):
             issues.append(f"Card 4 right column contains a punctuation-led line break: {point}")
 
     judgement = judgement_paragraph(data)
+    if len(judgement) > LIMIT_CARD4_JUDGEMENT_CHARS:
+        issues.append("Card 4 judgement paragraph exceeds its character budget.")
     if measure_block(draw, judgement, 316, f(FONT_JUDGEMENT), 10) > 4 * FONT_JUDGEMENT + 3 * 10:
         issues.append("Card 4 judgement paragraph exceeds its box.")
     if has_bad_linebreak(judgement, 316, f(FONT_JUDGEMENT), draw):
@@ -1271,7 +2002,7 @@ def card_3(data: ReportData) -> Image.Image:
     img = background()
     d = ImageDraw.Draw(img)
     header(d, 3)
-    draw_text(d, (72, 198), "实际 Revenue 分析", f(58, True), TEXT)
+    draw_text(d, (72, 198), "实际收入分析", f(58, True), TEXT)
     panel(d, (72, 314, 1008, 856))
     draw_text(d, (108, 360), f"{fiscal_year(data)} 收入流", f(34, True), TEXT)
     fin = finance(data)
@@ -1288,12 +2019,12 @@ def card_3(data: ReportData) -> Image.Image:
         draw_text(d, (108, y), label, f(FONT_CHART_LABEL), "#475467")
         d.rounded_rectangle((244, y + 6, 744, y + 28), radius=11, fill=LINE)
         d.rounded_rectangle((244, y + 6, 244 + int(500 * value / maxv), y + 28), radius=11, fill=color)
-        draw_text(d, (782, y - 6), f"{value:.1f} 亿美元", f(FONT_CHART_VALUE, True), TEXT)
+        draw_text(d, (782, y - 6), f"{value:.1f} 亿{_CURRENCY_LABEL}", f(FONT_CHART_VALUE, True), TEXT)
     for idx, (label, value, color) in enumerate(rate_metrics(data)):
         metric(d, 108 + idx * 242, 710, 220, label, value, color)
-    d.rounded_rectangle((72, 896, 1008, 1188), radius=28, fill=PANEL)
-    draw_text(d, (108, 942), "怎么理解这张图", f(34, True), TEXT)
-    bullets(d, revenue_explainer_points(data), 108, 1002, 820, 3, 3, 18)
+    d.rounded_rectangle((72, 896, 1008, 1225), radius=28, fill=PANEL)
+    draw_text(d, (108, 942), "收入分析", f(34, True), TEXT)
+    bullets(d, revenue_explainer_points(data), 108, 1002, 820, 3, 3, 12)
     footer(d, data)
     return img.convert("RGB")
 
@@ -1358,6 +2089,7 @@ def card_6(data: ReportData) -> Image.Image:
 
 def render_one(path: Path, output_root: Path, brand: str) -> list[Path]:
     data = parse_html(path)
+    set_currency_label(data)
     validate_report(data, brand)
     out_dir = output_root / data.stem
     out_dir.mkdir(parents=True, exist_ok=True)

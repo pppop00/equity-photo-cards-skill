@@ -4,7 +4,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from generate_social_cards import parse_html, validate_report
+from generate_social_cards import parse_html, validate_report, set_currency_label
 
 
 def input_files(src: Path) -> list[Path]:
@@ -24,6 +24,7 @@ def main() -> None:
 
     for html in files:
         data = parse_html(html)
+        set_currency_label(data)
         validate_report(data, args.brand)
         print(f"validated: {html}")
 

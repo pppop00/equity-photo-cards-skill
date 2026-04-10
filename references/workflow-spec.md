@@ -9,9 +9,10 @@ The pipeline is:
 3. normalize
 4. plan card slots
 5. write copy into slots
-6. validate
-7. rewrite until pass
-8. export
+6. audit hardcoded wording and logic
+7. validate
+8. rewrite until pass
+9. export
 
 ## 1. Input Contract
 
@@ -195,6 +196,7 @@ When turning slots into copy:
 - facts first
 - interpretation second
 - filler never
+- character budget before sentence count
 
 Required style rules:
 
@@ -202,6 +204,7 @@ Required style rules:
 - complete sentences
 - concise but not skeletal
 - strong human voice
+- voice consistency may be standardized, but substantive claims must be derived from the current report's extracted facts
 - no internal strategy notes
 - no clipped thesis fragments
 - no generic industry filler that could fit any company
@@ -216,6 +219,7 @@ Copy priority:
 ## 6. Validation Loop
 
 Validation is not a final polish step. It is part of generation.
+Hardcode and logic audit runs before layout validation, not after export.
 
 For each failed validation:
 
@@ -242,6 +246,7 @@ If a slot is too long:
 - remove repetition
 - compress phrasing
 - preserve the central idea and metrics
+- obey the slot's character budget before relying on max-lines clipping
 
 If a slot sounds dead:
 
