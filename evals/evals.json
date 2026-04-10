@@ -4,7 +4,7 @@
     {
       "id": 1,
       "prompt": "I have Tesla_Research_CN.html in my report folder with financial_data.json next to it. Generate a complete Tesla_Research_CN.card_slots.json beside it, then tell me the exact validate_cards.py and generate_social_cards.py commands with --slots so I get all six PNGs.",
-      "expected_output": "Complete card_slots.json content or path; both CLI commands with absolute paths and --brand; no export without --slots.",
+      "expected_output": "Ask which color palette (default / b / c) before any work; then complete card_slots.json; both CLI commands with absolute paths and --brand; generate_social_cards.py must include --palette matching the customer choice; no export without --slots.",
       "files": []
     },
     {
@@ -17,6 +17,12 @@
       "id": 3,
       "prompt": "Batch folder has three *_Research_CN.html files. Each needs its own card_slots.json. How do I pass --input and --slots to validate and render all three?",
       "expected_output": "--input directory of HTMLs; --slots as directory containing matching <stem>.card_slots.json per file; no single JSON for unrelated stems.",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "Export the six PNGs now — here is the path to my HTML and card_slots.json.",
+      "expected_output": "Do not run validate/generate until the customer has explicitly chosen default, b, or c; then pass --palette accordingly on generate_social_cards.py.",
       "files": []
     }
   ]

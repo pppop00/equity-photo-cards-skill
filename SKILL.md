@@ -1,16 +1,33 @@
 ---
 name: equity-photo-cards
 description: >-
-  Turns equity research HTML (and optional sibling JSON) into six fixed-layout social images
-  (e.g. Xiaohongshu / Douyin) by filling predefined card slots in `*.card_slots.json`, then
-  validating and rendering with Python. Use whenever the user has report HTML to convert into
-  slot-based PNGs, fixed-layout cards (default export 2160×2700; logical layout 1080×1350), `card_slots.json`, `validate_cards.py`, or
-  `generate_social_cards.py` — even if they only say “put this HTML into the picture templates.”
-  Mandatory path — agents must produce a complete `card_slots.json`; CLI requires `--slots`;
-  no heuristic-only export.
+  HARD GATE: do not start any work until the customer has explicitly confirmed a color palette
+  (list all: default / b / c; wait for their choice). No intake, extraction, slot writing,
+  validation, or export before that confirmation. Then: equity research HTML → `*.card_slots.json` →
+  validate → `generate_social_cards.py` with `--slots` and `--palette default|b|c` (non-interactive).
 ---
 
 # Equity Photo Cards
+
+## 配色选择（硬门禁：客户未确认则不得开工）
+
+<span id="palette-choice"></span>
+
+**接到与本 skill 相关的任何任务后，第一步且仅第一步：向客户提问「需要哪一种配色？」并列出下表全部选项。在客户给出明确选择（`default` / `b` / `c` 之一）之前，禁止开始任何后续工作。**
+
+**在客户确认配色之前，不得执行包括但不限于：** 接收材料后的实质处理、阅读报告并开始写槽位、运行 `validate_cards.py`、运行 `generate_social_cards.py`、或代客户默认任选一种配色。**「先做着再说」「默认用 default」均违规。**
+
+客户确认后，将所选配色记为本次任务的**唯一** `--palette` 参数，全程沿用至导出。
+
+| 选项 | `--palette` 参数 | 视觉说明 |
+|------|-------------------|----------|
+| **1** | `default` | 设计规范原版：灰白底 + 红橙强调 |
+| **2** | `b` | 浅紫底 + 紫/绿强调（偏小红书向） |
+| **3** | `c` | 暖纸色底 + 深色顶栏（杂志感） |
+
+三种配色均保留在 [scripts/generate_social_cards.py](./scripts/generate_social_cards.py) 的 `apply_palette()` 中。执行 `generate_social_cards.py` 时必须带上与客户确认一致的 **`--palette default`**、**`--palette b`** 或 **`--palette c`**。若在**无 TTY** 的环境（Agent、CI）中运行脚本，**不能**依赖交互式 `input()`，必须以客户已确认的选项作为唯一来源并显式传入。
+
+---
 
 **What you are building:** Agents consume **equity research HTML** (and optional sibling JSON), write copy into a **fixed set of named slots** (`*.card_slots.json`), and the renderer places that text into **predetermined image frames** (six cards; **logical** layout 1080×1350, **default PNG export** 2160×2700 for zoom-friendly assets) — not a bespoke layout per company.
 
@@ -32,15 +49,16 @@ equity-photo-cards/                    # Skill bundle (skill-creator anatomy)
 └── output/                            # Default PNG output (gitignored; use --output-root to override)
 ```
 
-This skill is not a generic image-generation workflow. It is a deterministic report-to-card pipeline:
+This skill is not a generic image-generation workflow. It is a deterministic report-to-card pipeline — **only after [配色选择](#palette-choice) 已由客户确认**：
 
+0. **customer confirms palette** (`default` | `b` | `c`) — **no step below until this is done**
 1. extract the report
 2. normalize the facts into a stable internal structure
 3. plan each card's content slots
 4. write publishable copy into those slots
 5. audit hardcoded wording and logic before layout
 6. validate layout and rewrite until every card passes
-7. render the final 6 images
+7. render the final 6 images (with matching `--palette`)
 
 The goal is that a new company HTML should normally flow through the same pipeline without adding a company-specific template. Code changes should only be needed when the upstream schema changes or when a truly new business-model pattern requires a new planner branch.
 
@@ -49,7 +67,7 @@ The goal is that a new company HTML should normally flow through the same pipeli
 **Specifications (read for schema and visuals):**
 
 - Workflow and slot schema: [references/workflow-spec.md](./references/workflow-spec.md)
-- Workflow diagrams — bundle 表 + 端到端 / CLI / 新报告 / 校验分层 / 九步（Mermaid）: [references/workflow-flowchart.md](./references/workflow-flowchart.md)
+- Workflow diagrams — bundle 表 + 端到端 / CLI / 新报告 / 校验分层 / 十步含配色（Mermaid）: [references/workflow-flowchart.md](./references/workflow-flowchart.md)
 - JSON slot contract (machine): [references/card-slots.schema.json](./references/card-slots.schema.json)
 - New-report slot starter (copy → rename to `<stem>.card_slots.json`): [references/templates/card_slots.template.json](./references/templates/card_slots.template.json)
 - Visual and layout rules: [references/design-spec.md](./references/design-spec.md)
@@ -71,14 +89,15 @@ The goal is that a new company HTML should normally flow through the same pipeli
 
 Do not treat this skill as "pick an industry and emit canned sentences."
 
-Use this skill as:
+Use this skill as — **only after the customer has confirmed a palette** ([配色选择](#palette-choice)):
 
+0. **`customer confirms palette`** → record `default` | `b` | `c` for this job; **do not proceed without this**
 1. `HTML/JSON -> structured report facts`
 2. `structured report facts -> fixed card slot plan`
 3. `slot plan -> copy` as **`card_slots.json`** written by the **content** then **layout** agents ([agent-slot-pipeline.md](./agents/agent-slot-pipeline.md)) — **this is the standard for every new report**, not optional
 4. `copy -> hardcode / logic audit` (on the final slot text)
 5. `audited copy -> validation / rewrite loop` (`validate_cards.py` — **`--slots` 必填**)
-6. `validated copy -> exported cards` (`generate_social_cards.py` — **`--slots` 必填**)
+6. `validated copy -> exported cards` (`generate_social_cards.py` — **`--slots` 必填**, **`--palette` 须与客户确认一致**)
 
 **No alternate path:** The CLI **does not** accept a run without `--slots`. Incomplete JSON is **rejected** (`assert_card_slots_complete`): every required body slot must be present so export never silently falls back to Python template copy.
 
@@ -97,6 +116,12 @@ The important boundary is this:
 ## Required Workflow
 
 Follow these steps in order every time a new report arrives.
+
+### 0. 配色确认（硬门禁；未完成则禁止进入步骤 1）
+
+- 按 **[配色选择](#palette-choice)** 向客户列出三种配色，**取得客户的明确确认**（口头/文字均可，但必须对应 `default`、`b`、`c` 之一）。
+- **在客户确认配色之前：不得执行步骤 1～7**（不得做 Intake、抽取、写槽位、校验、导出，也不得擅自默认配色）。
+- 确认后，记下本次任务的 `--palette`；后续所有 `generate_social_cards.py` 调用必须与之一致。
 
 ### 1. Intake
 
@@ -179,7 +204,7 @@ Rewrite priority:
 ### 7. Export
 
 - Only export once the validator passes with the **intended** `card_slots.json` (`validate_cards.py --input … --slots …`)
-- Export all 6 images for the report as one set (`generate_social_cards.py --input … --slots …`)
+- Export all 6 images for the report as one set (`generate_social_cards.py --input … --slots … --palette …`)，其中 **`--palette` 必须与步骤 0 中用户选择的配色一致**。
 - Keep the file naming convention stable
 
 ## Fixed Card Schema
@@ -251,8 +276,11 @@ python3 scripts/validate_cards.py \
 python3 scripts/generate_social_cards.py \
   --input "/abs/path/Tesla_Research_CN.html" \
   --slots "/abs/path/Tesla_Research_CN.card_slots.json" \
-  --brand "金融豹"
+  --brand "金融豹" \
+  --palette default
 ```
+
+**配色：** 接任务时必须先问并完成选择，见 **[配色选择](#palette-choice)**。三种预设均保留在 `apply_palette()`。用户在终端自己跑脚本且**不传 `--palette`** 时，脚本可交互询问 1/2/3；**Agent / 无 TTY 必须显式传入** `--palette`。
 
 PNG sets default to this skill repo’s `output/<stem>/` unless you pass `--output-root`.
 

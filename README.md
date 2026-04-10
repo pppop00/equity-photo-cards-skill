@@ -30,7 +30,7 @@ Follows **skill-creator** bundle layout: **`SKILL.md`** (entry) → **`reference
 |------|---------|
 | [SKILL.md](SKILL.md) | Agent skill contract: intake → extract → normalize → plan → copy → validate → export |
 | [references/workflow-spec.md](references/workflow-spec.md) | Pipeline and slot schema |
-| [references/workflow-flowchart.md](references/workflow-flowchart.md) | Mermaid：bundle 表、端到端、CLI、`card_slots` 启动、校验分层、九步 |
+| [references/workflow-flowchart.md](references/workflow-flowchart.md) | Mermaid：bundle 表、端到端、CLI、`card_slots` 启动、校验分层、十步（含配色确认） |
 | [references/templates/README.md](references/templates/README.md) | 模版目录说明（template vs example） |
 | [references/design-spec.md](references/design-spec.md) | Typography, colors, spacing, copy limits |
 | [references/card-slots.schema.json](references/card-slots.schema.json) | JSON Schema for slot file |
@@ -84,8 +84,11 @@ python3 scripts/validate_cards.py \
 python3 scripts/generate_social_cards.py \
   --input "/absolute/path/to/Company_Research_CN.html" \
   --slots "/absolute/path/to/Company_Research_CN.card_slots.json" \
-  --brand "金融豹"
+  --brand "金融豹" \
+  --palette default
 ```
+
+（配色须与客户确认一致：`default` | `b` | `c`；见 [SKILL.md](SKILL.md) 配色一节。）
 
 **批量多只 HTML：** `--input` 指向含多个 `*.html` 的目录时，`--slots` **必须为目录**，且内含与每个 `stem` 对应的 `<stem>.card_slots.json`。
 

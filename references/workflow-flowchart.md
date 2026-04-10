@@ -106,11 +106,12 @@ flowchart TB
 
 ---
 
-## 5. 与 workflow-spec 九步对应
+## 5. 与 workflow-spec 十步对应（含配色确认）
 
 ```mermaid
 flowchart LR
-    S1["1 ingest"] --> S2["2 extract"]
+    S0["0 配色确认\nclient: default|b|c"] --> S1["1 ingest"]
+    S1 --> S2["2 extract"]
     S2 --> S3["3 normalize"]
     S3 --> S4["4 plan slots"]
     S4 --> S5["5 write JSON\nContent + Layout"]
@@ -118,7 +119,7 @@ flowchart LR
     S6 --> S7["7 validate\n--slots"]
     S7 --> S8{"8 通过？"}
     S8 -->|否| S5
-    S8 -->|是| S9["9 export\n--slots"]
+    S8 -->|是| S9["9 export\n--slots --palette"]
 ```
 
 详述与必填槽位列表见 [workflow-spec.md §10](./workflow-spec.md)。

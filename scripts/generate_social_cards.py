@@ -6,6 +6,7 @@ import json
 import math
 import re
 import shutil
+import sys
 from datetime import datetime
 from dataclasses import dataclass
 from pathlib import Path
@@ -35,7 +36,69 @@ GREEN = "#12B76A"
 BLUE = "#1570EF"
 WHITE = "#FFFFFF"
 
+# Palette "c": optional dark header strip on cards 1–5; None = single flat background.
+HEADER_BG: str | None = None
+HEADER_BRAND_TEXT = "#F8FAFC"
+HEADER_SUBTITLE_TEXT = "#FBBF24"
+HEADER_PAGE_TEXT = "#F8FAFC"
+HEADER_RULE = "#334155"
+
 import os as _os
+
+
+def apply_palette(name: str) -> None:
+    """Switch global colors for preview / alternate looks. Call before rendering."""
+    global BG, TEXT, MUTED, LINE, PANEL, RED, ORANGE, GOLD, GREEN, BLUE, WHITE
+    global HEADER_BG, HEADER_BRAND_TEXT, HEADER_SUBTITLE_TEXT, HEADER_PAGE_TEXT, HEADER_RULE
+    if name == "default":
+        BG = "#FCFCFD"
+        TEXT = "#111827"
+        MUTED = "#667085"
+        LINE = "#EAECF0"
+        PANEL = "#FFF7ED"
+        RED = "#E82127"
+        ORANGE = "#B45309"
+        GOLD = "#C9A35D"
+        GREEN = "#12B76A"
+        BLUE = "#1570EF"
+        WHITE = "#FFFFFF"
+        HEADER_BG = None
+        return
+    if name == "b":
+        # Xiaohongshu-friendly: soft violet canvas + purple / emerald accents.
+        BG = "#FAF5FF"
+        TEXT = "#0F172A"
+        MUTED = "#64748B"
+        LINE = "#E9D5FF"
+        PANEL = "#F3E8FF"
+        RED = "#7C3AED"
+        ORANGE = "#A855F7"
+        GOLD = "#C9A35D"
+        GREEN = "#059669"
+        BLUE = "#6366F1"
+        WHITE = "#FFFFFF"
+        HEADER_BG = None
+        return
+    if name == "c":
+        # Magazine-style: warm paper body + dark header bar.
+        BG = "#FFFBF7"
+        TEXT = "#0F172A"
+        MUTED = "#57534E"
+        LINE = "#E7E5E4"
+        PANEL = "#FFF1E6"
+        RED = "#E11D48"
+        ORANGE = "#EA580C"
+        GOLD = "#D97706"
+        GREEN = "#059669"
+        BLUE = "#2563EB"
+        WHITE = "#FFFFFF"
+        HEADER_BG = "#0F172A"
+        HEADER_BRAND_TEXT = "#F8FAFC"
+        HEADER_SUBTITLE_TEXT = "#FBBF24"
+        HEADER_PAGE_TEXT = "#F8FAFC"
+        HEADER_RULE = "#334155"
+        return
+    raise ValueError(f"Unknown palette: {name!r}")
 
 def _pick_font_path(candidates: list) -> str:
     for p in candidates:
@@ -2402,10 +2465,21 @@ def panel(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int], fill: str =
 
 
 def header(draw: ImageDraw.ImageDraw, card_no: int) -> None:
-    draw_text(draw, (72, 56), "金融豹", f(FONT_HEADER_BRAND, True), TEXT)
-    draw_text(draw, (72, 92), "FINANCE LEOPARD", f(FONT_HEADER_SUBTITLE), ORANGE)
-    draw_text(draw, (942, 56), f"{card_no:02d}", f(FONT_HEADER_PAGE, True), TEXT)
-    draw.line((72, 126, 1008, 126), fill=LINE, width=2)
+    if HEADER_BG:
+        draw.rounded_rectangle((0, 0, 1080, 128), radius=0, fill=HEADER_BG)
+        brand = HEADER_BRAND_TEXT
+        sub = HEADER_SUBTITLE_TEXT
+        page = HEADER_PAGE_TEXT
+        rule = HEADER_RULE
+    else:
+        brand = TEXT
+        sub = ORANGE
+        page = TEXT
+        rule = LINE
+    draw_text(draw, (72, 56), "金融豹", f(FONT_HEADER_BRAND, True), brand)
+    draw_text(draw, (72, 92), "FINANCE LEOPARD", f(FONT_HEADER_SUBTITLE), sub)
+    draw_text(draw, (942, 56), f"{card_no:02d}", f(FONT_HEADER_PAGE, True), page)
+    draw.line((72, 126, 1008, 126), fill=rule, width=2)
 
 
 def footer(draw: ImageDraw.ImageDraw, data: ReportData) -> None:
@@ -2660,6 +2734,25 @@ _SKILL_REPO_ROOT = Path(__file__).resolve().parent.parent
 _DEFAULT_OUTPUT_ROOT = _SKILL_REPO_ROOT / "output"
 
 
+def resolve_palette(cli_palette: str | None) -> str:
+    """If --palette was omitted: prompt in a TTY; otherwise use default (CI / automation)."""
+    if cli_palette is not None:
+        return cli_palette
+    if sys.stdin.isatty() and sys.stdout.isatty():
+        print("选择配色（输入数字后回车）：", file=sys.stderr)
+        print("  1 = default — 设计规范原版（灰白底 + 红橙强调）", file=sys.stderr)
+        print("  2 = b — 浅紫底 + 紫/绿强调（偏小红书向）", file=sys.stderr)
+        print("  3 = c — 暖纸色底 + 深色顶栏（杂志感）", file=sys.stderr)
+        choice = input("配色 [1/2/3，默认 1]: ").strip() or "1"
+        return {"1": "default", "2": "b", "3": "c"}.get(choice, "default")
+    print(
+        "提示：未指定 --palette，非交互环境已使用 default。"
+        " 请显式传入 --palette default|b|c。",
+        file=sys.stderr,
+    )
+    return "default"
+
+
 def main() -> None:
     global _EXPORT_DOWN_SAMPLE_TO_LOGICAL
     parser = argparse.ArgumentParser()
@@ -2688,7 +2781,18 @@ def main() -> None:
         action="store_true",
         help="Do not copy card_slots.json into output/<stem>/ next to PNGs (default: copy for a single-folder bundle).",
     )
+    parser.add_argument(
+        "--palette",
+        default=None,
+        choices=["default", "b", "c"],
+        help=(
+            "配色：default | b | c（三种均保留在代码中）。"
+            "省略本参数时：在终端里会交互询问；非终端（如脚本/CI）则用 default。"
+            "自动化或 Agent 生成时请显式传入，例如 --palette b。"
+        ),
+    )
     args = parser.parse_args()
+    apply_palette(resolve_palette(args.palette))
     _EXPORT_DOWN_SAMPLE_TO_LOGICAL = args.export_logical_size
 
     src = Path(args.input).expanduser().resolve()

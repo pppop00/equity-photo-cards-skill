@@ -1,0 +1,21 @@
+{
+  "currency": "CNY",
+  "fiscal_year": "FY2024",
+  "sector": "电商与云计算",
+  "income_statement": {
+    "unit": "亿元人民币",
+    "current_year": {
+      "revenue": 9411.68,
+      "cogs": 0,
+      "gross_profit": 0,
+      "operating_income": 1400.0,
+      "net_income": 870.0
+    },
+    "prior_year": {
+      "revenue": 8686.87,
+      "net_income": 797.41
+    },
+    "yoy_revenue_pct": 8.3,
+    "yoy_net_income_pct": 9.1
+  }
+}
