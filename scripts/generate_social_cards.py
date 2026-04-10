@@ -1,0 +1,1403 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import json
+import math
+import re
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+from bs4 import BeautifulSoup
+from PIL import Image, ImageDraw, ImageFont
+
+W = 1080
+H = 1350
+
+BG = "#FCFCFD"
+TEXT = "#111827"
+MUTED = "#667085"
+LINE = "#EAECF0"
+PANEL = "#FFF7ED"
+RED = "#E82127"
+ORANGE = "#B45309"
+GOLD = "#C9A35D"
+GREEN = "#12B76A"
+BLUE = "#1570EF"
+WHITE = "#FFFFFF"
+
+ARIAL = "/System/Library/Fonts/Supplemental/Arial Unicode.ttf"
+LEADING_PUNCT = set("，。；：、,.!?！？）》】」』）")
+IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp"}
+WORD_TOKEN = re.compile(r"^[A-Za-z0-9.+/%$-]+$")
+TEXT_RENDER_SCALE = 3
+SENTENCE_END = "。！？"
+STIFF_OPENERS = (
+    "核心论点在于：",
+    "核心论点在于:",
+    "投资逻辑：",
+    "投资逻辑:",
+    "一句判断：",
+    "一句判断:",
+)
+HUMAN_MARKERS = ("说白了", "别看", "账单", "印钱", "印钞", "踩油门", "真要看", "本质上", "先别", "盯着", "这就是", "眼下")
+
+FONT_HEADER_BRAND = 28
+FONT_HEADER_SUBTITLE = 15
+FONT_HEADER_PAGE = 32
+FONT_FOOTER = 17
+FONT_COVER_META = 27
+FONT_INTRO = 29
+FONT_PANEL_BODY = 25
+FONT_BULLET = 25
+FONT_BULLET_COMPACT = 23
+FONT_BRAND_SUMMARY = 24
+FONT_CONCLUSION = 23
+FONT_PORTER_LABEL = 21
+FONT_PORTER_SCORE = 25
+FONT_CHART_LABEL = 23
+FONT_CHART_VALUE = 28
+FONT_JUDGEMENT = 21
+FONT_POST_TITLE = 42
+FONT_POST_LINE = 29
+FONT_POST_TAG = 23
+FONT_POST_FOOTER = 17
+FONT_METRIC_LABEL_START = 20
+FONT_METRIC_LABEL_MIN = 16
+FONT_METRIC_VALUE_START = 29
+FONT_METRIC_VALUE_MIN = 22
+
+
+@dataclass
+class ReportData:
+    stem: str
+    source_dir: Path
+    company_cn: str
+    company_en: str
+    ticker: str
+    date: str
+    summary: list[str]
+    highlights: list[str]
+    risks: list[str]
+    thesis: str
+    porter_industry: str
+    porter_forward: str
+    porter_scores_industry: list[int]
+    sankey_actual: dict[str, Any]
+    financial_data: dict[str, Any]
+    financial_analysis: dict[str, Any]
+    porter_analysis: dict[str, Any]
+
+
+def f(size: int, bold: bool = False) -> ImageFont.FreeTypeFont:
+    return ImageFont.truetype(ARIAL, size=size)
+
+
+def clean(text: str) -> str:
+    return re.sub(r"\s+", " ", text or "").strip()
+
+
+def load_json(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {}
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def js_object_to_json(text: str) -> str:
+    return re.sub(r'([{,]\s*)([A-Za-z_][A-Za-z0-9_]*)\s*:', r'\1"\2":', text)
+
+
+def extract_json_var(html: str, var_name: str) -> dict[str, Any]:
+    match = re.search(rf"const {re.escape(var_name)} = (\{{.*?\}});", html, re.S)
+    return json.loads(js_object_to_json(match.group(1))) if match else {}
+
+
+def extract_porter_scores(html: str) -> list[int]:
+    match = re.search(r"industry:\s*\[(.*?)\]", html, re.S)
+    return [int(p.strip()) for p in match.group(1).split(",")] if match else [3, 3, 3, 3, 3]
+
+
+def get_nested(obj: dict[str, Any], *keys: str, default: Any = None) -> Any:
+    cur: Any = obj
+    for key in keys:
+        if not isinstance(cur, dict) or key not in cur:
+            return default
+        cur = cur[key]
+    return cur
+
+
+def pick_first(*values: Any) -> str:
+    for value in values:
+        if isinstance(value, str) and clean(value):
+            return clean(value)
+        if value is not None and not isinstance(value, str):
+            return str(value)
+    return ""
+
+
+def parse_html(path: Path) -> ReportData:
+    raw = path.read_text(encoding="utf-8")
+    soup = BeautifulSoup(raw, "lxml")
+    company_cn_node = soup.select_one(".company-name-cn")
+    company_en_node = soup.select_one(".company-name-en")
+    company_cn = clean(company_cn_node.get_text()) if company_cn_node else ""
+    company_en_full = clean(company_en_node.get_text(" ")) if company_en_node else ""
+    company_en = company_en_full.split("·")[0].strip() if company_en_full else company_cn
+    ticker = company_en_full.split("·")[-1].strip() if "·" in company_en_full else company_en_full
+    meta_spans = soup.select(".header-meta span")
+    date = clean(meta_spans[0].get_text()) if meta_spans else ""
+    summary = [clean(p.get_text(" ")) for p in soup.select("#section-summary .summary-para")]
+    highlights = [clean(li.get_text(" ")) for li in soup.select(".highlights-box li")]
+    risks = [clean(li.get_text(" ")) for li in soup.select(".risks-box li")]
+    thesis_node = soup.select_one(".thesis-box")
+    thesis = clean(thesis_node.get_text(" ").replace("投资逻辑：", "")) if thesis_node else ""
+    porter_texts = [clean(div.get_text(" ")) for div in soup.select(".porter-text")]
+    source_dir = path.parent
+    return ReportData(
+        stem=path.stem,
+        source_dir=source_dir,
+        company_cn=company_cn,
+        company_en=company_en,
+        ticker=ticker,
+        date=date,
+        summary=summary,
+        highlights=highlights,
+        risks=risks,
+        thesis=thesis,
+        porter_industry=porter_texts[1] if len(porter_texts) > 1 else "",
+        porter_forward=porter_texts[2] if len(porter_texts) > 2 else "",
+        porter_scores_industry=extract_porter_scores(raw),
+        sankey_actual=extract_json_var(raw, "sankeyActualData"),
+        financial_data=load_json(source_dir / "financial_data.json"),
+        financial_analysis=load_json(source_dir / "financial_analysis.json"),
+        porter_analysis=load_json(source_dir / "porter_analysis.json"),
+    )
+
+
+def display_name(name: str) -> str:
+    return name[:-2] if name.endswith("公司") else name
+
+
+def hashtag_token(text: str) -> str:
+    return "#" + re.sub(r"\s+", "", text.lstrip("#"))
+
+
+def join_tokens(tokens: list[str]) -> str:
+    out: list[str] = []
+    prev = ""
+    for token in tokens:
+        if out and WORD_TOKEN.match(prev) and WORD_TOKEN.match(token):
+            out.append(" ")
+        out.append(token)
+        prev = token
+    return "".join(out)
+
+
+def wrap(draw: ImageDraw.ImageDraw, text: str, font_obj: ImageFont.FreeTypeFont, width: int) -> list[str]:
+    tokens = re.findall(r"[A-Za-z0-9.+/%$-]+|[\u4e00-\u9fff]|[^\s]", clean(text))
+    lines: list[str] = []
+    cur_tokens: list[str] = []
+    for token in tokens:
+        trial = join_tokens(cur_tokens + [token])
+        if draw.textlength(trial, font=font_obj) <= width or not cur_tokens:
+            cur_tokens.append(token)
+        else:
+            if token in LEADING_PUNCT and cur_tokens:
+                if len(cur_tokens) >= 2:
+                    moved = cur_tokens.pop()
+                    lines.append(join_tokens(cur_tokens))
+                    cur_tokens = [moved, token]
+                else:
+                    cur_tokens.append(token)
+            else:
+                lines.append(join_tokens(cur_tokens))
+                cur_tokens = [token]
+    if cur_tokens:
+        lines.append(join_tokens(cur_tokens))
+    return lines
+
+
+def has_bad_linebreak(text: str, width: int, font_obj: ImageFont.FreeTypeFont, draw: ImageDraw.ImageDraw) -> bool:
+    lines = wrap(draw, text, font_obj, width)
+    return any(line and line[0] in LEADING_PUNCT for line in lines[1:])
+
+
+def draw_text(draw: ImageDraw.ImageDraw, xy: tuple[int, int], text: str, font_obj: ImageFont.FreeTypeFont, fill: str) -> None:
+    base = draw._image
+    bbox = font_obj.getbbox(text)
+    width = max(1, bbox[2] - bbox[0])
+    height = max(1, bbox[3] - bbox[1])
+    pad = 4
+    scale = TEXT_RENDER_SCALE
+    hq_font = ImageFont.truetype(font_obj.path, size=font_obj.size * scale)
+    hq = Image.new("RGBA", ((width + pad * 2) * scale, (height + pad * 2) * scale), (255, 255, 255, 0))
+    hq_draw = ImageDraw.Draw(hq)
+    hq_draw.text(
+        ((pad - bbox[0]) * scale, (pad - bbox[1]) * scale),
+        text,
+        font=hq_font,
+        fill=fill,
+    )
+    down = hq.resize((width + pad * 2, height + pad * 2), Image.Resampling.LANCZOS)
+    base.alpha_composite(down, (xy[0] - pad, xy[1] - pad))
+
+
+def block(
+    draw: ImageDraw.ImageDraw,
+    text: str,
+    x: int,
+    y: int,
+    width: int,
+    font_obj: ImageFont.FreeTypeFont,
+    fill: str,
+    line_gap: int,
+    max_lines: int | None = None,
+) -> int:
+    lines = wrap(draw, clean(text), font_obj, width)
+    if max_lines is not None and len(lines) > max_lines:
+        lines = lines[:max_lines]
+    for line in lines:
+        draw_text(draw, (x, y), line, font_obj, fill)
+        y += font_obj.size + line_gap
+    return y
+
+
+def fit_font(draw: ImageDraw.ImageDraw, text: str, max_width: int, start_size: int, min_size: int) -> ImageFont.FreeTypeFont:
+    size = start_size
+    while size > min_size:
+        font_obj = f(size, True)
+        if draw.textlength(text, font=font_obj) <= max_width:
+            return font_obj
+        size -= 2
+    return f(min_size, True)
+
+
+def sentence_chunks(text: str, limit: int = 3) -> list[str]:
+    return [clean(x) for x in re.split(r"[。！？；]", text) if clean(x)][:limit]
+
+
+def strip_stiff_opener(text: str) -> str:
+    text = clean(text)
+    for opener in STIFF_OPENERS:
+        if text.startswith(opener):
+            return clean(text[len(opener):])
+    return text
+
+
+def ensure_terminal_punct(text: str, punct: str = "。") -> str:
+    text = clean(text).rstrip("，；：,;:")
+    if not text:
+        return ""
+    return text if text.endswith(tuple(SENTENCE_END)) else text + punct
+
+
+def contains_ellipsis(text: str) -> bool:
+    return "…" in text or "..." in text
+
+
+def is_complete_copy(text: str) -> bool:
+    text = clean(text)
+    return bool(text) and not contains_ellipsis(text) and text.endswith(tuple(SENTENCE_END))
+
+
+def is_human_copy(text: str) -> bool:
+    return any(marker in text for marker in HUMAN_MARKERS)
+
+
+def fit_copy(candidates: list[str], limit: int, *, human: bool = False) -> str:
+    normalized: list[str] = []
+    for raw in candidates:
+        text = ensure_terminal_punct(strip_stiff_opener(raw))
+        if text:
+            normalized.append(text)
+    for text in normalized:
+        if len(text) <= limit and (not human or is_human_copy(text)):
+            return text
+    for text in normalized:
+        if len(text) <= limit:
+            return text
+    if normalized:
+        shortest = min(normalized, key=len)
+        return shortest
+    return ""
+
+
+def paragraph_from_sentences(text: str, limit: int, sentences: int = 3) -> str:
+    parts = [ensure_terminal_punct(strip_stiff_opener(part)) for part in sentence_chunks(text, sentences)]
+    out = ""
+    for part in parts:
+        trial = out + part
+        if len(trial) <= limit:
+            out = trial
+    return out
+
+
+def dedupe_texts(items: list[str], limit: int | None = None) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+    for item in items:
+        cleaned = clean(item)
+        key = re.sub(r"[^\w\u4e00-\u9fff]+", "", cleaned).lower()
+        if cleaned and key and key not in seen:
+            seen.add(key)
+            out.append(cleaned)
+            if limit is not None and len(out) >= limit:
+                break
+    return out
+
+
+def fiscal_year(data: ReportData) -> str:
+    return str(get_nested(data.financial_data, "fiscal_year", default="FY"))
+
+
+def income_current(data: ReportData) -> dict[str, Any]:
+    return get_nested(data.financial_data, "income_statement", "current_year", default={}) or {}
+
+
+def profitability(data: ReportData) -> dict[str, Any]:
+    prof = get_nested(data.financial_analysis, "profitability", default={}) or {}
+    if "gross_margin_pct" in prof or "operating_margin_pct" in prof or "net_margin_pct" in prof:
+        return prof
+    normalized = dict(prof)
+    if "gross_margin_current" in prof:
+        normalized["gross_margin_pct"] = prof["gross_margin_current"]
+    if "operating_margin_current" in prof:
+        normalized["operating_margin_pct"] = prof["operating_margin_current"]
+    if "net_margin_current" in prof:
+        normalized["net_margin_pct"] = prof["net_margin_current"]
+    return normalized
+
+
+def growth(data: ReportData) -> dict[str, Any]:
+    growth_data = get_nested(data.financial_analysis, "growth", default={}) or {}
+    if "yoy_revenue_pct" in growth_data or "yoy_net_income_pct" in growth_data:
+        return growth_data
+    normalized = dict(growth_data)
+    if "revenue_growth_yoy_pct" in growth_data:
+        normalized["yoy_revenue_pct"] = growth_data["revenue_growth_yoy_pct"]
+    if "net_income_growth_yoy_pct" in growth_data:
+        normalized["yoy_net_income_pct"] = growth_data["net_income_growth_yoy_pct"]
+    return normalized
+
+
+def cash_flow(data: ReportData) -> dict[str, Any]:
+    cf = get_nested(data.financial_data, "cash_flow", default={}) or {}
+    if "capex_purchases" in cf:
+        return cf
+    normalized = dict(cf)
+    if "capex" in cf:
+        normalized["capex_purchases"] = abs(float(cf["capex"]))
+    return normalized
+
+
+def operational_kpis(data: ReportData) -> dict[str, Any]:
+    return get_nested(data.financial_data, "operational_kpis", default={}) or {}
+
+
+def segment_data(data: ReportData) -> list[dict[str, Any]]:
+    return get_nested(data.financial_data, "segment_data", default=[]) or []
+
+
+def revenue_yoy(data: ReportData) -> Any:
+    value = get_nested(data.financial_data, "income_statement", "yoy_revenue_pct")
+    if value is not None:
+        return value
+    value = growth(data).get("yoy_revenue_pct")
+    if value is not None:
+        return value
+    current = get_nested(data.financial_data, "income_statement", "current_year", "revenue")
+    prior = get_nested(data.financial_data, "income_statement", "prior_year", "revenue")
+    if current and prior:
+        return (float(current) / float(prior) - 1) * 100
+    return None
+
+
+def net_income_yoy(data: ReportData) -> Any:
+    value = get_nested(data.financial_data, "income_statement", "yoy_net_income_pct")
+    if value is not None:
+        return value
+    value = growth(data).get("yoy_net_income_pct")
+    if value is not None:
+        return value
+    current = get_nested(data.financial_data, "income_statement", "current_year", "net_income")
+    prior = get_nested(data.financial_data, "income_statement", "prior_year", "net_income")
+    if current and prior:
+        return (float(current) / float(prior) - 1) * 100
+    return None
+
+
+def segment_revenue_bn(segment: dict[str, Any]) -> float:
+    if segment.get("revenue_bn") is not None:
+        return float(segment["revenue_bn"])
+    if segment.get("revenue") is not None:
+        return float(segment["revenue"]) / 1000
+    return 0.0
+
+
+def finance(data: ReportData) -> dict[str, float]:
+    links = data.sankey_actual.get("links", [])
+    lookup = {(l["source"], l["target"]): float(l["value"]) for l in links}
+    if links:
+        revenue = sum(l["value"] for l in links if l["source"] == 0)
+        return {
+            "revenue": revenue,
+            "cogs": lookup.get((0, 1), 0.0),
+            "gross": lookup.get((0, 2), 0.0),
+            "op": lookup.get((2, 6), 0.0),
+            "net": lookup.get((6, 8), 0.0),
+        }
+    current = income_current(data)
+    return {
+        "revenue": float(current.get("revenue", 0.0)),
+        "cogs": float(current.get("cogs", 0.0)),
+        "gross": float(current.get("gross_profit", 0.0)),
+        "op": float(current.get("operating_income", 0.0)),
+        "net": float(current.get("net_income", 0.0)),
+    }
+
+
+def yi(value: float) -> float:
+    return value / 100
+
+
+def money_text(value: float) -> str:
+    return f"{yi(value):.1f} 亿美元"
+
+
+def pct_text(value: Any, signed: bool = False) -> str:
+    if value is None or value == "":
+        return "--"
+    num = float(value)
+    if signed:
+        return f"{num:+.1f}%"
+    return f"{num:.1f}%"
+
+
+def bn_to_yi(value: float) -> str:
+    return f"{value * 10:.1f} 亿"
+
+
+def clean_segment_name(name: str) -> str:
+    return re.sub(r"（.*?）", "", clean(name)).strip()
+
+
+def all_text(data: ReportData) -> str:
+    items = [
+        data.company_cn,
+        data.company_en,
+        data.thesis,
+        " ".join(data.summary),
+        " ".join(data.highlights),
+        " ".join(data.risks),
+        get_nested(data.financial_analysis, "executive_summary", default="") or "",
+        get_nested(data.financial_analysis, "investment_thesis_short", default="") or "",
+        get_nested(data.porter_analysis, "company_level", default="") or "",
+        get_nested(data.porter_analysis, "industry_level", default="") or "",
+        get_nested(data.porter_analysis, "forward_looking", default="") or "",
+    ]
+    return " ".join(clean(str(item)) for item in items if item is not None)
+
+
+def operational_metric(data: ReportData) -> tuple[str, str, str]:
+    kpis = operational_kpis(data)
+    if "dap_billion" in kpis:
+        return ("DAP", bn_to_yi(float(kpis["dap_billion"])), GREEN)
+    if "mau_billion" in kpis:
+        return ("MAU", bn_to_yi(float(kpis["mau_billion"])), GREEN)
+    if "dau_million" in kpis:
+        return ("DAU", f"{float(kpis['dau_million']):.0f} 百万", GREEN)
+    if "subscribers_million" in kpis:
+        return ("订阅用户", f"{float(kpis['subscribers_million']):.0f} 百万", GREEN)
+    ocf = cash_flow(data).get("operating_cash_flow")
+    if ocf:
+        return ("经营现金流", money_text(float(ocf)), GREEN)
+    net_margin = profitability(data).get("net_margin_pct")
+    return ("净利率", pct_text(net_margin), GREEN)
+
+
+def company_theme(data: ReportData) -> str:
+    text = all_text(data).lower()
+    sector = str(get_nested(data.financial_data, "sector", default="")).lower()
+    if any(token in text for token in ("制药", "药企", "药物", "肥胖", "糖尿病", "临床", "管线", "mounjaro", "zepbound", "verzenio")) or "healthcare" in sector:
+        return "pharma"
+    if any(token in text for token in ("aws", "电商", "零售", "第三方卖家", "履约", "物流", "综合零售", "云服务", "prime", "亚马逊")) or any(
+        token in sector for token in ("综合零售", "云服务", "非必需消费")
+    ):
+        return "ecom_cloud"
+    if any(token in text for token in ("广告", "reels", "family of apps", "社交", "互动媒体")):
+        return "ads_ai"
+    if any(token in text for token in ("电动车", "robotaxi", "fsd", "储能", "汽车")):
+        return "ev_ai"
+    if any(token in text for token in ("订阅", "saas", "软件", "云", "license")):
+        return "software"
+    return "general"
+
+
+def segment_sentence(data: ReportData) -> str:
+    segments = segment_data(data)
+    if len(segments) >= 2:
+        seg1, seg2 = segments[0], segments[1]
+        return ensure_terminal_punct(
+            f"{clean_segment_name(seg1.get('name', '主业务'))}{segment_revenue_bn(seg1) * 10:.1f} 亿美元，"
+            f"{clean_segment_name(seg2.get('name', '次业务'))}{segment_revenue_bn(seg2) * 10:.1f} 亿美元，盘子和押注分得很清楚"
+        )
+    label, value, _ = operational_metric(data)
+    return ensure_terminal_punct(f"{label}{value}，说明这门生意的底盘还在")
+
+
+def cover_intro(data: ReportData) -> str:
+    theme = company_theme(data)
+    label, value, _ = operational_metric(data)
+    candidates = {
+        "ecom_cloud": [
+            "说白了，市场现在盯的不是亚马逊还能不能卖货，而是 AWS、广告和履约效率能不能一起把利润率继续抬上去",
+            "别看营收盘子已经很大，真正决定估值的，还是云业务、广告和零售效率能不能一起撑住利润弹性",
+        ],
+        "pharma": [
+            "说白了，市场现在盯的不是礼来药卖得好不好，而是减重和糖尿病这条大单品曲线能不能继续往上冲，同时把产能和竞争都扛住",
+            "别看礼来现在增长很猛，真正决定估值的，是爆款药能不能继续放量，产能瓶颈会不会先拖住收入",
+        ],
+        "ads_ai": [
+            f"说白了，市场现在盯的不是广告还赚不赚钱，而是 {label}{value} 这台流量机器能不能一边印钱，一边把 AI 账单扛住",
+            f"别看钱还在进，真正决定估值的，是 AI 投入多久能换回更高广告回报",
+        ],
+        "ev_ai": [
+            "说白了，车还是基本盘，市场真正下注的是软件、储能和自动驾驶能不能兑现",
+            "别看卖车还在卷，真正能抬估值的，是高毛利新业务跑得有多快",
+        ],
+        "software": [
+            "说白了，市场盯的不是功能多不多，而是留存、提价和利润兑现能不能一起走",
+            "别看故事讲得热闹，真正值钱的是客户续费和现金流是不是还在抬",
+        ],
+        "general": [
+            "说白了，市场现在看的不是故事够不够大，而是增长和兑现能不能同时成立",
+            "别看生意还在扩，真正决定估值的，是新投入多久能变成真钱",
+        ],
+    }
+    return fit_copy(candidates.get(theme, candidates["general"]), 44, human=True)
+
+
+def company_focus_paragraph(data: ReportData) -> str:
+    theme = company_theme(data)
+    fin = finance(data)
+    label, value, _ = operational_metric(data)
+    candidates = {
+        "ecom_cloud": [
+            f"说白了，这家公司现在拼的不是收入还能不能长，而是高毛利的 AWS、广告和第三方卖家服务，能不能把庞大的零售底盘真正变成更厚的利润池。{fiscal_year(data)} 营收 {money_text(fin['revenue'])}，{label}{value} 说明现金还在往里进，但只要云增速、履约效率或资本开支节奏一变，市场就会立刻重算它的利润弹性和估值。",
+            f"别看亚马逊什么都在做，市场真正盯的还是三件事：AWS 增速能不能继续抬、广告和卖家服务能不能继续放大利润、零售网络是不是还在变得更高效。{fiscal_year(data)} 营收 {money_text(fin['revenue'])} 说明基本盘够大，但估值能不能再往上走，还是要看高利润业务能不能把整个集团带得更轻。",
+        ],
+        "pharma": [
+            f"说白了，这门生意现在拼的不是药卖不卖得动，而是爆款能不能持续放量、产能能不能跟上、下一批管线能不能顺利接棒。{fiscal_year(data)} 营收 {money_text(fin['revenue'])}，{label}{value} 说明现金还在往里流，但只要供应、医保定价或竞争格局一有变化，市场就会立刻重算它的增速和估值。",
+            f"别看礼来现在像在一路狂奔，市场真正盯的还是三件事：减重药供给够不够、糖尿病药渗透还能不能继续抬、后面新适应症能不能接上。{fiscal_year(data)} 营收 {money_text(fin['revenue'])} 说明基本盘已经做大，但高增长能跑多久，才是决定估值能站多高的核心。真要是哪条线先松一下，市场给它的高溢价也会跟着一起回吐。",
+        ],
+        "ads_ai": [
+            f"说白了，这还是一台会印钱的广告机器，但 AI 基建也是真烧钱。{fiscal_year(data)} 营收 {money_text(fin['revenue'])}，{label}{value} 说明流量盘子没塌，广告引擎也没熄火。市场真正在算的，是这笔大投入多久能换回更高变现，别最后收入涨了，利润却先被账单吃掉。",
+            f"别看 Meta 还在赚钱，资本市场现在更关心的是两件事：广告效率能不能继续抬，AI 投入多久能开始回本。{label}{value} 说明底盘还稳，但账单已经越来越大，后面要看的不是能不能投，而是投完之后利润能不能接得上。",
+        ],
+        "ev_ai": [
+            f"说白了，车还是报表基本盘，软件和储能才是估值想象力。{fiscal_year(data)} 营收 {money_text(fin['revenue'])}，{label}{value} 说明新业务已经开始有存在感。市场接下来盯的，不是故事新不新，而是兑现快不快，毕竟高毛利业务一天不接棒，估值就一天站不稳。",
+            "别看车卖得还是最多，真正抬估值的已经不是交付量，而是软件订阅、储能扩张和自动驾驶进展。眼前看现金流，中期看新业务兑现，谁先把新利润池做出来，谁的故事才更值钱。",
+        ],
+        "software": [
+            f"说白了，这门生意现在不缺收入，缺的是让市场相信高增长和高利润能一起跑。{label}{value} 说明底盘还在，提价、续费和费用控制也都得继续兑现，不然收入看着热闹，利润表先发虚，估值也会跟着掉价。真正拉开差距的，不是谁功能更多，而是谁能把生态绑定和现金流一起守住。",
+            f"别看业务线铺得很开，市场真正盯的还是两件事：客户愿不愿继续续费，云和 AI 能不能把更多现金流留在表里。{label}{value} 说明底盘还稳，但要是提价和扩张接不上，故事再大也会被打回现实，市场也不会一直替它买单。真到景气转弱时，先掉的往往不是收入，而是市场给它的溢价。",
+        ],
+        "general": [
+            f"说白了，这家公司眼下不只是拼增长，更是在拼兑现速度。{fiscal_year(data)} 营收 {money_text(fin['revenue'])}，{label}{value} 说明基本盘还稳。市场接下来盯的，是新投入能不能换回更高回报，别最后规模做大了，利润却被摊薄。",
+            "别看表面数据还行，真正让估值有弹性的，是主业守住基本盘的同时，新故事能不能尽快变成真钱。只有增长和兑现能一起跑，市场才会愿意继续给耐心。",
+        ],
+    }
+    return fit_copy(candidates.get(theme, candidates["general"]), 124, human=True)
+
+
+def industry_paragraph(data: ReportData) -> str:
+    theme = company_theme(data)
+    candidates = {
+        "ecom_cloud": [
+            "这个行业表面上是零售，骨子里拼的是履约网络、卖家生态、广告变现和云基础设施。规模做大只是门槛，真正拉开差距的是谁能把低毛利交易流量导向更高毛利的云、广告和服务。谁只是卖货不控效率，利润率就很难抬起来。",
+            "平台零售和云服务放在一起看，核心不是谁业务多，而是谁能把流量、商家、物流和算力串成一个飞轮。只要云和广告继续抬利润，零售就不只是包袱；反过来一旦履约和 capex 压力上来，估值也会很快被重估。",
+        ],
+        "pharma": [
+            "这个行业表面上卖的是药，骨子里比的是临床数据、产能、渠道和专利壁垒。减重赛道把天花板抬得很高，也把竞争、供给和定价压力一起推了上来。谁能把爆款持续放量、把新适应症做宽，谁就更容易把高估值守住。",
+            "创新药赛道不怕需求大，怕的是供给跟不上、专利和竞争提前松动。只要疗效、可及性和产能都在线，市场就愿意给高溢价；反过来一旦放量节奏掉下来，估值回撤通常也会来得很快。",
+        ],
+        "ads_ai": [
+            "这个行业说到底就是抢注意力、拼算法，再把时长换成广告钱。AI 让投放更自动，也把算力和能源成本一起抬上去。头部平台吃肉，后排玩家找缝，真正的分水岭不在有没有流量，而在能不能把流量变成更高 ROI。",
+            "互动媒体和在线广告这门生意，表面上看是卖流量，骨子里比的是算法、分发和转化。AI 把效率天花板抬高了，也把成本曲线一起顶上去了。谁能把广告主的钱花得更准，谁就更能在景气波动里守住利润。",
+        ],
+        "ev_ai": [
+            "这个行业表面上在卷价格，骨子里在卷效率、软件和供应链。车企都想抢份额，但真正能把估值拉开的，还是自动驾驶、储能和制造效率。硬件是底座，软件和能源生态才是利润上限，谁只能靠降价，谁就更难守住利润。",
+            "新能源车行业现在不是谁更会讲故事，而是谁能把规模、毛利和软件收入一起做出来。硬件越来越像底座，软件越来越像上限，谁能先把高毛利业务做厚，谁就更容易穿越价格战，也更容易让估值站稳。",
+        ],
+        "software": [
+            "这个行业看起来是卖软件，实际上比的是续费、集成深度和提价权。AI 能拉高效率，也会加速同质化，所以最后拼的还是客户黏性、生态位和现金流。谁只是功能堆得多、迁移成本又不够高，谁就会被更便宜的新工具往后挤。",
+            "企业软件赛道不怕故事多，怕的是替代成本不够高。只要留存稳、扩张率高、生态绑定深，市场就愿意给耐心；反过来估值掉得也会很快，因为客户一旦松动，利润通常会比收入更早塌下来。",
+        ],
+        "general": [
+            "这个行业表面上在拼增长，实际上在拼谁能把规模、效率和利润一起做出来。上游成本、需求节奏和监管变化，都会直接改写利润率，谁的成本结构更硬，谁就更容易掉队。",
+            "这门生意不是谁声音大谁赢，而是谁能把基本盘守住，再把新投入变成回报。景气一好，大家都能讲故事；景气一弱，现金流立刻见真章，市场会先挑最能兑现的公司站队。",
+        ],
+    }
+    return fit_copy(candidates.get(theme, candidates["general"]), 180, human=True)
+
+
+def conclusion_block(data: ReportData) -> str:
+    theme = company_theme(data)
+    candidates = {
+        "ecom_cloud": [
+            "零售底盘还在转，真正的上限要看 AWS、广告和卖家服务能不能继续放大利润",
+            "眼前靠零售和云撑盘子，估值上限还是看高毛利业务能不能继续接棒",
+        ],
+        "pharma": [
+            "爆款药还在放量，真正的问号是产能、竞争和后续管线谁先掉链子",
+            "眼前靠重磅药冲收入，估值上限还得看供给和新适应症能不能续上",
+        ],
+        "ads_ai": [
+            "护城河还在，真正的问号是 AI 投入多久能换回更高广告回报",
+            "平台没掉队，真正要盯的是 AI 账单何时开始反哺利润",
+        ],
+        "ev_ai": [
+            "主业看现金流，上限看软件、储能和自动驾驶兑现",
+            "车卖得再多只是基本盘，估值上限仍要看新业务兑现",
+        ],
+        "software": [
+            "产品能卖不是终点，续费、提价和利润兑现才是关键",
+            "真正值钱的不是增速一时多快，而是客户留得有多稳",
+        ],
+        "general": [
+            "基本盘还在，真正的问号是新投入多久能变成真钱",
+            "市场不是不给耐心，而是只给能兑现的耐心",
+        ],
+    }
+    return fit_copy(candidates.get(theme, candidates["general"]), 56, human=True)
+
+
+def judgement_paragraph(data: ReportData) -> str:
+    theme = company_theme(data)
+    candidates = {
+        "ecom_cloud": [
+            "说白了，眼前看 AWS 和零售效率，估值看广告和高毛利服务能不能继续抬",
+            "别看营收盘子够大，真正决定估值的还是利润结构能不能继续变轻",
+        ],
+        "pharma": [
+            "说白了，眼前看爆款药放量，估值看产能和新适应症；供给跟得上，故事才值钱",
+            "别看收入冲得快，真正决定估值的还是产能兑现和管线接棒",
+        ],
+        "ads_ai": [
+            "说白了，广告还在印钱，AI 账单也在飞；收入扛得住，估值就撑得住",
+            "别看利润还厚，市场真正盯的是 AI 投入会不会先把费用顶起来",
+        ],
+        "ev_ai": [
+            "说白了，眼前看卖车，估值看软件和储能；主业稳得住，故事才有人信",
+            "别看车还是主角，真正抬估值的要靠高毛利新业务兑现",
+        ],
+        "software": [
+            "说白了，眼前看续费，估值看提价和利润；留存稳，故事才站得住",
+            "别看增速还在，真正决定估值的还是客户黏性和现金流",
+        ],
+        "general": [
+            "说白了，眼前看利润，估值看新业务多久兑现；基本盘稳，故事才值钱",
+            "别看数据不差，市场真正算的是投入回报而不是口号",
+        ],
+    }
+    return fit_copy(candidates.get(theme, candidates["general"]), 52, human=True)
+
+
+def brand_statement(data: ReportData) -> str:
+    theme = company_theme(data)
+    candidates = {
+        "ecom_cloud": [
+            "说白了，亚马逊现在卖的不只是货，而是零售底盘、云利润和广告飞轮的叠加",
+            "别看盘子已经很大，真正值钱的是高毛利业务能不能继续把集团带轻",
+        ],
+        "pharma": [
+            "说白了，礼来现在卖的不只是药，而是爆款放量、产能兑现和管线接棒的预期",
+            "别看收入冲得猛，真正值钱的是爆款药还能跑多久、后面还有没有人接班",
+        ],
+        "ads_ai": [
+            "广告机还在印钱，AI 账单已经追上来了",
+            "流量还在变现，AI 投入也在猛踩油门",
+        ],
+        "ev_ai": [
+            "说白了，车还是基本盘，软件和储能才值钱",
+            "别看报表靠卖车，估值还是得靠新业务兑现",
+        ],
+        "software": [
+            "说白了，微软现在卖的不只是软件，而是留存、提价和整套生态的黏性",
+            "别看收入还在长，真正值钱的是客户不走、价格还能往上抬",
+        ],
+        "general": [
+            "主业还在赚钱，新故事也在烧钱",
+            "基本盘要稳，新投入也得尽快回本",
+        ],
+    }
+    return fit_copy(candidates.get(theme, candidates["general"]), 34, human=True)
+
+
+def background_points(data: ReportData) -> list[str]:
+    fin = finance(data)
+    rev_yoy = revenue_yoy(data)
+    net_yoy = net_income_yoy(data)
+    prof = profitability(data)
+    ocf = cash_flow(data).get("operating_cash_flow")
+    capex = cash_flow(data).get("capex_purchases")
+    points = [
+        fit_copy([f"{fiscal_year(data)} 营收 {money_text(fin['revenue'])}，同比{pct_text(rev_yoy, signed=True)}，基本盘还在持续发力。"], 52),
+        fit_copy([f"净利润 {money_text(fin['net'])}，同比{pct_text(net_yoy, signed=True)}，利润节奏暂时没跟上收入。"], 50),
+        fit_copy([segment_sentence(data)], 56),
+        fit_copy(
+            [
+                f"营业利润率 {pct_text(prof.get('operating_margin_pct'))}，经营现金流 {money_text(float(ocf))}，但 Capex {money_text(float(capex))} 也明显抬起来了。"
+                if ocf and capex
+                else f"营业利润率 {pct_text(prof.get('operating_margin_pct'))}，这门生意的盈利底子还在。"
+            ],
+            60,
+        ),
+    ]
+    return dedupe_texts(points, 4)
+
+
+def revenue_explainer_points(data: ReportData) -> list[str]:
+    prof = profitability(data)
+    narratives = get_nested(data.financial_analysis, "trend_narratives", default={}) or {}
+    theme = company_theme(data)
+    points = [
+        fit_copy([f"毛利率 {pct_text(prof.get('gross_margin_pct'))}，营业利润率 {pct_text(prof.get('operating_margin_pct'))}，利润池依旧不小"], 40),
+        fit_copy(
+            [
+                narratives.get("fcf", ""),
+                "药卖得快，钱也回得快，但产能和投入一样都不能掉链子。",
+                "现金流还在，但大额投入已经开始抢利润。",
+                "账上的钱还够用，但投入节奏明显比以前猛。",
+            ],
+            54,
+        ),
+        fit_copy(
+            {
+                "ecom_cloud": ["说白了，真正支撑估值的，不只是今天卖出多少货，而是 AWS、广告和卖家服务能不能把利润率继续往上抬。"],
+                "pharma": ["说白了，真正支撑估值的，不只是今天卖了多少药，而是爆款能不能持续放量、后面还有没有新药接棒。"],
+                "ads_ai": ["说白了，真正支撑估值的，不是今天赚了多少，而是 AI 投入以后能赚得更多。"],
+                "ev_ai": ["说白了，真正支撑估值的，不是多卖几辆车，而是软件和储能能不能放大利润。"],
+                "software": ["说白了，真正支撑估值的，不是功能多少，而是留存和提价能不能一起兑现。"],
+                "general": ["说白了，真正支撑估值的，不只是今天赚多少钱，而是明天还能不能赚得更快。"],
+            }[theme],
+            54,
+            human=True,
+        ),
+    ]
+    return dedupe_texts(points, 3)
+
+
+def business_now_points(data: ReportData) -> list[str]:
+    theme = company_theme(data)
+    points: list[str] = []
+    segments = segment_data(data)
+    if segments:
+        lead = segments[0]
+        points.append(
+            fit_copy(
+                [
+                    f"{clean_segment_name(lead.get('name', '主业务'))} {segment_revenue_bn(lead) * 10:.1f} 亿美元，还是收入基本盘。",
+                    f"{clean_segment_name(lead.get('name', '主业务'))} 还是现金牛，主业务没有熄火，报表重心也还压在这里。",
+                ],
+                58,
+            )
+        )
+    kpis = operational_kpis(data)
+    if "dap_billion" in kpis:
+        points.append(fit_copy([f"DAP {bn_to_yi(float(kpis['dap_billion']))}，流量底盘和分发效率都还在线，广告机器没有掉链子。"], 56))
+    elif "ad_impressions_yoy_pct" in kpis:
+        points.append(fit_copy([f"广告展示量同比{pct_text(kpis['ad_impressions_yoy_pct'], signed=True)}，平台活跃度还在往上走，用户时长也还撑得住。"], 58))
+    prof = profitability(data)
+    if prof.get("operating_margin_pct") is not None:
+        points.append(fit_copy([f"营业利润率 {pct_text(prof.get('operating_margin_pct'))}，这门生意现在依旧很能赚钱，利润底子并没有塌。"], 58))
+    ocf = cash_flow(data).get("operating_cash_flow")
+    capex = cash_flow(data).get("capex_purchases")
+    if ocf and capex:
+        points.append(fit_copy([f"经营现金流 {money_text(float(ocf))}，但 Capex {money_text(float(capex))} 已经踩下油门，账单只会越来越大。"], 60, human=True))
+    theme_point = {
+        "ecom_cloud": "零售还是底盘，但市场更关心的是 AWS、广告和卖家服务能不能把利润结构继续往上抬，别让 capex 和履约再把弹性吃掉。",
+        "pharma": "爆款药已经把收入曲线抬起来了，但市场更关心的是供给、竞争和后续管线能不能继续接住这波高增长。",
+        "ads_ai": "Family of Apps 还是现金牛，广告机器没有熄火，但市场已经开始盯 AI 投入会不会吞掉更多利润。",
+        "ev_ai": "车还是主角，但市场已经盯上软件和储能的利润弹性，谁先兑现谁先吃到估值。",
+        "software": "产品卖得出去只是起点，续费和扩张才决定质量，客户黏性一天都不能松。",
+        "general": "主业务还在扛报表，新业务开始决定市场想象力，兑现速度会比故事本身更重要。",
+    }[theme]
+    points.append(fit_copy([theme_point], 62, human=theme != "general"))
+    extras = {
+        "ads_ai": [
+            "推荐、广告工具和变现效率如果还能继续抬，主业务现金流就还有韧性。",
+        ],
+        "ecom_cloud": [
+            "AWS、广告和第三方卖家服务只要继续抬占比，亚马逊的利润结构就还有继续变轻的空间。",
+        ],
+        "pharma": [
+            "减重和糖尿病赛道看着很热，但真正能守住高增长的，还是供给能力和临床扩张速度。",
+        ],
+        "ev_ai": [
+            "卖车决定报表下限，软件、储能和自动驾驶决定利润上限，这三条线现在得一起看。",
+            "只靠交付量已经不够，市场更想看高毛利业务什么时候开始接棒。",
+        ],
+        "software": [
+            "客户续费、产品集成和提价能力，才是真正决定收入质量的三件事。",
+        ],
+        "general": [
+            "主业务稳不稳，决定这家公司有没有底气继续投未来。",
+        ],
+    }[theme]
+    dense = dedupe_texts(points, 4)
+    if len(dense) < 4:
+        dense = dedupe_texts(dense + [fit_copy([item], 62, human=True) for item in extras], 4)
+    return dense
+
+
+def future_watch_points(data: ReportData) -> list[str]:
+    theme = company_theme(data)
+    points: list[str] = []
+    theme_points = {
+        "ecom_cloud": [
+            "别只看收入，更要看 AWS、广告和履约效率能不能一起守住，不然利润弹性很容易被成本吃掉。",
+            "云服务和广告是估值锚，但零售网络、劳资和物流投入提醒市场，这门生意并不轻。",
+            "高毛利业务继续提占比，市场就愿意给耐心；一旦云增速回落、capex 再抬，估值会很快被压缩。",
+            "眼下大家买的是飞轮越转越顺，不是单看卖货规模；谁能把规模变成更厚利润，谁就更值钱。",
+        ],
+        "pharma": [
+            "别只看销量，更要看产能爬坡、医保覆盖和竞品节奏能不能一起扛住，不然高增长很容易先撞到供给天花板。",
+            "减重赛道够大，但越是高景气，市场越会盯供给、定价和长期安全性这些硬问题。",
+            "新适应症一旦持续放量，估值天花板还会被往上抬；但只要临床或供给节奏一慢，市场也会立刻重估。",
+            "眼下大家买的是爆款延续性和管线接棒，一旦这两条线松动，回撤通常不会太温和。",
+        ],
+        "ads_ai": [
+            "别只看广告景气，更要看 AI 投入能不能换回更高 ROI，不然账单会先把利润吃薄。",
+            "算力、电力和数据中心是硬约束，费用率短期还会紧，资本开支也未必马上降温。",
+            "监管一收紧，广告定向和产品节奏都可能被打断，产品迭代会直接被拖慢。",
+            "收入继续快跑，市场就夸它敢投；增速一掉，估值先挨打，情绪切得会非常快。",
+        ],
+        "ev_ai": [
+            "别只看交付量，更要看软件付费和储能扩张能不能继续兑现，利润池能不能真正换挡。",
+            "价格战如果拉太久，硬件利润会先被挤薄，现金流修复也会往后拖。",
+            "自动驾驶一旦兑现，估值天花板会被重新打开，但市场不会无限等。",
+            "市场现在买的是未来，兑现节奏一慢，回撤也会很快，故事反噬会比想象中更狠。",
+        ],
+        "software": [
+            "别只看新单，更要看续费、扩张率和提价能不能一起守住，单靠签单堆不出好估值。",
+            "AI 会拉高效率，也会加速同质化，护城河得靠客户黏性守，不能只靠新功能。",
+            "宏观一转弱，预算和回款节奏会先传到报表里，利润弹性往往比收入更早变脸。",
+            "增速守得住，估值就稳；留存一松，市场会立刻砍价，而且一点都不会客气。",
+        ],
+        "general": [
+            "别只看收入，更要看新投入多久能变成真钱，不然规模越大反而越容易被质疑。",
+            "上游成本、需求节奏和监管变化，都会先打到利润率，报表会比故事更早翻脸。",
+            "故事讲得再大，兑现一慢，市场就会先收估值，而且通常不会给第二次解释机会。",
+            "基本盘守得住，市场才愿意继续为远期叙事买单，不然耐心会掉得很快。",
+        ],
+    }
+    points.extend(fit_copy([item], 62, human=("别看" in item or "夸它敢投" in item)) for item in theme_points[theme])
+    return dedupe_texts(points, 4)
+
+
+def brand_summary_points(data: ReportData) -> list[str]:
+    rev_yoy = revenue_yoy(data)
+    points = [
+        fit_copy([f"收入同比{pct_text(rev_yoy, signed=True)}，基本盘还稳。"], 24),
+        fit_copy([brand_statement(data)], 24, human=True),
+        fit_copy([future_watch_points(data)[0]], 28, human=True),
+    ]
+    return dedupe_texts(points, 3)
+
+
+def watch_sentence(data: ReportData) -> str:
+    right = future_watch_points(data)
+    return right[0] if right else judgement_paragraph(data)
+
+
+def post_title(data: ReportData) -> str:
+    return f"一天吃透一家上市公司：{display_name(data.company_cn)}"
+
+
+def post_content_lines(data: ReportData) -> list[str]:
+    fin = finance(data)
+    rev_yoy = revenue_yoy(data)
+    label, value, _ = operational_metric(data)
+    lines = [
+        fit_copy([brand_statement(data)], 42, human=True),
+        fit_copy([f"{fiscal_year(data)} 营收 {money_text(fin['revenue'])}，同比{pct_text(rev_yoy, signed=True)}，钱还在进。"], 44),
+        fit_copy([f"{label} {value}，这就是它眼下最值得盯的经营抓手。"], 44, human=True),
+        fit_copy([f"后面真要看的是：{watch_sentence(data)}"], 44, human=True),
+    ]
+    return dedupe_texts(lines, 4)
+
+
+def keyword_tags(data: ReportData) -> list[str]:
+    text = all_text(data)
+    tags: list[str] = [hashtag_token(display_name(data.company_cn))]
+    if data.ticker:
+        tags.append(hashtag_token(data.ticker))
+    tags.append("#美股")
+    sector = str(get_nested(data.financial_data, "sector", default=""))
+    if "通信" in sector or "广告" in text:
+        tags.append("#数字广告")
+    if "社交" in text:
+        tags.append("#社交平台")
+    if "AI" in text or "人工智能" in text:
+        tags.append("#AI")
+    if "云" in text:
+        tags.append("#云计算")
+    if "电动车" in text:
+        tags.append("#电动车")
+    tags.extend(["#商业模式", "#上市公司", "#金融豹"])
+    return dedupe_texts([hashtag_token(tag) for tag in tags], 5)
+
+
+def post_hashtags(data: ReportData) -> str:
+    return " ".join(keyword_tags(data))
+
+
+def measure_block(draw: ImageDraw.ImageDraw, text: str, width: int, font_obj: ImageFont.FreeTypeFont, line_gap: int) -> int:
+    lines = wrap(draw, text, font_obj, width)
+    if not lines:
+        return 0
+    return len(lines) * font_obj.size + (len(lines) - 1) * line_gap
+
+
+def measure_bullets(draw: ImageDraw.ImageDraw, items: list[str], width: int, font_obj: ImageFont.FreeTypeFont, line_gap: int, gap_after: int) -> int:
+    total = 0
+    for item in items:
+        total += measure_block(draw, item, width - 24, font_obj, line_gap)
+        total += gap_after
+    return total
+
+
+def validate_report(data: ReportData, brand: str) -> None:
+    img = Image.new("RGB", (W, H), BG)
+    draw = ImageDraw.Draw(img)
+    issues: list[str] = []
+
+    focus = company_focus_paragraph(data)
+    intro = cover_intro(data)
+    bg_points = background_points(data)
+    industry = industry_paragraph(data)
+    left = business_now_points(data)
+    right = future_watch_points(data)
+    brand_points = brand_summary_points(data)
+    brand_line = brand_statement(data)
+    title = post_title(data)
+    lines = post_content_lines(data)
+    tags = post_hashtags(data)
+
+    if display_name(data.company_cn).endswith("公司"):
+        issues.append("Company display name must use the short Chinese name without '公司'.")
+    if not data.date:
+        issues.append("Date is missing.")
+    if not brand:
+        issues.append("Brand is missing.")
+    if TEXT_RENDER_SCALE < 2:
+        issues.append("Text rendering scale must be at least 2x for crisp export.")
+    if "账号应该给人什么印象" in data.thesis:
+        issues.append("Forbidden meta copy detected.")
+    for label, text in [
+        ("Card 1 intro sentence", intro),
+        ("Card 1 company-focus paragraph", focus),
+        ("Card 2 industry paragraph", industry),
+        ("Card 2 conclusion", conclusion_block(data)),
+        ("Card 4 judgement paragraph", judgement_paragraph(data)),
+        ("Card 5 main statement", brand_line),
+    ]:
+        if not is_complete_copy(text):
+            issues.append(f"{label} must be a complete sentence or paragraph without ellipsis.")
+    for label, text in [
+        ("Card 4 judgement paragraph", judgement_paragraph(data)),
+        ("Card 5 main statement", brand_line),
+    ]:
+        if not is_human_copy(text):
+            issues.append(f"{label} must read like a human voice, not analyst template copy.")
+    if measure_block(draw, intro, 860, f(FONT_INTRO), 12) > 2 * FONT_INTRO + 12:
+        issues.append("Card 1 intro sentence exceeds 2 lines.")
+    if has_bad_linebreak(intro, 860, f(FONT_INTRO), draw):
+        issues.append("Card 1 intro sentence contains a punctuation-led line break.")
+    focus_height = measure_block(draw, focus, 860, f(FONT_PANEL_BODY), 12)
+    if len(focus) < 60:
+        issues.append("Card 1 company-focus paragraph is too short.")
+    if focus_height < 4 * FONT_PANEL_BODY + 3 * 12:
+        issues.append("Card 1 company-focus paragraph leaves too much empty yellow-panel space.")
+    if focus_height > 7 * FONT_PANEL_BODY + 6 * 12:
+        issues.append("Card 1 company-focus paragraph exceeds the allowed panel height.")
+    if has_bad_linebreak(focus, 860, f(FONT_PANEL_BODY), draw):
+        issues.append("Card 1 company-focus paragraph contains a punctuation-led line break.")
+
+    left_card_height = measure_bullets(draw, bg_points, 446, f(FONT_BULLET), 12, 24) + measure_block(draw, industry, 446, f(FONT_PANEL_BODY), 13)
+    if len(bg_points) != 4:
+        issues.append("Card 2 must contain exactly 4 background bullets.")
+    for point in bg_points:
+        if not is_complete_copy(point):
+            issues.append(f"Card 2 background bullet must be a complete sentence: {point}")
+        if measure_block(draw, point, 422, f(FONT_BULLET), 12) > 4 * FONT_BULLET + 3 * 12:
+            issues.append(f"Card 2 background bullet is too long: {point}")
+        if has_bad_linebreak(point, 422, f(FONT_BULLET), draw):
+            issues.append(f"Card 2 background bullet contains a punctuation-led line break: {point}")
+
+    if len(industry) < 90:
+        issues.append("Card 2 industry paragraph is too short.")
+    if measure_block(draw, industry, 446, f(FONT_PANEL_BODY), 13) > 11 * FONT_PANEL_BODY + 10 * 13:
+        issues.append("Card 2 industry paragraph exceeds its section box.")
+    if has_bad_linebreak(industry, 446, f(FONT_PANEL_BODY), draw):
+        issues.append("Card 2 industry paragraph contains a punctuation-led line break.")
+    if left_card_height < 360:
+        issues.append("Card 2 left card is too sparse and leaves obvious whitespace.")
+    conclusion = conclusion_block(data)
+    if measure_block(draw, conclusion, 300, f(FONT_CONCLUSION), 12) > 4 * FONT_CONCLUSION + 3 * 12:
+        issues.append("Card 2 conclusion exceeds its box.")
+
+    if 710 < 438 + 4 * 56 + 28 + 20:
+        issues.append("Card 3 metric cards are too close to the revenue rows.")
+
+    left_height = measure_bullets(draw, left, 350, f(FONT_BULLET_COMPACT), 10, 18)
+    right_height = measure_bullets(draw, right, 368, f(FONT_BULLET_COMPACT), 10, 18)
+    if sum(len(x) for x in left) < 90:
+        issues.append("Card 4 left column is too sparse.")
+    if sum(len(x) for x in right) < 90:
+        issues.append("Card 4 right column is too sparse.")
+    if left_height < 320:
+        issues.append("Card 4 left column leaves too much empty space.")
+    if right_height < 320:
+        issues.append("Card 4 right column leaves too much empty space.")
+    if left_height > 520:
+        issues.append("Card 4 left column exceeds its available height.")
+    if right_height > 520:
+        issues.append("Card 4 right column exceeds its available height.")
+    for point in left:
+        if not is_complete_copy(point):
+            issues.append(f"Card 4 left column must use complete sentences: {point}")
+        if has_bad_linebreak(point, 326, f(FONT_BULLET_COMPACT), draw):
+            issues.append(f"Card 4 left column contains a punctuation-led line break: {point}")
+    for point in right:
+        if not is_complete_copy(point):
+            issues.append(f"Card 4 right column must use complete sentences: {point}")
+        if has_bad_linebreak(point, 344, f(FONT_BULLET_COMPACT), draw):
+            issues.append(f"Card 4 right column contains a punctuation-led line break: {point}")
+
+    judgement = judgement_paragraph(data)
+    if measure_block(draw, judgement, 316, f(FONT_JUDGEMENT), 10) > 4 * FONT_JUDGEMENT + 3 * 10:
+        issues.append("Card 4 judgement paragraph exceeds its box.")
+    if has_bad_linebreak(judgement, 316, f(FONT_JUDGEMENT), draw):
+        issues.append("Card 4 judgement paragraph contains a punctuation-led line break.")
+
+    if measure_block(draw, brand_line, 760, f(52, True), 14) > 3 * 52 + 2 * 14:
+        issues.append("Card 5 main statement exceeds its allowed block.")
+    if measure_bullets(draw, brand_points, 820, f(FONT_BRAND_SUMMARY), 12, 22) > 210:
+        issues.append("Card 5 summary bullets exceed the yellow panel.")
+    for point in brand_points:
+        if not is_complete_copy(point):
+            issues.append(f"Card 5 summary bullet must be a complete sentence: {point}")
+        if has_bad_linebreak(point, 796, f(FONT_BRAND_SUMMARY), draw):
+            issues.append(f"Card 5 summary bullet contains a punctuation-led line break: {point}")
+
+    if measure_block(draw, title, 860, f(FONT_POST_TITLE, True), 16) > 2 * FONT_POST_TITLE + 16:
+        issues.append("Card 6 title exceeds its allowed block.")
+    if has_bad_linebreak(title, 860, f(FONT_POST_TITLE, True), draw):
+        issues.append("Card 6 title contains a punctuation-led line break.")
+    if len(lines) != 4:
+        issues.append("Card 6 content must contain exactly 4 bullet lines.")
+    for line in lines:
+        if not is_complete_copy(line):
+            issues.append(f"Card 6 content line must be a complete sentence without ellipsis: {line}")
+        if not is_human_copy(line) and "真要看" not in line and "钱还在进" not in line:
+            issues.append(f"Card 6 content line lacks a human voice: {line}")
+        if measure_block(draw, line, 860, f(FONT_POST_LINE), 14) > 2 * FONT_POST_LINE + 14:
+            issues.append(f"Card 6 content line is too long: {line}")
+        if has_bad_linebreak(line, 860, f(FONT_POST_LINE), draw):
+            issues.append(f"Card 6 content line contains a punctuation-led line break: {line}")
+    if measure_block(draw, tags, 860, f(FONT_POST_TAG), 12) > 4 * FONT_POST_TAG + 3 * 12:
+        issues.append("Card 6 hashtags exceed their section.")
+    if has_bad_linebreak(tags, 860, f(FONT_POST_TAG), draw):
+        issues.append("Card 6 hashtags contain a punctuation-led line break.")
+    if len(keyword_tags(data)) > 5:
+        issues.append("Card 6 hashtags may not exceed 5 tags.")
+
+    if issues:
+        raise ValueError("Validation failed:\n- " + "\n- ".join(issues))
+
+
+def find_logo_asset(data: ReportData) -> Path | None:
+    names = {
+        display_name(data.company_cn).lower().replace(" ", ""),
+        data.ticker.lower(),
+        "logo",
+    }
+    for path in sorted(data.source_dir.iterdir()):
+        if path.suffix.lower() not in IMAGE_EXTS:
+            continue
+        stem = path.stem.lower().replace(" ", "")
+        if any(name and name in stem for name in names):
+            return path
+    return None
+
+
+def paste_logo(img: Image.Image, path: Path | None, box: tuple[int, int, int, int]) -> None:
+    if not path:
+        return
+    try:
+        logo = Image.open(path).convert("RGBA")
+    except OSError:
+        return
+    max_w = box[2] - box[0]
+    max_h = box[3] - box[1]
+    logo.thumbnail((max_w, max_h))
+    canvas = Image.new("RGBA", img.size, (255, 255, 255, 0))
+    x = box[0] + (max_w - logo.width) // 2
+    y = box[1] + (max_h - logo.height) // 2
+    canvas.alpha_composite(logo, (x, y))
+    img.alpha_composite(canvas)
+
+
+def background() -> Image.Image:
+    return Image.new("RGBA", (W, H), BG)
+
+
+def panel(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int], fill: str = WHITE, stroke: str = LINE, radius: int = 28) -> None:
+    draw.rounded_rectangle(box, radius=radius, fill=fill, outline=stroke, width=2)
+
+
+def header(draw: ImageDraw.ImageDraw, card_no: int) -> None:
+    draw_text(draw, (72, 56), "金融豹", f(FONT_HEADER_BRAND, True), TEXT)
+    draw_text(draw, (72, 92), "FINANCE LEOPARD", f(FONT_HEADER_SUBTITLE), ORANGE)
+    draw_text(draw, (942, 56), f"{card_no:02d}", f(FONT_HEADER_PAGE, True), TEXT)
+    draw.line((72, 126, 1008, 126), fill=LINE, width=2)
+
+
+def footer(draw: ImageDraw.ImageDraw, data: ReportData) -> None:
+    draw_text(draw, (72, 1288), f"{display_name(data.company_cn)} | {data.date}", f(FONT_FOOTER), MUTED)
+
+
+def metric(draw: ImageDraw.ImageDraw, x: int, y: int, w: int, label: str, value: str, accent: str) -> None:
+    panel(draw, (x, y, x + w, y + 110), WHITE)
+    draw.rounded_rectangle((x, y, x + 8, y + 110), radius=18, fill=accent)
+    label_font = fit_font(draw, label, w - 42, FONT_METRIC_LABEL_START, FONT_METRIC_LABEL_MIN)
+    value_font = fit_font(draw, value, w - 42, FONT_METRIC_VALUE_START, FONT_METRIC_VALUE_MIN)
+    draw_text(draw, (x + 24, y + 16), label, label_font, MUTED)
+    draw_text(draw, (x + 24, y + 52), value, value_font, TEXT)
+
+
+def bullets(
+    draw: ImageDraw.ImageDraw,
+    items: list[str],
+    x: int,
+    y: int,
+    width: int,
+    max_items: int,
+    max_lines: int,
+    gap_after: int = 24,
+    font_size: int = FONT_BULLET,
+    line_gap: int = 12,
+) -> int:
+    for item in items[:max_items]:
+        draw.ellipse((x, y + 12, x + 10, y + 22), fill=RED)
+        y = block(draw, item, x + 24, y, width - 24, f(font_size), TEXT, line_gap, max_lines=max_lines)
+        y += gap_after
+    return y
+
+
+def cover_metrics(data: ReportData) -> list[tuple[str, str, str]]:
+    fin = finance(data)
+    second_label = "净利润" if fin["net"] else "营业利润"
+    second_value = money_text(fin["net"] or fin["op"])
+    third_label, third_value, third_color = operational_metric(data)
+    return [
+        (f"{fiscal_year(data)} 总收入", money_text(fin["revenue"]), GOLD),
+        (second_label, second_value, RED),
+        (third_label, third_value, third_color),
+    ]
+
+
+def rate_metrics(data: ReportData) -> list[tuple[str, str, str]]:
+    prof = profitability(data)
+    return [
+        ("毛利率", pct_text(prof.get("gross_margin_pct")), GREEN),
+        ("营业利润率", pct_text(prof.get("operating_margin_pct")), BLUE),
+        ("净利率", pct_text(prof.get("net_margin_pct")), RED),
+    ]
+
+
+def card_1(data: ReportData) -> Image.Image:
+    img = background()
+    d = ImageDraw.Draw(img)
+    header(d, 1)
+    draw_text(d, (72, 198), "每天学习一个公司", f(58, True), TEXT)
+    company_font = fit_font(d, display_name(data.company_cn), 860, 96, 58)
+    draw_text(d, (72, 292), display_name(data.company_cn), company_font, RED)
+    draw_text(d, (78, 412), f"{data.company_en} · {data.ticker}", f(FONT_COVER_META), MUTED)
+    block(d, cover_intro(data), 78, 454, 860, f(FONT_INTRO), "#344054", 12, 2)
+    for idx, (label, value, color) in enumerate(cover_metrics(data)):
+        metric(d, 72 + idx * 300, 566, 280, label, value, color)
+    draw_panel = (72, 736, 1008, 1060)
+    d.rounded_rectangle(draw_panel, radius=28, fill=PANEL)
+    draw_text(d, (108, 786), "公司看点", f(34, True), TEXT)
+    block(d, company_focus_paragraph(data), 108, 842, 860, f(FONT_PANEL_BODY), "#344054", 12, 7)
+    footer(d, data)
+    return img.convert("RGB")
+
+
+def card_2(data: ReportData) -> Image.Image:
+    img = background()
+    d = ImageDraw.Draw(img)
+    header(d, 2)
+    draw_text(d, (72, 198), "公司背景 + 行业介绍", f(58, True), TEXT)
+    panel(d, (72, 314, 598, 1224))
+    d.rounded_rectangle((622, 314, 1008, 1224), radius=28, fill=PANEL)
+    draw_text(d, (108, 362), "公司背景", f(34, True), TEXT)
+    left_end_y = bullets(d, background_points(data), 108, 424, 446, 4, 4)
+    industry_title_y = max(728, left_end_y + 6)
+    industry_body_y = industry_title_y + 58
+    draw_text(d, (108, industry_title_y), "行业层面", f(34, True), TEXT)
+    block(d, industry_paragraph(data), 108, industry_body_y, 446, f(FONT_PANEL_BODY), "#344054", 13, 11)
+    draw_text(d, (656, 362), "波特五力", f(34, True), TEXT)
+    labels = ["供应商", "买方", "新进入者", "替代品", "竞争强度"]
+    y = 430
+    for label, score in zip(labels, data.porter_scores_industry):
+        draw_text(d, (656, y), label, f(FONT_PORTER_LABEL), "#475467")
+        d.rounded_rectangle((656, y + 36, 856, y + 52), radius=8, fill=LINE)
+        color = RED if score >= 4 else GOLD
+        d.rounded_rectangle((656, y + 36, 656 + int(200 * score / 5), y + 52), radius=8, fill=color)
+        draw_text(d, (880, y + 6), f"{score}/5", f(FONT_PORTER_SCORE, True), TEXT)
+        y += 110
+    draw_text(d, (656, 1018), "一句结论", f(30, True), TEXT)
+    block(d, conclusion_block(data), 656, 1066, 300, f(FONT_CONCLUSION), "#344054", 12, 4)
+    footer(d, data)
+    return img.convert("RGB")
+
+
+def card_3(data: ReportData) -> Image.Image:
+    img = background()
+    d = ImageDraw.Draw(img)
+    header(d, 3)
+    draw_text(d, (72, 198), "实际 Revenue 分析", f(58, True), TEXT)
+    panel(d, (72, 314, 1008, 856))
+    draw_text(d, (108, 360), f"{fiscal_year(data)} 收入流", f(34, True), TEXT)
+    fin = finance(data)
+    rows = [
+        ("总收入", yi(fin["revenue"]), GOLD),
+        ("营业成本", yi(fin["cogs"]), RED),
+        ("毛利润", yi(fin["gross"]), GREEN),
+        ("营业利润", yi(fin["op"]), BLUE),
+        ("净利润", yi(fin["net"]), TEXT),
+    ]
+    maxv = max(v for _, v, _ in rows) or 1
+    for idx, (label, value, color) in enumerate(rows):
+        y = 438 + idx * 56
+        draw_text(d, (108, y), label, f(FONT_CHART_LABEL), "#475467")
+        d.rounded_rectangle((244, y + 6, 744, y + 28), radius=11, fill=LINE)
+        d.rounded_rectangle((244, y + 6, 244 + int(500 * value / maxv), y + 28), radius=11, fill=color)
+        draw_text(d, (782, y - 6), f"{value:.1f} 亿美元", f(FONT_CHART_VALUE, True), TEXT)
+    for idx, (label, value, color) in enumerate(rate_metrics(data)):
+        metric(d, 108 + idx * 242, 710, 220, label, value, color)
+    d.rounded_rectangle((72, 896, 1008, 1188), radius=28, fill=PANEL)
+    draw_text(d, (108, 942), "怎么理解这张图", f(34, True), TEXT)
+    bullets(d, revenue_explainer_points(data), 108, 1002, 820, 3, 3, 18)
+    footer(d, data)
+    return img.convert("RGB")
+
+
+def card_4(data: ReportData) -> Image.Image:
+    img = background()
+    d = ImageDraw.Draw(img)
+    header(d, 4)
+    draw_text(d, (72, 198), "实际业务 + 未来展望", f(58, True), TEXT)
+    panel(d, (72, 314, 506, 1220))
+    panel(d, (534, 314, 1008, 1220))
+    draw_text(d, (108, 362), "现在靠什么赚钱", f(32, True), TEXT)
+    bullets(d, business_now_points(data), 108, 424, 350, 4, 5, 18, font_size=FONT_BULLET_COMPACT, line_gap=10)
+    draw_text(d, (570, 362), "未来 2-3 年看什么", f(32, True), TEXT)
+    bullets(d, future_watch_points(data), 570, 424, 368, 4, 5, 18, font_size=FONT_BULLET_COMPACT, line_gap=10)
+    d.rounded_rectangle((570, 980, 948, 1176), radius=24, fill=PANEL)
+    draw_text(d, (602, 1028), "一句判断", f(28, True), TEXT)
+    block(d, judgement_paragraph(data), 602, 1076, 316, f(FONT_JUDGEMENT), "#344054", 10, 4)
+    footer(d, data)
+    return img.convert("RGB")
+
+
+def card_5(data: ReportData, brand: str) -> Image.Image:
+    img = background()
+    d = ImageDraw.Draw(img)
+    header(d, 5)
+    draw_text(d, (72, 214), brand, f(110, True), TEXT)
+    subtitle = f"一句话看{display_name(data.company_cn)}"
+    subtitle_font = fit_font(d, subtitle, 760, 46, 34)
+    draw_text(d, (78, 346), subtitle, subtitle_font, ORANGE)
+    statement_font = fit_font(d, brand_statement(data), 760, 52, 38)
+    block(d, brand_statement(data), 78, 476, 760, statement_font, RED, 14, 3)
+    d.rounded_rectangle((72, 646, 1008, 1006), radius=28, fill=PANEL)
+    draw_text(d, (108, 696), "今日总结", f(34, True), TEXT)
+    bullets(d, brand_summary_points(data), 108, 758, 820, 3, 3, 22, font_size=FONT_BRAND_SUMMARY, line_gap=12)
+    draw_text(d, (72, 1098), "关注金融豹，每天学习一个公司。", f(34, True), TEXT)
+    for x, y, s in [(900, 218, 88), (980, 360, 64), (900, 520, 74)]:
+        d.ellipse((x, y, x + s, y + s), outline=RED, width=3)
+    paste_logo(img, find_logo_asset(data), (840, 240, 1010, 520))
+    footer(d, data)
+    return img.convert("RGB")
+
+
+def card_6(data: ReportData) -> Image.Image:
+    img = Image.new("RGBA", (W, H), "#101318")
+    d = ImageDraw.Draw(img)
+    draw_text(d, (72, 64), "发帖文案", f(FONT_BULLET, True), "#F8FAFC")
+    draw_text(d, (72, 104), "TITLE / CONTENT / HASHTAGS", f(FONT_HEADER_SUBTITLE), "#94A3B8")
+    draw_text(d, (72, 190), post_title(data), f(FONT_POST_TITLE, True), "#F8FAFC")
+
+    y = 310
+    for line in post_content_lines(data):
+        d.ellipse((72, y + 12, 84, y + 24), fill="#F97316")
+        y = block(d, line, 102, y, 880, f(FONT_POST_LINE), "#E5E7EB", 14, 2)
+        y += 30
+
+    d.rounded_rectangle((72, y + 10, 1008, y + 210), radius=28, fill="#171B22")
+    draw_text(d, (102, y + 42), post_hashtags(data), f(FONT_POST_TAG), "#F8FAFC")
+    draw_text(d, (72, 1288), f"{display_name(data.company_cn)} | 发帖文案图", f(FONT_POST_FOOTER), "#94A3B8")
+    return img.convert("RGB")
+
+
+def render_one(path: Path, output_root: Path, brand: str) -> list[Path]:
+    data = parse_html(path)
+    validate_report(data, brand)
+    out_dir = output_root / data.stem
+    out_dir.mkdir(parents=True, exist_ok=True)
+    cards = [
+        ("01_cover.png", card_1(data)),
+        ("02_background_industry.png", card_2(data)),
+        ("03_revenue.png", card_3(data)),
+        ("04_business_outlook.png", card_4(data)),
+        ("05_brand.png", card_5(data, brand)),
+        ("06_post_copy.png", card_6(data)),
+    ]
+    paths = []
+    for name, img in cards:
+        out = out_dir / name
+        img.save(out, quality=95)
+        paths.append(out)
+    return paths
+
+
+def input_files(src: Path) -> list[Path]:
+    return [src] if src.is_file() else sorted(src.glob("*.html"))
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--input", required=True, help="HTML file or folder.")
+    parser.add_argument("--output-root", default="output", help="Output root.")
+    parser.add_argument("--brand", default="金融豹", help="Brand name.")
+    args = parser.parse_args()
+
+    src = Path(args.input).expanduser().resolve()
+    out_root = Path(args.output_root).expanduser().resolve()
+    out_root.mkdir(parents=True, exist_ok=True)
+    files = input_files(src)
+    if not files:
+        raise SystemExit(f"No HTML files found at: {src}")
+    for html in files:
+        render_one(html, out_root, args.brand)
+        print(f"generated: {html}")
+
+
+if __name__ == "__main__":
+    main()
