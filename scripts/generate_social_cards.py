@@ -203,6 +203,70 @@ AUDIT_COMMON_EN_TERMS = {
 
 
 @dataclass
+class CardSlotOverrides:
+    """Optional slot copy from the content + layout agents; overrides heuristic templates when fields are set."""
+
+    schema_version: int = 1
+    intro_sentence: str | None = None
+    company_focus_paragraph: str | None = None
+    background_bullets: list[str] | None = None
+    industry_paragraph: str | None = None
+    porter_scores: list[int] | None = None
+    conclusion_block: str | None = None
+    revenue_explainer_points: list[str] | None = None
+    current_business_points: list[str] | None = None
+    future_watch_points: list[str] | None = None
+    judgement_paragraph: str | None = None
+    brand_subheading: str | None = None
+    brand_statement: str | None = None
+    memory_points: list[str] | None = None
+    cta_line: str | None = None
+    post_title: str | None = None
+    post_content_lines: list[str] | None = None
+    hashtags: list[str] | None = None
+
+    @staticmethod
+    def from_json_dict(raw: dict[str, Any]) -> CardSlotOverrides:
+        fields = {
+            "schema_version",
+            "intro_sentence",
+            "company_focus_paragraph",
+            "background_bullets",
+            "industry_paragraph",
+            "porter_scores",
+            "conclusion_block",
+            "revenue_explainer_points",
+            "current_business_points",
+            "future_watch_points",
+            "judgement_paragraph",
+            "brand_subheading",
+            "brand_statement",
+            "memory_points",
+            "cta_line",
+            "post_title",
+            "post_content_lines",
+            "hashtags",
+        }
+        kwargs: dict[str, Any] = {}
+        for key in fields:
+            if key not in raw:
+                continue
+            val = raw[key]
+            kwargs[key] = int(val) if key == "schema_version" and val is not None else val
+        return CardSlotOverrides(**kwargs)
+
+
+def load_card_slots(path: Path) -> CardSlotOverrides:
+    p = path.expanduser().resolve()
+    if not p.is_file():
+        raise FileNotFoundError(f"Slots file not found: {p}")
+    raw = json.loads(p.read_text(encoding="utf-8"))
+    if not isinstance(raw, dict):
+        raise ValueError("card_slots JSON root must be an object")
+    return CardSlotOverrides.from_json_dict(raw)
+
+
+@dataclass
 class ReportData:
     stem: str
     source_dir: Path
@@ -221,6 +285,7 @@ class ReportData:
     financial_data: dict[str, Any]
     financial_analysis: dict[str, Any]
     porter_analysis: dict[str, Any]
+    card_slots: CardSlotOverrides | None = None
 
 
 def f(size: int, bold: bool = False) -> ImageFont.FreeTypeFont:
@@ -346,7 +411,14 @@ def parse_html(path: Path) -> ReportData:
         financial_data=load_json(source_dir / "financial_data.json"),
         financial_analysis=load_json(source_dir / "financial_analysis.json"),
         porter_analysis=load_json(source_dir / "porter_analysis.json"),
+        card_slots=None,
     )
+
+
+def porter_scores_for_card(data: ReportData) -> list[int]:
+    if data.card_slots and data.card_slots.porter_scores is not None:
+        return data.card_slots.porter_scores
+    return data.porter_scores_industry
 
 
 def display_name(name: str) -> str:
@@ -1122,6 +1194,8 @@ def segment_fact_line(data: ReportData) -> str:
 
 
 def cover_intro(data: ReportData) -> str:
+    if data.card_slots and data.card_slots.intro_sentence:
+        return clean(data.card_slots.intro_sentence)
     theme = company_theme(data)
     label, value, _ = operational_metric(data)
     source_candidates = source_copy_candidates(
@@ -1161,6 +1235,8 @@ def cover_intro(data: ReportData) -> str:
 
 
 def company_focus_paragraph(data: ReportData) -> str:
+    if data.card_slots and data.card_slots.company_focus_paragraph:
+        return clean(data.card_slots.company_focus_paragraph)
     theme = company_theme(data)
     fin = finance(data)
     label, value, _ = operational_metric(data)
@@ -1207,6 +1283,8 @@ def company_focus_paragraph(data: ReportData) -> str:
 
 
 def industry_paragraph(data: ReportData) -> str:
+    if data.card_slots and data.card_slots.industry_paragraph:
+        return clean(data.card_slots.industry_paragraph)
     theme = company_theme(data)
     industry_texts = porter_section_texts(data, "industry") + porter_section_texts(data, "company") + porter_section_texts(data, "forward")
     source_candidates = source_copy_candidates(
@@ -1259,6 +1337,8 @@ def industry_paragraph(data: ReportData) -> str:
 
 
 def conclusion_block(data: ReportData) -> str:
+    if data.card_slots and data.card_slots.conclusion_block:
+        return clean(data.card_slots.conclusion_block)
     theme = company_theme(data)
     source_candidates = source_copy_candidates(
         porter_section_texts(data, "forward") + porter_section_texts(data, "company") + executive_texts(data),
@@ -1300,6 +1380,8 @@ def conclusion_block(data: ReportData) -> str:
 
 
 def judgement_paragraph(data: ReportData) -> str:
+    if data.card_slots and data.card_slots.judgement_paragraph:
+        return clean(data.card_slots.judgement_paragraph)
     theme = company_theme(data)
     source_candidates = source_copy_candidates(
         executive_texts(data) + porter_section_texts(data, "forward"),
@@ -1342,6 +1424,8 @@ def judgement_paragraph(data: ReportData) -> str:
 
 
 def brand_statement(data: ReportData) -> str:
+    if data.card_slots and data.card_slots.brand_statement:
+        return clean(data.card_slots.brand_statement)
     theme = company_theme(data)
     source_candidates = source_copy_candidates(
         executive_texts(data) + summary_texts(data) + highlight_texts(data),
@@ -1384,6 +1468,9 @@ def brand_statement(data: ReportData) -> str:
 
 
 def background_points(data: ReportData) -> list[str]:
+    if data.card_slots and data.card_slots.background_bullets:
+        bullets = [clean(x) for x in data.card_slots.background_bullets if clean(x)]
+        return dedupe_texts(bullets, 4)
     fin = finance(data)
     rev_yoy = revenue_yoy(data)
     net_yoy = net_income_yoy(data)
@@ -1402,6 +1489,9 @@ def background_points(data: ReportData) -> list[str]:
 
 
 def revenue_explainer_points(data: ReportData) -> list[str]:
+    if data.card_slots and data.card_slots.revenue_explainer_points:
+        pts = [clean(x) for x in data.card_slots.revenue_explainer_points if clean(x)]
+        return dedupe_texts(pts, 3)
     prof = profitability(data)
     narratives = get_nested(data.financial_analysis, "trend_narratives", default={}) or {}
     theme = company_theme(data)
@@ -1513,6 +1603,9 @@ def cash_flow_point(data: ReportData) -> str:
 
 
 def business_now_points(data: ReportData) -> list[str]:
+    if data.card_slots and data.card_slots.current_business_points:
+        pts = [clean(x) for x in data.card_slots.current_business_points if clean(x)]
+        return dedupe_texts(pts, 4)
     points: list[str] = []
     lead_point = lead_business_point(data)
     if lead_point:
@@ -1542,6 +1635,9 @@ def business_now_points(data: ReportData) -> list[str]:
 
 
 def future_watch_points(data: ReportData) -> list[str]:
+    if data.card_slots and data.card_slots.future_watch_points:
+        pts = [clean(x) for x in data.card_slots.future_watch_points if clean(x)]
+        return dedupe_texts(pts, 4)
     theme = company_theme(data)
     points: list[str] = [
         fit_copy([text], LIMIT_CARD4_FUTURE_BULLET_CHARS)
@@ -1600,6 +1696,9 @@ def future_watch_points(data: ReportData) -> list[str]:
 
 
 def brand_summary_points(data: ReportData) -> list[str]:
+    if data.card_slots and data.card_slots.memory_points:
+        pts = [clean(x) for x in data.card_slots.memory_points if clean(x)]
+        return dedupe_texts(pts, 3)
     rev_yoy = revenue_yoy(data)
     points = [
         fit_copy([f"收入同比{pct_text(rev_yoy, signed=True)}，基本盘还稳。"], 24),
@@ -1615,10 +1714,15 @@ def watch_sentence(data: ReportData) -> str:
 
 
 def post_title(data: ReportData) -> str:
+    if data.card_slots and data.card_slots.post_title:
+        return clean(data.card_slots.post_title)
     return f"一天吃透一家上市公司：{display_name(data.company_cn)}"
 
 
 def post_content_lines(data: ReportData) -> list[str]:
+    if data.card_slots and data.card_slots.post_content_lines:
+        lines = [clean(x) for x in data.card_slots.post_content_lines if clean(x)]
+        return dedupe_texts(lines, 4)
     fin = finance(data)
     rev_yoy = revenue_yoy(data)
     label, value, _ = operational_metric(data)
@@ -1653,6 +1757,9 @@ def keyword_tags(data: ReportData) -> list[str]:
 
 
 def post_hashtags(data: ReportData) -> str:
+    if data.card_slots and data.card_slots.hashtags:
+        tags = [hashtag_token(str(t).lstrip("#")) for t in data.card_slots.hashtags if clean(str(t))]
+        return " ".join(dedupe_texts(tags, 5))
     return " ".join(keyword_tags(data))
 
 
@@ -1735,7 +1842,11 @@ def hardcode_logic_issues(data: ReportData) -> list[str]:
             for marker in CROSS_REPORT_NAME_MARKERS:
                 if marker in normalized and marker not in source_blob and marker not in data.company_cn and marker not in data.company_en:
                     issues.append(f"{label} contains cross-report residue not found in this report package: {marker}")
-            if label != "Card 2 background bullets" and not has_source_anchor(normalized, data, source_terms):
+            if (
+                data.card_slots is None
+                and label != "Card 2 background bullets"
+                and not has_source_anchor(normalized, data, source_terms)
+            ):
                 issues.append(f"{label} looks like generic template copy without company-specific anchors: {normalized}")
 
     rev_yoy = revenue_yoy(data)
@@ -1760,6 +1871,8 @@ def validate_report(data: ReportData, brand: str) -> None:
     img = Image.new("RGB", (W, H), BG)
     draw = ImageDraw.Draw(img)
     issues: list[str] = []
+    if data.card_slots and data.card_slots.porter_scores is not None and len(data.card_slots.porter_scores) != 5:
+        issues.append("When card_slots.porter_scores is set, it must contain exactly five integers.")
     issues.extend(hardcode_logic_issues(data))
 
     focus = company_focus_paragraph(data)
@@ -2076,7 +2189,7 @@ def card_2(data: ReportData) -> Image.Image:
     draw_text(d, (656, 362), "波特五力", f(34, True), TEXT)
     labels = ["供应商", "买方", "新进入者", "替代品", "竞争强度"]
     y = 430
-    for label, score in zip(labels, data.porter_scores_industry):
+    for label, score in zip(labels, porter_scores_for_card(data)):
         draw_text(d, (656, y), label, f(FONT_PORTER_LABEL), "#475467")
         d.rounded_rectangle((656, y + 36, 856, y + 52), radius=8, fill=LINE)
         color = RED if score >= 4 else GOLD
@@ -2154,7 +2267,11 @@ def card_5(data: ReportData, brand: str) -> Image.Image:
     d = ImageDraw.Draw(img)
     header(d, 5)
     draw_text(d, (72, 214), brand, f(110, True), TEXT)
-    subtitle = f"一句话看{display_name(data.company_cn)}"
+    subtitle = (
+        clean(data.card_slots.brand_subheading)
+        if data.card_slots and data.card_slots.brand_subheading
+        else f"一句话看{display_name(data.company_cn)}"
+    )
     subtitle_font = fit_font(d, subtitle, 760, 46, 34)
     draw_text(d, (78, 346), subtitle, subtitle_font, ORANGE)
     statement_font = fit_font(d, brand_statement(data), 760, 52, 38)
@@ -2162,7 +2279,12 @@ def card_5(data: ReportData, brand: str) -> Image.Image:
     d.rounded_rectangle((72, 646, 1008, 1006), radius=28, fill=PANEL)
     draw_text(d, (108, 696), "今日总结", f(34, True), TEXT)
     bullets(d, brand_summary_points(data), 108, 758, 820, 3, 3, 22, font_size=FONT_BRAND_SUMMARY, line_gap=12)
-    draw_text(d, (72, 1098), "关注金融豹，每天学习一个公司。", f(34, True), TEXT)
+    cta = (
+        clean(data.card_slots.cta_line)
+        if data.card_slots and data.card_slots.cta_line
+        else "关注金融豹，每天学习一个公司。"
+    )
+    draw_text(d, (72, 1098), cta, f(34, True), TEXT)
     for x, y, s in [(900, 218, 88), (980, 360, 64), (900, 520, 74)]:
         d.ellipse((x, y, x + s, y + s), outline=RED, width=3)
     paste_logo(img, find_logo_asset(data), (840, 240, 1010, 520))
@@ -2189,8 +2311,10 @@ def card_6(data: ReportData) -> Image.Image:
     return img.convert("RGB")
 
 
-def render_one(path: Path, output_root: Path, brand: str) -> list[Path]:
+def render_one(path: Path, output_root: Path, brand: str, slots_path: Path | None = None) -> list[Path]:
     data = parse_html(path)
+    if slots_path is not None:
+        data.card_slots = load_card_slots(slots_path)
     set_currency_label(data)
     validate_report(data, brand)
     out_dir = output_root / data.stem
@@ -2228,16 +2352,22 @@ def main() -> None:
         help=f"Output root for PNG sets (default: {_DEFAULT_OUTPUT_ROOT})",
     )
     parser.add_argument("--brand", default="金融豹", help="Brand name.")
+    parser.add_argument(
+        "--slots",
+        default=None,
+        help="Optional card_slots.json from content/layout agents (same file used for all HTML in batch).",
+    )
     args = parser.parse_args()
 
     src = Path(args.input).expanduser().resolve()
     out_root = Path(args.output_root).expanduser().resolve()
     out_root.mkdir(parents=True, exist_ok=True)
+    slots_path = Path(args.slots).expanduser().resolve() if args.slots else None
     files = input_files(src)
     if not files:
         raise SystemExit(f"No HTML files found at: {src}")
     for html in files:
-        render_one(html, out_root, args.brand)
+        render_one(html, out_root, args.brand, slots_path)
         print(f"generated: {html}")
 
 

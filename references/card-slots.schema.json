@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/pppop00/equity-photo-cards-skill/card-slots.schema.json",
+  "title": "Equity photo card slot overrides",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "intro_sentence": { "type": "string" },
+    "company_focus_paragraph": { "type": "string" },
+    "background_bullets": { "type": "array", "items": { "type": "string" } },
+    "industry_paragraph": { "type": "string" },
+    "porter_scores": {
+      "type": "array",
+      "items": { "type": "integer", "minimum": 1, "maximum": 5 },
+      "minItems": 5,
+      "maxItems": 5
+    },
+    "conclusion_block": { "type": "string" },
+    "revenue_explainer_points": { "type": "array", "items": { "type": "string" } },
+    "current_business_points": { "type": "array", "items": { "type": "string" } },
+    "future_watch_points": { "type": "array", "items": { "type": "string" } },
+    "judgement_paragraph": { "type": "string" },
+    "brand_subheading": { "type": "string" },
+    "brand_statement": { "type": "string" },
+    "memory_points": { "type": "array", "items": { "type": "string" } },
+    "cta_line": { "type": "string" },
+    "post_title": { "type": "string" },
+    "post_content_lines": { "type": "array", "items": { "type": "string" } },
+    "hashtags": { "type": "array", "items": { "type": "string" } }
+  }
+}

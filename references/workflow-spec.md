@@ -290,3 +290,20 @@ Expected final output:
 - `06_post_copy.png`
 
 If validation fails, do not export.
+
+## 10. Two-Agent Copy Pipeline (recommended)
+
+**Problem:** The built-in Python renderer still applies industry heuristics (`company_theme`, canned phrases, aggressive `fit_copy`), which can **compress away** rich narrative already present in your Equity Research HTML.
+
+**Recommended flow for publication-quality cards:**
+
+1. **Content production agent** reads the full HTML package (and sibling JSON). It outputs one file: `card_slots.json` — see [content-production-agent.md](./content-production-agent.md) and [card-slots.schema.json](./card-slots.schema.json). Every non-null field must be **traceable** to the report (no invented numbers).
+2. **Layout / fill agent** takes `card_slots.json` plus [design-spec.md](./design-spec.md) and [validation-agent.md](./validation-agent.md). It trims, splits bullets, or rephrases **only** to satisfy character budgets, line caps, and voice rules — without changing facts. It updates `card_slots.json`.
+3. Run `python3 scripts/validate_cards.py --input …/Report_CN.html --slots …/card_slots.json` until clean.
+4. Run `python3 scripts/generate_social_cards.py --input …/Report_CN.html --slots …/card_slots.json`.
+
+**Partial overrides:** You may emit JSON with only the slots you care about; omitted keys keep the renderer’s heuristic fill for those slots.
+
+Hand-off overview: [agent-slot-pipeline.md](./agent-slot-pipeline.md).
+
+Example (PDD-shaped): [examples/pdd_holdings_card_slots.example.json](./examples/pdd_holdings_card_slots.example.json).

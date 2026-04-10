@@ -52,10 +52,22 @@ Validation step:
 python3 scripts/validate_cards.py --input "/abs/path/to/report.html" --brand "金融豹"
 ```
 
+With **agent slot file**:
+
+```bash
+python3 scripts/validate_cards.py --input "/abs/path/to/report.html" --slots "/abs/path/card_slots.json" --brand "金融豹"
+```
+
 Generation step:
 
 ```bash
 python3 scripts/generate_social_cards.py --input "/abs/path/to/report.html" --brand "金融豹"
+```
+
+With slots:
+
+```bash
+python3 scripts/generate_social_cards.py --input "/abs/path/to/report.html" --slots "/abs/path/card_slots.json" --brand "金融豹"
 ```
 
 (Renderer defaults to this skill repo’s `output/<report_stem>/`; pass `--output-root` to override.)

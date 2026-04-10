@@ -20,6 +20,10 @@ The goal is that a new company HTML should normally flow through the same pipeli
 ## Source Of Truth
 
 - Workflow and slot schema: [references/workflow-spec.md](./references/workflow-spec.md)
+- JSON slot contract (machine): [references/card-slots.schema.json](./references/card-slots.schema.json)
+- Two-agent handoff: [references/agent-slot-pipeline.md](./references/agent-slot-pipeline.md)
+- Content production agent brief: [references/content-production-agent.md](./references/content-production-agent.md)
+- Layout fill agent brief: [references/layout-fill-agent.md](./references/layout-fill-agent.md)
 - Visual and layout rules: [references/design-spec.md](./references/design-spec.md)
 - Hardcode and logic audit policy: [references/hardcode-audit-agent.md](./references/hardcode-audit-agent.md)
 - Validation policy: [references/validation-agent.md](./references/validation-agent.md)
@@ -34,10 +38,12 @@ Use this skill as:
 
 1. `HTML/JSON -> structured report facts`
 2. `structured report facts -> fixed card slot plan`
-3. `slot plan -> copy`
+3. `slot plan -> copy` (**LLM agents** may write `card_slots.json`; otherwise renderer heuristics)
 4. `copy -> hardcode / logic audit`
 5. `audited copy -> validation / rewrite loop`
 6. `validated copy -> exported cards`
+
+**Rich HTML reports:** Prefer the two-agent slot pipeline ([agent-slot-pipeline.md](./references/agent-slot-pipeline.md)) and `--slots card_slots.json` so narrative from the HTML is not collapsed by built-in `company_theme` / `fit_copy` shortcuts.
 
 The important boundary is this:
 
@@ -204,6 +210,15 @@ Single file (PNG sets default to this skill repo’s `output/<stem>/`):
 ```bash
 python3 scripts/generate_social_cards.py \
   --input "/abs/path/Tesla_Research_CN.html" \
+  --brand "金融豹"
+```
+
+With **agent-produced copy** (same `card_slots.json` reused if you batch multiple HTML files — only use when appropriate):
+
+```bash
+python3 scripts/generate_social_cards.py \
+  --input "/abs/path/Tesla_Research_CN.html" \
+  --slots "/abs/path/card_slots.json" \
   --brand "金融豹"
 ```
 

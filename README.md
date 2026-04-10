@@ -28,6 +28,11 @@ Canvas: **1080 × 1350**. Details: [references/design-spec.md](references/design
 | [references/workflow-spec.md](references/workflow-spec.md) | Pipeline and slot schema |
 | [references/design-spec.md](references/design-spec.md) | Typography, colors, spacing, copy limits |
 | [references/validation-agent.md](references/validation-agent.md) | Validation policy |
+| [references/agent-slot-pipeline.md](references/agent-slot-pipeline.md) | Two-agent copy → `card_slots.json` → render |
+| [references/content-production-agent.md](references/content-production-agent.md) | Agent A: HTML → slot copy |
+| [references/layout-fill-agent.md](references/layout-fill-agent.md) | Agent B: fit copy to layout rules |
+| [references/card-slots.schema.json](references/card-slots.schema.json) | JSON Schema for slot file |
+| [references/examples/pdd_holdings_card_slots.example.json](references/examples/pdd_holdings_card_slots.example.json) | Example slot file (PDD-shaped) |
 | [scripts/generate_social_cards.py](scripts/generate_social_cards.py) | Parse HTML and render PNGs |
 | [scripts/validate_cards.py](scripts/validate_cards.py) | Run checks before export |
 | [references/figma-template-sync.js](references/figma-template-sync.js) | Optional Figma helper |
@@ -89,6 +94,24 @@ python3 scripts/generate_social_cards.py \
 ```
 
 Override output location only when needed: `--output-root /other/path`.
+
+### Agent-written copy (`--slots`)
+
+When the built-in summarizer loses too much narrative, produce a **`card_slots.json`** (see `references/content-production-agent.md` + `layout-fill-agent.md`), validate, then render:
+
+```bash
+python3 scripts/validate_cards.py \
+  --input "/absolute/path/to/Company_Research_CN.html" \
+  --slots "/absolute/path/card_slots.json" \
+  --brand "金融豹"
+
+python3 scripts/generate_social_cards.py \
+  --input "/absolute/path/to/Company_Research_CN.html" \
+  --slots "/absolute/path/card_slots.json" \
+  --brand "金融豹"
+```
+
+Partial JSON is allowed: only filled keys override the heuristic template.
 
 Optional JSON next to the HTML (when your report package provides them): `financial_data.json`, `financial_analysis.json`, `porter_analysis.json`. The workflow is described in [references/workflow-spec.md](references/workflow-spec.md).
 
