@@ -72,6 +72,37 @@ STIFF_OPENERS = (
     "一句判断:",
 )
 HUMAN_MARKERS = ("说白了", "别看", "账单", "印钱", "印钞", "踩油门", "真要看", "本质上", "先别", "盯着", "这就是", "眼下")
+# Accepted only for Card 6 `post_content_lines` validation (tieba / forum colloquial voice).
+CARD6_COLLOQUIAL_MARKERS = (
+    "这波",
+    "离谱",
+    "吃瓜",
+    "吐槽",
+    "笑死",
+    "绷不住",
+    "好家伙",
+    "上头",
+    "麻了",
+    "急了",
+    "整活",
+    "阴阳",
+    "蚌埠住了",
+    "破防",
+    "下头",
+    "夺笋",
+    "狠狠",
+    "怼",
+    "杠",
+    "扎心",
+    "翻车",
+    "背刺",
+    "破圈",
+    "爆款",
+    "火出圈",
+    "杀疯了",
+    "真的会谢",
+    "绷",
+)
 SOURCE_DISCLAIMER_MARKERS = (
     "不构成买入价位建议",
     "情景预测不构成",
@@ -699,6 +730,13 @@ def is_complete_copy(text: str) -> bool:
 
 def is_human_copy(text: str) -> bool:
     return any(marker in text for marker in HUMAN_MARKERS)
+
+
+def card6_line_sounds_human(text: str) -> bool:
+    """Card 6 may use standard HUMAN_MARKERS or extra colloquial markers (see layout-fill / content agent)."""
+    if is_human_copy(text) or "真要看" in text or "钱还在进" in text:
+        return True
+    return any(marker in text for marker in CARD6_COLLOQUIAL_MARKERS)
 
 
 def fit_copy(candidates: list[str], limit: int, *, human: bool = False) -> str:
@@ -2223,7 +2261,7 @@ def validate_report(data: ReportData, brand: str) -> None:
     for line in lines:
         if not is_complete_copy(line):
             issues.append(f"Card 6 content line must be a complete sentence without ellipsis: {line}")
-        if not is_human_copy(line) and "真要看" not in line and "钱还在进" not in line:
+        if not card6_line_sounds_human(line):
             issues.append(f"Card 6 content line lacks a human voice: {line}")
         if len(wrap(draw, clean(line), f(FONT_POST_LINE), 860)) > 2:
             issues.append(f"Card 6 content line is too long: {line}")

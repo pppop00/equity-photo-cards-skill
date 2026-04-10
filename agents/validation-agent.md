@@ -41,7 +41,7 @@ Validation belongs inside the generation loop:
 - Card 4 left and right columns must obey their per-bullet character budgets
 - Card 5 must not include `今天这家公司，特斯拉` or any equivalent preface line
 - Card 6 must include `title`, `content`, and `hashtags`
-- Card 6 content must contain exactly 4 bullet lines
+- Card 6 content must contain exactly 4 bullet lines; each line must pass **`card6_line_sounds_human`** (`HUMAN_MARKERS` or `CARD6_COLLOQUIAL_MARKERS` in `generate_social_cards.py`); **editorial pass:** tone should match [content-production-agent.md](./content-production-agent.md) Card 6 (贴吧 / forum energy, not sell-side recap)
 - Card 6 hashtags must fit inside the hashtag section without overflow, and the total hashtag count may not exceed 5
 - Text rendering must use high-quality supersampling so exported fonts remain crisp
 

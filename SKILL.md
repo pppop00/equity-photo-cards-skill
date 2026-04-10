@@ -191,7 +191,7 @@ The fixed output is always:
 - Card 3: revenue / profit flow
 - Card 4: current business + next 2 to 3 years
 - Card 5: brand close + three memory points
-- Card 6: social post copy image with title, content, hashtags
+- Card 6: social post copy image with title, content, hashtags — **贴吧/热帖** tone (recent buzz, hot products, events; fun/angry/funny OK); **four** `post_content_lines`; each line must satisfy `card6_line_sounds_human` in `generate_social_cards.py` (see [content-production-agent.md](./agents/content-production-agent.md) Card 6)
 
 Do not change the card count or reorder the card roles unless the design spec is explicitly revised.
 

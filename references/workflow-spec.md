@@ -186,8 +186,10 @@ hashtags[3..5]
 
 Planning rule:
 
-- this should read like a real social post draft
+- this should read like a **Chinese forum / 贴吧** hot thread: emotional, meme-adjacent, argumentative — **not** sell-side deck tone
 - every line must be publishable without additional editing
+- **`post_content_lines`:** exactly four lines; ground facts in the report but **voice** should feel like **recent gossip + hot takes** (products, news, sentiment — good, bad, funny, angry) — see [content-production-agent.md](../agents/content-production-agent.md) Card 6 and `CARD6_COLLOQUIAL_MARKERS` in `generate_social_cards.py`
+- **`post_title`:** scroll-bait energy like a 贴吧 title; avoid generic “年报速读”
 
 ## 5. Copywriting Rules
 
