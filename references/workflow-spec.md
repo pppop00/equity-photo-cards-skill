@@ -17,18 +17,21 @@ The pipeline is:
 
 ## 1. Input Contract
 
-Expected primary input:
+Preferred primary input:
 
-- one report HTML file
+- one report folder containing `*_Research_CN.html` plus sibling JSON files
 
-Expected sibling inputs when available:
+Expected package files when available:
 
 - `financial_data.json`
 - `financial_analysis.json`
 - `porter_analysis.json`
-- optional local logo assets
+- `news_intel.json`, `macro_factors.json`, `prediction_waterfall.json`, and other research JSON
+- one report HTML file for rendered prose, embedded chart variables, and PNG export
 
 The workflow should assume the report package may have schema drift. It should not assume every report uses the exact same field names.
+
+Read JSON first. JSON is the canonical source for numeric facts, margins, segments, cash flow, Porter details, and latest operating updates. Read HTML second for identity/date, rendered section prose, embedded data blocks such as `sankeyActualData`, and the render scaffold. If only HTML is provided, locate sibling JSON in the same folder. If only JSON is provided, draft analysis/copy from it but do not export final cards until the HTML is available.
 
 ## 2. Extraction Contract
 
@@ -49,6 +52,8 @@ Required raw extraction buckets:
 - `available_assets`
 
 Extraction should preserve source detail even if some of it is not used later.
+
+Logo acquisition is part of extraction and must use web search. Do not rely on local logo discovery. Search for the company's official logo, brand assets, press kit, IR media kit, or reputable official logo file. Use that official reference to regenerate a clean transparent PNG/WEBP asset at sufficient resolution (e.g. **≥840 px** wide for horizontal wordmarks at default `LAYOUT_SCALE` — see `logo_asset_dimension_issues` in `generate_social_cards.py`), save it locally, and preserve its file path and source URL in working notes. Do not use screenshots, search-result thumbnails, favicons, or ticker-letter placeholders; never upscale a small raster into a “large” PNG.
 
 ## 3. Normalized Report Model
 
@@ -112,13 +117,16 @@ english_ticker_line
 intro_sentence
 metrics_row[3]
 company_focus_paragraph
+logo_asset_path (optional)
 ```
 
 Planning rule:
 
 - `intro_sentence` should state the central tension or what the market is really watching
-- `company_focus_paragraph` should explain the current setup in 2 complete sentences when possible
+- `company_focus_paragraph` should explain the current setup in 150–165 characters, usually 2 complete sentences
 - use actual metrics to support the framing, not replace it
+- set `logo_asset_path` from the logo production agent's regenerated official logo asset; otherwise omit it and never synthesize a ticker-letter logo
+- after export, remove logo source downloads and unused logo variants so only the `logo_asset_path` file remains
 
 ### Card 2 Slots
 
@@ -147,6 +155,8 @@ revenue_explainer_points[3]
 Planning rule:
 
 - this is the data-forward card
+- use `financial_data.income_statement.current_year` as fallback when the HTML Sankey omits net income or margin fields
+- do not allow `0.0` net income or `--` margin cards when source financial data can compute those values
 - the explanatory bullets should interpret the flow, not repeat the numbers blindly
 
 ### Card 4 Slots

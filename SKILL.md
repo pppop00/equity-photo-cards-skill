@@ -74,7 +74,8 @@ The goal is that a new company HTML should normally flow through the same pipeli
 
 **Agents (who does what before export):**
 
-- Two-agent handoff: [agents/agent-slot-pipeline.md](./agents/agent-slot-pipeline.md)
+- Agent handoff: [agents/agent-slot-pipeline.md](./agents/agent-slot-pipeline.md)
+- Logo production (web official logo → regenerated clean asset): [agents/logo-production-agent.md](./agents/logo-production-agent.md)
 - Content production (HTML → draft slots): [agents/content-production-agent.md](./agents/content-production-agent.md)
 - Layout fill (draft → validator-clean): [agents/layout-fill-agent.md](./agents/layout-fill-agent.md)
 - Hardcode and logic audit policy: [agents/hardcode-audit-agent.md](./agents/hardcode-audit-agent.md)
@@ -92,16 +93,21 @@ Do not treat this skill as "pick an industry and emit canned sentences."
 Use this skill as — **only after the customer has confirmed a palette** ([配色选择](#palette-choice)):
 
 0. **`customer confirms palette`** → record `default` | `b` | `c` for this job; **do not proceed without this**
-1. `HTML/JSON -> structured report facts`
+1. `report folder (JSON-first, HTML as render scaffold) -> structured report facts`
 2. `structured report facts -> fixed card slot plan`
-3. `slot plan -> copy` as **`card_slots.json`** written by the **content** then **layout** agents ([agent-slot-pipeline.md](./agents/agent-slot-pipeline.md)) — **this is the standard for every new report**, not optional
-4. `copy -> hardcode / logic audit` (on the final slot text)
-5. `audited copy -> validation / rewrite loop` (`validate_cards.py` — **`--slots` 必填**)
-6. `validated copy -> exported cards` (`generate_social_cards.py` — **`--slots` 必填**, **`--palette` 须与客户确认一致**)
+3. `company identity -> official logo asset` via the **logo production agent** ([logo-production-agent.md](./agents/logo-production-agent.md))
+4. `slot plan + logo path -> copy` as **`card_slots.json`** written by the **content** then **layout** agents ([agent-slot-pipeline.md](./agents/agent-slot-pipeline.md)) — **this is the standard for every new report**, not optional
+5. `copy -> hardcode / logic audit` (on the final slot text)
+6. `audited copy -> validation / rewrite loop` (`validate_cards.py` — **`--slots` 必填**)
+7. `validated copy -> exported cards` (`generate_social_cards.py` — **`--slots` 必填**, **`--palette` 须与客户确认一致**；export 后自动清理未使用 logo 文件)
 
 **No alternate path:** The CLI **does not** accept a run without `--slots`. Incomplete JSON is **rejected** (`assert_card_slots_complete`): every required body slot must be present so export never silently falls back to Python template copy.
 
+**Input convention:** Preferred user input is the whole report folder path, e.g. `.../NVIDIA_2026-04-12/`, containing `*_Research_CN.html` plus sibling JSON files. Treat JSON as the primary factual source (`financial_data.json`, `financial_analysis.json`, `porter_analysis.json`, etc.) because it is faster, less lossy, and easier to validate than scraping rendered HTML. Use HTML for identity/date, summary prose, embedded chart variables, and final rendering. If the user provides only one HTML file, still look for sibling JSON in the same folder. If the user provides only JSON without HTML, use it for analysis/copy drafting but ask for or locate the HTML before final PNG export.
+
 **File convention:** **`Company_Research_CN.card_slots.json`** beside **`Company_Research_CN.html`** in the report folder. For a **single** report you may pass `--slots` as either the JSON file path or that **folder** (resolver loads `<stem>.card_slots.json`). For **`--input` 指向多只 HTML**，`--slots` **必须是目录**，且内含与每个 `stem` 对应的 `*.card_slots.json`。
+
+**Logo convention:** Card 1 has a fixed small logo section below `公司看点`, drawn directly on the card background with no white logo container. Do **not** auto-discover local logos. Before writing final slots, run [logo-production-agent.md](./agents/logo-production-agent.md): search the web for official brand / press-kit / IR-media logo sources, regenerate a clean transparent logo asset from the official reference (SVG or high-res PNG; **horizontal wordmarks ≥840 px wide** at default render scale so they are not soft upscales), save it locally, then set `logo_asset_path` in `card_slots.json`. Never use screenshots, search-result thumbnails, or ticker-letter placeholders. `validate_cards.py` rejects logos below the minimum bitmap size. After export, keep only the logo file actually referenced by `logo_asset_path`; delete logo source downloads, alternatives, and temporary logo folders.
 
 **Why there is no one “universal” filled `card_slots.json`:** The file is **per-company body copy** (facts, wording, hashtags) read by the renderer into **fixed** card frames. The skill ships a **structure template** you copy for each new stem — [references/templates/card_slots.template.json](./references/templates/card_slots.template.json) — plus machine schema [references/card-slots.schema.json](./references/card-slots.schema.json) and a worked example [references/examples/pdd_holdings_card_slots.example.json](./references/examples/pdd_holdings_card_slots.example.json). Agents still **author** `<stem>.card_slots.json` from the HTML package; the template only avoids starting from a blank file.
 
@@ -125,15 +131,17 @@ Follow these steps in order every time a new report arrives.
 
 ### 1. Intake
 
-- Confirm the input is a report HTML, not an arbitrary marketing page or random article
-- Check whether sibling JSON files exist in the same folder
-- Treat the HTML plus sibling JSON as one report package
+- Prefer a report folder path over a standalone HTML path when the user can provide it
+- Confirm the folder contains one report HTML, not an arbitrary marketing page or random article
+- Check for sibling JSON files before reading the HTML body
+- Treat the HTML plus sibling JSON as one report package, with JSON as the primary source for financial facts
 - If the HTML exists but supporting JSON is missing, continue with best-effort extraction and flag the missing fields
+- If JSON exists but HTML is missing, use JSON for analysis/copy drafting but do not export PNGs until the report HTML is located
 
 ### 2. Extraction
 
-- Read the report HTML and pull all text and embedded data blocks that are relevant to company analysis
-- Read sibling JSON files when present
+- Read sibling JSON files first when present; they are the preferred source for financial data, margins, segments, cash flow, Porter scores, and latest operating updates
+- Read the report HTML after JSON to pull summary prose, rendered section text, identity/date, and embedded data blocks such as `sankeyActualData`
 - Prefer over-extraction to under-extraction at this stage
 - Do not write card copy yet
 
@@ -149,7 +157,7 @@ Required extraction targets:
 - revenue / margin / cash-flow facts
 - segment or product mix
 - operating KPIs
-- locally available logo assets
+- official logo source candidates from web search
 
 ### 3. Normalization
 
@@ -170,9 +178,17 @@ If the source uses different names such as `revenue_growth_yoy_pct` vs `yoy_reve
 
 The slot schema is defined in [references/workflow-spec.md](./references/workflow-spec.md). Use it every time.
 
+### 4.5 Logo Production
+
+- Run [logo-production-agent.md](./agents/logo-production-agent.md) before finalizing `card_slots.json`.
+- Search the web for official logo references; do not rely on local discovery.
+- Regenerate a clean transparent logo asset from the official reference, save it locally, and set `logo_asset_path`.
+- Do not use screenshots, browser crops, search thumbnails, or ticker-letter placeholders.
+- After export, leave only the final `logo_asset_path` asset in the report output folder; remove downloaded source logos, rejected alternatives, and `logo_sources/`.
+
 ### 5. Copy Generation (standard = materialize `card_slots.json`)
 
-- **Production:** Run the **content production agent** then the **layout fill agent** so all body copy lives in **`card_slots.json`** before any PNG export. See [content-production-agent.md](./agents/content-production-agent.md) and [layout-fill-agent.md](./agents/layout-fill-agent.md).
+- **Production:** Run the **logo production agent**, then the **content production agent**, then the **layout fill agent** so all body copy and `logo_asset_path` live in **`card_slots.json`** before any PNG export. See [logo-production-agent.md](./agents/logo-production-agent.md), [content-production-agent.md](./agents/content-production-agent.md), and [layout-fill-agent.md](./agents/layout-fill-agent.md).
 - **`card_slots.json` 必须填满** 所有脚本要求的槽位（见 `assert_card_slots_complete`）；不允许依赖内置 `fit_copy` / `company_theme` 自动糊字作为交付物。
 - Write copy slot by slot, not card by card in one pass
 - Use report facts first, thematic framing second

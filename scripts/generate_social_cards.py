@@ -129,6 +129,7 @@ _LATIN_BOLD_PATH = _pick_font_path([
 _SINGLE_FONT_MODE = _os.path.exists("/System/Library/Fonts/Supplemental/Arial Unicode.ttf")
 LEADING_PUNCT = set("，。；：、,.!?！？）》】」』）")
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp"}
+LOGO_CLEANUP_EXTS = IMAGE_EXTS | {".svg"}
 WORD_TOKEN = re.compile(r"^[A-Za-z0-9.+/%$-]+$")
 TEXT_RENDER_SCALE = 6
 
@@ -279,7 +280,8 @@ FONT_METRIC_LABEL_MIN = 16
 FONT_METRIC_VALUE_START = 29
 FONT_METRIC_VALUE_MIN = 22
 
-LIMIT_CARD1_FOCUS_CHARS = 132
+MIN_CARD1_FOCUS_CHARS = 150
+LIMIT_CARD1_FOCUS_CHARS = 165
 LIMIT_CARD2_INDUSTRY_CHARS = 113
 LIMIT_CARD2_BG_BULLET_CHARS = 60
 LIMIT_CARD3_EXPLAINER_CHARS = 58
@@ -395,6 +397,7 @@ class CardSlotOverrides:
     brand_statement: str | None = None
     memory_points: list[str] | None = None
     cta_line: str | None = None
+    logo_asset_path: str | None = None
     post_title: str | None = None
     post_content_lines: list[str] | None = None
     hashtags: list[str] | None = None
@@ -417,6 +420,7 @@ class CardSlotOverrides:
             "brand_statement",
             "memory_points",
             "cta_line",
+            "logo_asset_path",
             "post_title",
             "post_content_lines",
             "hashtags",
@@ -598,6 +602,18 @@ def pick_first(*values: Any) -> str:
         if value is not None and not isinstance(value, str):
             return str(value)
     return ""
+
+
+def as_float(value: Any) -> float | None:
+    if value is None or value == "":
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    text = clean(str(value)).replace(",", "").replace("%", "")
+    match = re.search(r"[-+]?\d+(?:\.\d+)?", text)
+    if not match:
+        return None
+    return float(match.group(0))
 
 
 def parse_html(path: Path) -> ReportData:
@@ -1098,6 +1114,16 @@ def income_current(data: ReportData) -> dict[str, Any]:
     return get_nested(data.financial_data, "income_statement", "current_year", default={}) or {}
 
 
+def metric_current_percent(data: ReportData, metric_name: str) -> float | None:
+    for item in get_nested(data.financial_analysis, "metrics", default=[]) or []:
+        if not isinstance(item, dict):
+            continue
+        if clean(str(item.get("metric", ""))) != metric_name:
+            continue
+        return as_float(item.get("current"))
+    return None
+
+
 def profitability(data: ReportData) -> dict[str, Any]:
     prof = get_nested(data.financial_analysis, "profitability", default={}) or {}
     if "gross_margin_pct" in prof or "operating_margin_pct" in prof or "net_margin_pct" in prof:
@@ -1109,6 +1135,26 @@ def profitability(data: ReportData) -> dict[str, Any]:
         normalized["operating_margin_pct"] = prof["operating_margin_current"]
     if "net_margin_current" in prof:
         normalized["net_margin_pct"] = prof["net_margin_current"]
+    current = income_current(data)
+    revenue = as_float(current.get("revenue"))
+    gross = as_float(current.get("gross_profit"))
+    op = as_float(current.get("operating_income"))
+    net = as_float(current.get("net_income"))
+    if revenue:
+        if normalized.get("gross_margin_pct") is None:
+            normalized["gross_margin_pct"] = (gross / revenue * 100) if gross is not None else metric_current_percent(data, "毛利率")
+        if normalized.get("operating_margin_pct") is None:
+            normalized["operating_margin_pct"] = (op / revenue * 100) if op is not None else metric_current_percent(data, "营业利润率")
+        if normalized.get("net_margin_pct") is None:
+            normalized["net_margin_pct"] = (net / revenue * 100) if net is not None else as_float(
+                get_nested(data.financial_analysis, "kpis", "net_margin", "value")
+            )
+    if normalized.get("gross_margin_pct") is None:
+        normalized["gross_margin_pct"] = metric_current_percent(data, "毛利率")
+    if normalized.get("operating_margin_pct") is None:
+        normalized["operating_margin_pct"] = metric_current_percent(data, "营业利润率")
+    if normalized.get("net_margin_pct") is None:
+        normalized["net_margin_pct"] = as_float(get_nested(data.financial_analysis, "kpis", "net_margin", "value"))
     return normalized
 
 
@@ -1203,6 +1249,15 @@ def sankey_value_by_node_name(data: ReportData, keywords: tuple[str, ...]) -> fl
 
 
 def finance(data: ReportData) -> dict[str, float]:
+    current = income_current(data)
+    if current:
+        return {
+            "revenue": float(current.get("revenue", 0.0)),
+            "cogs": float(current.get("cogs", 0.0)),
+            "gross": float(current.get("gross_profit", 0.0)),
+            "op": float(current.get("operating_income", 0.0)),
+            "net": float(current.get("net_income", 0.0)),
+        }
     links = data.sankey_actual.get("links", [])
     lookup = {(l["source"], l["target"]): float(l["value"]) for l in links}
     if links:
@@ -1218,14 +1273,7 @@ def finance(data: ReportData) -> dict[str, float]:
             "op": op,
             "net": net,
         }
-    current = income_current(data)
-    return {
-        "revenue": float(current.get("revenue", 0.0)),
-        "cogs": float(current.get("cogs", 0.0)),
-        "gross": float(current.get("gross_profit", 0.0)),
-        "op": float(current.get("operating_income", 0.0)),
-        "net": float(current.get("net_income", 0.0)),
-    }
+    return {"revenue": 0.0, "cogs": 0.0, "gross": 0.0, "op": 0.0, "net": 0.0}
 
 
 def yi(value: float) -> float:
@@ -2222,6 +2270,16 @@ def validate_report(data: ReportData, brand: str) -> None:
     issues: list[str] = []
     if data.card_slots and data.card_slots.porter_scores is not None and len(data.card_slots.porter_scores) != 5:
         issues.append("When card_slots.porter_scores is set, it must contain exactly five integers.")
+    logo_path_raw = (data.card_slots.logo_asset_path or "").strip() if data.card_slots else ""
+    if logo_path_raw:
+        logo_name = Path(logo_path_raw).name.lower()
+        if any(marker in logo_name for marker in ("screenshot", "screencapture", "screen-capture", "captureui")):
+            issues.append("card_slots.logo_asset_path must not point to a screenshot or screen capture.")
+        logo_path = find_logo_asset(data)
+        if not logo_path:
+            issues.append("card_slots.logo_asset_path is set, but the logo file was not found or is not a supported image type.")
+        else:
+            issues.extend(logo_asset_dimension_issues(logo_path))
     issues.extend(hardcode_logic_issues(data))
 
     focus = company_focus_paragraph(data)
@@ -2235,6 +2293,11 @@ def validate_report(data: ReportData, brand: str) -> None:
     title = post_title(data)
     lines = post_content_lines(data)
     tags = post_hashtags(data)
+    fin = finance(data)
+    prof = profitability(data)
+    current_income = income_current(data)
+    source_revenue = as_float(current_income.get("revenue"))
+    source_net = as_float(current_income.get("net_income"))
 
     if display_name(data.company_cn).endswith("公司"):
         issues.append("Company display name must use the short Chinese name without '公司'.")
@@ -2246,6 +2309,23 @@ def validate_report(data: ReportData, brand: str) -> None:
         issues.append("Text rendering scale must be at least 2x for crisp export.")
     if "账号应该给人什么印象" in data.thesis:
         issues.append("Forbidden meta copy detected.")
+    if source_net is not None and abs(float(fin.get("net", 0.0)) - source_net) > max(abs(source_net) * 0.02, 1.0):
+        issues.append("Card 3 net income does not match financial_data income_statement.current_year.net_income.")
+    if source_revenue:
+        margin_sources = [
+            ("gross_margin_pct", "gross_profit", "Card 3 gross margin"),
+            ("operating_margin_pct", "operating_income", "Card 3 operating margin"),
+            ("net_margin_pct", "net_income", "Card 3 net margin"),
+        ]
+        for margin_key, source_key, label in margin_sources:
+            source_value = as_float(current_income.get(source_key))
+            actual_margin = as_float(prof.get(margin_key))
+            if source_value is not None and actual_margin is None:
+                issues.append(f"{label} is missing even though financial_data can compute it.")
+            elif source_value is not None and actual_margin is not None:
+                expected_margin = source_value / source_revenue * 100
+                if abs(actual_margin - expected_margin) > 0.5:
+                    issues.append(f"{label} does not match financial_data income_statement.current_year.")
     for label, text in [
         ("Card 1 intro sentence", intro),
         ("Card 1 company-focus paragraph", focus),
@@ -2269,7 +2349,7 @@ def validate_report(data: ReportData, brand: str) -> None:
         issues.append("Card 1 intro sentence contains a punctuation-led line break.")
     focus_font = f(FONT_PANEL_BODY)
     focus_lines = wrap(draw, clean(focus), focus_font, 860)
-    if len(focus) < 60:
+    if len(focus) < MIN_CARD1_FOCUS_CHARS:
         issues.append("Card 1 company-focus paragraph is too short.")
     if len(focus) > LIMIT_CARD1_FOCUS_CHARS:
         issues.append("Card 1 company-focus paragraph exceeds its character budget.")
@@ -2423,18 +2503,71 @@ def validate_report(data: ReportData, brand: str) -> None:
 
 
 def find_logo_asset(data: ReportData) -> Path | None:
-    names = {
-        display_name(data.company_cn).lower().replace(" ", ""),
-        data.ticker.lower(),
-        "logo",
-    }
-    for path in sorted(data.source_dir.iterdir()):
-        if path.suffix.lower() not in IMAGE_EXTS:
-            continue
-        stem = path.stem.lower().replace(" ", "")
-        if any(name and name in stem for name in names):
+    explicit = (data.card_slots.logo_asset_path or "").strip() if data.card_slots else ""
+    if not explicit:
+        return None
+    raw = Path(explicit).expanduser()
+    candidates = [raw] if raw.is_absolute() else [data.source_dir / raw, Path(__file__).resolve().parents[1] / raw]
+    for path in candidates:
+        if path.is_file() and path.suffix.lower() in IMAGE_EXTS:
             return path
     return None
+
+
+# Card 1 logo area in logical design coordinates (must match logo_section / design-spec).
+LOGO_BOX_CARD1_LOGICAL = (330, 1094, 750, 1238)
+LOGO_SLOT_MAX_W = (LOGO_BOX_CARD1_LOGICAL[2] - LOGO_BOX_CARD1_LOGICAL[0]) * LAYOUT_SCALE
+LOGO_SLOT_MAX_H = (LOGO_BOX_CARD1_LOGICAL[3] - LOGO_BOX_CARD1_LOGICAL[1]) * LAYOUT_SCALE
+# Square / near-square marks (icons): require enough pixels for a sharp downscale into the slot.
+LOGO_SQUAREISH_MIN_MAX_SIDE = 512
+# Landscape vs portrait vs square-ish (same thresholds as layout heuristics elsewhere).
+_LOGO_ASPECT_LANDSCAPE = 1.15
+
+
+def logo_asset_dimension_issues(path: Path) -> list[str]:
+    """
+    Reject logos that are too small in the dominant dimension for the Card 1 slot.
+
+    The renderer uses PIL thumbnail() which never upscales. A wide wordmark narrower than the
+    slot width (e.g. 760px vs 840px) is almost always an upscaled favicon or soft raster — it
+    looks blurry next to assets exported from SVG / high-res press PNG (compare NVIDIA ~1066px wide).
+    """
+    try:
+        with Image.open(path) as im:
+            w, h = im.size
+    except OSError:
+        return []
+    if w <= 0 or h <= 0:
+        return ["Logo image has invalid dimensions."]
+    aspect = w / h if h else 0.0
+    issues: list[str] = []
+    if aspect >= _LOGO_ASPECT_LANDSCAPE:
+        if w < LOGO_SLOT_MAX_W:
+            issues.append(
+                f"Logo bitmap width {w}px is below the Card 1 logo area width ({LOGO_SLOT_MAX_W}px at "
+                f"LAYOUT_SCALE={LAYOUT_SCALE}). Export from official SVG or press-kit PNG at ≥{LOGO_SLOT_MAX_W}px "
+                "wide; do not use favicons, social avatars, or upscaled low-resolution rasters."
+            )
+    elif aspect <= 1.0 / _LOGO_ASPECT_LANDSCAPE:
+        if h < LOGO_SLOT_MAX_H:
+            issues.append(
+                f"Logo bitmap height {h}px is below the Card 1 logo area height ({LOGO_SLOT_MAX_H}px). "
+                f"Use a vector or high-resolution vertical mark ≥{LOGO_SLOT_MAX_H}px tall."
+            )
+    else:
+        if max(w, h) < LOGO_SQUAREISH_MIN_MAX_SIDE:
+            issues.append(
+                f"Logo bitmap is too small (longest side {max(w, h)}px; need ≥{LOGO_SQUAREISH_MIN_MAX_SIDE}px). "
+                "Use an official icon or mark at sufficient resolution."
+            )
+    return issues
+
+
+def logo_section(draw: ScaledDraw, img: Image.Image, data: ReportData) -> None:
+    logo = find_logo_asset(data)
+    if not logo:
+        return
+    paste_logo(img, logo, (330, 1094, 750, 1238))
 
 
 def paste_logo(img: Image.Image, path: Path | None, box: tuple[int, int, int, int]) -> None:
@@ -2454,6 +2587,47 @@ def paste_logo(img: Image.Image, path: Path | None, box: tuple[int, int, int, in
     y = y0 + (max_h - logo.height) // 2
     canvas.alpha_composite(logo, (x, y))
     img.alpha_composite(canvas)
+
+
+def cleanup_unused_logo_assets(data: ReportData, out_dir: Path) -> None:
+    """Keep only the explicit Card 1 logo asset; remove temporary logo files."""
+    used_logo = find_logo_asset(data)
+    used_logo = used_logo.resolve() if used_logo else None
+    root = out_dir.resolve()
+
+    def is_inside(path: Path, parent: Path) -> bool:
+        try:
+            path.resolve().relative_to(parent.resolve())
+            return True
+        except ValueError:
+            return False
+
+    logo_sources = root / "logo_sources"
+    if logo_sources.exists():
+        if used_logo and is_inside(used_logo, logo_sources):
+            for item in sorted(logo_sources.rglob("*"), key=lambda p: len(p.parts), reverse=True):
+                if item.resolve() == used_logo:
+                    continue
+                if item.is_dir():
+                    try:
+                        item.rmdir()
+                    except OSError:
+                        pass
+                elif item.is_file():
+                    item.unlink()
+        else:
+            if logo_sources.is_dir() and not logo_sources.is_symlink():
+                shutil.rmtree(logo_sources)
+            else:
+                logo_sources.unlink()
+
+    for item in root.iterdir():
+        if not item.is_file():
+            continue
+        if used_logo and item.resolve() == used_logo:
+            continue
+        if "logo" in item.name.lower() and item.suffix.lower() in LOGO_CLEANUP_EXTS:
+            item.unlink()
 
 
 def background() -> Image.Image:
@@ -2550,6 +2724,7 @@ def card_1(data: ReportData) -> Image.Image:
     d.rounded_rectangle(draw_panel, radius=28, fill=PANEL)
     draw_text(d, (108, 786), "公司看点", f(34, True), TEXT)
     block(d, company_focus_paragraph(data), 108, 842, 860, f(FONT_PANEL_BODY), "#344054", 12, 7)
+    logo_section(d, img, data)
     footer(d, data)
     return finalize_export(img)
 
@@ -2723,6 +2898,7 @@ def render_one(
         dest = out_dir / slots_path.name
         shutil.copy2(slots_path, dest)
         paths.append(dest)
+    cleanup_unused_logo_assets(data, out_dir)
     return paths
 
 

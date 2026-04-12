@@ -36,9 +36,10 @@ Follows **skill-creator** bundle layout: **`SKILL.md`** (entry) → **`reference
 | [references/card-slots.schema.json](references/card-slots.schema.json) | JSON Schema for slot file |
 | [references/templates/card_slots.template.json](references/templates/card_slots.template.json) | Copy to `<stem>.card_slots.json` for each new report, then replace placeholders |
 | [references/examples/pdd_holdings_card_slots.example.json](references/examples/pdd_holdings_card_slots.example.json) | Example slot file (PDD-shaped) |
-| [agents/agent-slot-pipeline.md](agents/agent-slot-pipeline.md) | Two-agent copy → `card_slots.json` → render |
-| [agents/content-production-agent.md](agents/content-production-agent.md) | Agent A: HTML → slot copy |
-| [agents/layout-fill-agent.md](agents/layout-fill-agent.md) | Agent B: fit copy to layout rules |
+| [agents/agent-slot-pipeline.md](agents/agent-slot-pipeline.md) | Agent handoff → `card_slots.json` → render |
+| [agents/logo-production-agent.md](agents/logo-production-agent.md) | Web official logo → regenerated clean logo asset |
+| [agents/content-production-agent.md](agents/content-production-agent.md) | HTML → slot copy |
+| [agents/layout-fill-agent.md](agents/layout-fill-agent.md) | Fit copy to layout rules |
 | [agents/hardcode-audit-agent.md](agents/hardcode-audit-agent.md) | Hardcode / logic audit before validation |
 | [agents/validation-agent.md](agents/validation-agent.md) | Validation policy (what `validate_cards.py` enforces) |
 | [scripts/generate_social_cards.py](scripts/generate_social_cards.py) | Parse HTML and render PNGs |

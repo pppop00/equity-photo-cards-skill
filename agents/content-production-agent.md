@@ -1,15 +1,17 @@
 # Content Production Agent
 
-**Invocation:** For **every** new Equity Research report package, you run **before** final PNG export. Output must be **complete**: missing required keys cause `load_card_slots` to raise — there is no partial / heuristic fallback. Next step is the layout agent, then `validate_cards.py` / `generate_social_cards.py` (**`--slots` mandatory**).
+**Invocation:** For **every** new Equity Research report package, you run after the logo production agent and before final PNG export. Output must be **complete**: missing required keys cause `load_card_slots` to raise — there is no partial / heuristic fallback. Next step is the layout agent, then `validate_cards.py` / `generate_social_cards.py` (**`--slots` mandatory**).
 
 Before you materialize `card_slots.json`, follow [SKILL.md](../SKILL.md) **Required Workflow §2–4**: whole-package extraction, normalization, and a six-card slot plan. This file’s job is to **write the full slot copy** once that planning is done. Skipping normalization often yields inconsistent figures across cards or internal contradictions — that conflicts with the grounding rules below.
 
-You turn one **equity research HTML package** into **`html_stem.card_slots.json`** beside the HTML (e.g. `Amazon_Research_CN.card_slots.json`), using the field names in [workflow-spec.md](../references/workflow-spec.md) §4 and §10 and the machine shape in [card-slots.schema.json](../references/card-slots.schema.json).
+You turn one **equity research report folder** into **`html_stem.card_slots.json`** beside the HTML (e.g. `Amazon_Research_CN.card_slots.json`), using the field names in [workflow-spec.md](../references/workflow-spec.md) §4 and §10 and the machine shape in [card-slots.schema.json](../references/card-slots.schema.json). Prefer folder input over a standalone HTML path whenever available.
 
 ## Inputs
 
-- Main file: `*_Research_CN.html` (or equivalent) with sections like `#section-summary`, `.highlights-box`, `.risks-box`, `.thesis-box`, `.porter-text`, embedded `sankeyActualData`.
-- Sibling JSON when present: `financial_data.json`, `financial_analysis.json`, `porter_analysis.json`.
+- Preferred input: a report folder containing `*_Research_CN.html` plus sibling JSON files.
+- Primary factual sources: `financial_data.json`, `financial_analysis.json`, `porter_analysis.json`, and other sibling JSON such as `news_intel.json`, `macro_factors.json`, `prediction_waterfall.json`.
+- Render scaffold: `*_Research_CN.html` (or equivalent) with sections like `#section-summary`, `.highlights-box`, `.risks-box`, `.thesis-box`, `.porter-text`, embedded `sankeyActualData`.
+- Read JSON first for financial facts and validation; read HTML second for prose, identity/date, embedded chart variables, and final export.
 
 ## Non-negotiables
 
@@ -17,13 +19,14 @@ You turn one **equity research HTML package** into **`html_stem.card_slots.json`
 2. **No disclaimers in body slots:** Do not paste rating boilerplate (“不构成投资建议…”) into card bodies; keep tone analytical like the report prose **except Card 6** (`post_title`, `post_content_lines`, `hashtags`), where **贴吧/嘴炮楼**口语 is required — see **Card 6** below.
 3. **Completeness:** Prefer **full sentences** ending in 。！？ — the validator rejects ellipsis and half sentences.
 4. **Card 2 Porter bars:** If you set `porter_scores`, supply **exactly five** integers `1..5` in order: 供应商、买方、新进入者、替代品、竞争强度. If unsure, **omit** `porter_scores` so the renderer keeps auto-extracted scores.
+5. **Logo asset:** Use the `logo_asset_path` produced by [logo-production-agent.md](./logo-production-agent.md). Do not search local folders for logos, and do not use screenshots or ticker-letter placeholders.
 
 ## Field cheat sheet (copy targets)
 
 | JSON key | Card | Source hints |
 |----------|------|----------------|
 | `intro_sentence` | 1 | Core tension: what the market prices *now* — often thesis + last summary paragraph. |
-| `company_focus_paragraph` | 1 yellow | Compress 2–3 `summary-para` sentences; keep **one** revenue/ profit fact. |
+| `company_focus_paragraph` | 1 yellow | Compress 2–3 `summary-para` sentences into **150–165 characters**; keep revenue/profit plus one operating driver. |
 | `background_bullets` | 2 left | Highlights + first summary facts; exactly **4** bullets later validated. |
 | `industry_paragraph` | 2 left | Porter “industry” block + sector context from HTML. |
 | `conclusion_block` | 2 right | One sharp takeaway under Porter bars (forward-looking). |
@@ -35,6 +38,7 @@ You turn one **equity research HTML package** into **`html_stem.card_slots.json`
 | `brand_statement` | 5 | One punchy line; **human** voice. |
 | `memory_points` | 5 | Three takeaway bullets. |
 | `cta_line` | 5 footer | Optional; default is 金融豹 CTA. |
+| `logo_asset_path` | 1 logo | Path from the logo production agent; optional only if no trustworthy official logo can be regenerated. |
 | `post_title` | 6 | **贴吧味标题：** 像热帖标题一样勾人，不要研报目录体。 |
 | `post_content_lines` | 6 | **Exactly four** complete sentences. See **Card 6** — colloquial markers / `CARD6_COLLOQUIAL_MARKERS` in `generate_social_cards.py`. |
 | `hashtags` | 6 | 3–5 tags; renderer adds `#`. |

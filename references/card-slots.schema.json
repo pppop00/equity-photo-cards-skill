@@ -25,6 +25,7 @@
     "brand_statement": { "type": "string" },
     "memory_points": { "type": "array", "items": { "type": "string" } },
     "cta_line": { "type": "string" },
+    "logo_asset_path": { "type": "string" },
     "post_title": { "type": "string" },
     "post_content_lines": { "type": "array", "items": { "type": "string" } },
     "hashtags": { "type": "array", "items": { "type": "string" } }

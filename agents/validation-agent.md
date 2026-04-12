@@ -15,6 +15,7 @@ Validation belongs inside the generation loop:
 ## Required Checks
 
 - `card_slots.json` must pass **`assert_card_slots_complete`** (all required slot keys populated) before layout checks run
+- When `logo_asset_path` is set, **`validate_report`** checks logo file dimensions (`logo_asset_dimension_issues` in `generate_social_cards.py`): horizontal wordmarks must be **≥840 px** wide (Card 1 slot at `LAYOUT_SCALE=2`), vertical marks **≥288 px** tall, square-ish marks **≥512 px** on the long side — this blocks upscaled favicons and other soft rasters
 - Company display name must use the short Chinese company name, not the full legal name with `公司`
 - Footer must be exactly `公司名 | 日期`
 - Font family must stay in the Arial family
