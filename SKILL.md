@@ -309,6 +309,8 @@ python3 scripts/generate_social_cards.py \
 
 **配色：** 接任务时必须先问并完成选择，见 **[配色选择](#palette-choice)**。三种预设均保留在 `apply_palette()`。用户在终端自己跑脚本且**不传 `--palette`** 时，脚本可交互询问 1/2/3；**Agent / 无 TTY 必须显式传入** `--palette`。
 
+**单张 PNG 重渲（常见坑）：** 若只重跑某一张（例如只更新 `01_cover.png`），**必须使用与整套六张相同的 `--palette`**。`generate_social_cards.py` 在进程内调用 `apply_palette()`；`default` / `b` 顶栏为浅色字；`c` 为深色顶栏（`HEADER_BG`）。混用会导致 **Card 1 顶栏与其他卡片不一致**。`card_slots.json` **不记录** palette，**Validator 1 / 2 均无法从 JSON 发现此问题**——须靠流程约定或整套重渲。
+
 PNG sets default to this skill repo’s `output/<stem>/` unless you pass `--output-root`.
 
 **Where `card_slots.json` lives:** The **authoritative** file stays beside the HTML in the report package (version control, re-validation). **`generate_social_cards.py` also copies** that resolved JSON into `output/<stem>/` next to the six PNGs so you have one folder per company for handoff—unless you pass **`--no-copy-slots`**.

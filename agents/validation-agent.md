@@ -14,6 +14,10 @@ Validation belongs inside the generation loop:
 6. **Validator 2:** [validator-2-agent.md](./validator-2-agent.md) — web fact-check every material claim in slots; fix copy and repeat steps 4–5 until **both** pass
 7. export (`generate_social_cards.py`) only after Validator 1 **and** Validator 2 pass
 
+## What Validator 1 does **not** check
+
+- **Runtime `--palette` consistency:** The same report’s six PNGs must all be rendered with the **same** `--palette` (`default` | `b` | `c`). The slot file does not store palette; if someone re-renders only `01_cover.png` with a different palette than cards 2–6, the **top header colors** will mismatch. There is no automated assertion for this — use the same CLI flags as the full export, or re-export all six cards.
+
 ## Required Checks
 
 - `card_slots.json` must pass **`assert_card_slots_complete`** (all required slot keys populated) before layout checks run
