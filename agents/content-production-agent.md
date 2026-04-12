@@ -1,6 +1,6 @@
 # Content Production Agent
 
-**Invocation:** For **every** new Equity Research report package, you run after the logo production agent and before final PNG export. Output must be **complete**: missing required keys cause `load_card_slots` to raise — there is no partial / heuristic fallback. Next step is the layout agent, then `validate_cards.py` / `generate_social_cards.py` (**`--slots` mandatory**).
+**Invocation:** For **every** new Equity Research report package, you run after the logo production agent and before final PNG export. Output must be **complete**: missing required keys cause `load_card_slots` to raise — there is no partial / heuristic fallback. Next step is the layout agent, then **`validate_cards.py` (Validator 1)**, then **[validator-2-agent.md](./validator-2-agent.md) (Validator 2)**, then **`generate_social_cards.py`** (**`--slots` mandatory**).
 
 Before you materialize `card_slots.json`, follow [SKILL.md](../SKILL.md) **Required Workflow §2–4**: whole-package extraction, normalization, and a six-card slot plan. This file’s job is to **write the full slot copy** once that planning is done. Skipping normalization often yields inconsistent figures across cards or internal contradictions — that conflicts with the grounding rules below.
 

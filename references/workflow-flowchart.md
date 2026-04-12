@@ -98,15 +98,16 @@ flowchart TD
 ```mermaid
 flowchart TB
     L1["① 结构：JSON 键齐全、列表条数达标\nassert_card_slots_complete"]
-    L2["② 语义：硬编码/逻辑审计、人话标记、\n与 HTML 事实锚点\nvalidate_report 内"]
+    L2["② 语义：硬编码/逻辑审计、人话标记、\n与包内 financial_data 等\nvalidate_report（Validator 1）"]
     L3["③ 排版：行数/字符预算、\nCard2 动态 y、Card4 判断框等\n像素级近似\n（与 generate_social_cards 一致）"]
-    L1 --> L2 --> L3
-    L3 --> OK["通过后可 generate"]
+    L4["④ 外部事实：Validator 2\n联网核对披露/财报与 card 数字"]
+    L1 --> L2 --> L3 --> L4
+    L4 --> OK["通过后可 generate"]
 ```
 
 ---
 
-## 5. 与 workflow-spec 十步对应（含配色确认）
+## 5. 与 workflow-spec 步骤对应（含配色确认与 Validator 2）
 
 ```mermaid
 flowchart LR
@@ -116,10 +117,11 @@ flowchart LR
     S3 --> S4["4 plan slots"]
     S4 --> S5["5 write JSON\nContent + Layout"]
     S5 --> S6["6 audit"]
-    S6 --> S7["7 validate\n--slots"]
-    S7 --> S8{"8 通过？"}
+    S6 --> S7["7 Validator 1\nvalidate_cards --slots"]
+    S7 --> S7b["8 Validator 2\n联网事实核查"]
+    S7b --> S8{"9 通过？"}
     S8 -->|否| S5
-    S8 -->|是| S9["9 export\n--slots --palette"]
+    S8 -->|是| S9["10 export\n--slots --palette"]
 ```
 
 详述与必填槽位列表见 [workflow-spec.md §10](./workflow-spec.md)。

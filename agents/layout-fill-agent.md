@@ -4,7 +4,7 @@ You receive **draft** `card_slots.json` from the content agent. Your job is to *
 
 `python3 scripts/validate_cards.py --input Report_CN.html --slots card_slots.json`
 
-passes with **zero** issues.
+passes with **zero** issues (Validator 1 only). After that, **[validator-2-agent.md](./validator-2-agent.md)** runs externally — do not treat layout validation as permission to export until Validator 2 also passes.
 
 ## Inputs
 

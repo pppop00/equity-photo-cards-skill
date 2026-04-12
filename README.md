@@ -2,9 +2,9 @@
 
 Agent skill and Python tooling that turn **equity research HTML** (plus optional sibling JSON) into **six fixed-layout social images** (e.g. Xiaohongshu / Douyin), with slot-based copy and **layout validation** before export.
 
-**中文简介：** 将权益类研报 HTML 规范化为固定 **6 张卡片** 的图文素材。**唯一支持路径：** 两层 Agent 生成 **完整** `html_stem.card_slots.json` → `validate_cards.py` 与 `generate_social_cards.py` **必须带 `--slots`**；脚本在加载时会拒绝缺字段的 JSON，**不存在**「不写 slots、只靠 Python 模板糊字」的出口。
+**中文简介：** 将权益类研报 HTML 规范化为固定 **6 张卡片** 的图文素材。**唯一支持路径：** 多 Agent 生成 **完整** `html_stem.card_slots.json` → **`validate_cards.py`（Validator 1）** → **Validator 2 联网事实核查** → `generate_social_cards.py`；后两者 **必须带 `--slots`**；脚本在加载时会拒绝缺字段的 JSON，**不存在**「不写 slots、只靠 Python 模板糊字」的出口。
 
-**Pipeline:** HTML in → content agent → layout agent → hardcode/logic audit on slot text → `validate_cards.py` → `generate_social_cards.py` (both CLIs require `--slots`; slots map copy into fixed card frames).
+**Pipeline:** HTML in → logo agent → content agent → layout agent → hardcode/logic audit → **`validate_cards.py` (Validator 1)** → **Validator 2 (web fact-check; [agents/validator-2-agent.md](agents/validator-2-agent.md))** → `generate_social_cards.py` (CLIs require `--slots`; slots map copy into fixed card frames).
 
 - **Repository:** [pppop00/equity-photo-cards-skill](https://github.com/pppop00/equity-photo-cards-skill)  
 - **License:** [Apache-2.0](LICENSE)
@@ -28,7 +28,7 @@ Follows **skill-creator** bundle layout: **`SKILL.md`** (entry) → **`reference
 
 | Path | Purpose |
 |------|---------|
-| [SKILL.md](SKILL.md) | Agent skill contract: intake → extract → normalize → plan → copy → validate → export |
+| [SKILL.md](SKILL.md) | Agent skill contract: intake → extract → normalize → plan → copy → Validator 1 → Validator 2 → export |
 | [references/workflow-spec.md](references/workflow-spec.md) | Pipeline and slot schema |
 | [references/workflow-flowchart.md](references/workflow-flowchart.md) | Mermaid：bundle 表、端到端、CLI、`card_slots` 启动、校验分层、十步（含配色确认） |
 | [references/templates/README.md](references/templates/README.md) | 模版目录说明（template vs example） |
@@ -41,7 +41,8 @@ Follows **skill-creator** bundle layout: **`SKILL.md`** (entry) → **`reference
 | [agents/content-production-agent.md](agents/content-production-agent.md) | HTML → slot copy |
 | [agents/layout-fill-agent.md](agents/layout-fill-agent.md) | Fit copy to layout rules |
 | [agents/hardcode-audit-agent.md](agents/hardcode-audit-agent.md) | Hardcode / logic audit before validation |
-| [agents/validation-agent.md](agents/validation-agent.md) | Validation policy (what `validate_cards.py` enforces) |
+| [agents/validation-agent.md](agents/validation-agent.md) | Validator 1 — what `validate_cards.py` enforces |
+| [agents/validator-2-agent.md](agents/validator-2-agent.md) | Validator 2 — web fact-check all card data before export |
 | [scripts/generate_social_cards.py](scripts/generate_social_cards.py) | Parse HTML and render PNGs |
 | [scripts/validate_cards.py](scripts/validate_cards.py) | Run checks before export |
 | [evals/evals.json](evals/evals.json) | Optional smoke-test prompts for the skill |

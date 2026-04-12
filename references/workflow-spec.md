@@ -11,9 +11,10 @@ The pipeline is:
 4. plan card slots
 5. write copy into slots
 6. audit hardcoded wording and logic
-7. validate
-8. rewrite until pass
-9. export
+7. validate (**Validator 1** — `validate_cards.py`)
+8. rewrite until Validator 1 passes
+9. **Validator 2** — external fact-check of all material claims in slots via web search (see [validator-2-agent.md](../agents/validator-2-agent.md)); rewrite and repeat steps 7–8 until Validator 2 passes
+10. export (`generate_social_cards.py` only after Validator 1 **and** Validator 2 pass)
 
 ## 1. Input Contract
 
@@ -232,14 +233,18 @@ Copy priority:
 ## 6. Validation Loop
 
 Validation is not a final polish step. It is part of generation.
-Hardcode and logic audit runs before layout validation, not after export.
+Hardcode and logic audit runs before **Validator 1**, not after export.
 
-For each failed validation:
+**Validator 1** (`validate_cards.py`) covers structure, layout, and internal consistency with the report package. **Validator 2** ([validator-2-agent.md](../agents/validator-2-agent.md)) runs only after Validator 1 passes and checks **external** factual accuracy via web search before any PNG export.
+
+For each failed **Validator 1** run:
 
 1. identify the failing slot
 2. rewrite the slot, not the entire report
-3. re-run validation
-4. repeat until all slots pass
+3. re-run `validate_cards.py`
+4. repeat until Validator 1 passes
+
+Then run **Validator 2**. If any public fact is wrong, fix slots (and re-run Validator 1), then Validator 2 again, until both pass.
 
 Rewrite order:
 
@@ -302,7 +307,7 @@ Expected final output:
 - `05_brand.png`
 - `06_post_copy.png`
 
-If validation fails, do not export.
+If **Validator 1** or **Validator 2** fails, do not export.
 
 ## 10. Standard copy pipeline (only path; enforced in CLI)
 
@@ -313,9 +318,10 @@ If validation fails, do not export.
 **Standard flow (every new `*_Research_CN.html`):**
 
 1. **Content production agent** writes **`html_stem.card_slots.json`** beside the HTML — see [content-production-agent.md](../agents/content-production-agent.md) and [card-slots.schema.json](./card-slots.schema.json).
-2. **Layout fill agent** refines copy per [design-spec.md](./design-spec.md) and [validation-agent.md](../agents/validation-agent.md).
-3. `python3 scripts/validate_cards.py --input …/Report_CN.html --slots …` until clean.
-4. `python3 scripts/generate_social_cards.py --input …/Report_CN.html --slots … --palette default|b|c` (palette must match the customer’s confirmed choice from step 0).
+2. **Layout fill agent** refines copy per [design-spec.md](./design-spec.md) and [validation-agent.md](../agents/validation-agent.md) (Validator 1 policy).
+3. `python3 scripts/validate_cards.py --input …/Report_CN.html --slots …` until clean (**Validator 1**).
+4. **Validator 2:** follow [validator-2-agent.md](../agents/validator-2-agent.md) — web-search every material fact in the cards; fix copy and repeat step 3 until **both** Validator 1 and Validator 2 pass.
+5. `python3 scripts/generate_social_cards.py --input …/Report_CN.html --slots … --palette default|b|c` (palette must match the customer’s confirmed choice from step 0).
 
 **`--slots` argument:** For **one** HTML file, pass the JSON file path **or** the **folder** that contains `<stem>.card_slots.json`. For **several** HTML files under `--input`, `--slots` **must** be a **directory** containing one `<stem>.card_slots.json` per HTML.
 

@@ -1,16 +1,18 @@
-# Validation Agent
+# Validation Agent（Validator 1）
 
-Run this validation pass after card slots have been planned, filled with copy, and audited for hardcoded wording and logical consistency, but before final image export. If any check fails, revise the failing slot copy or slot mapping and validate again until every check passes.
+This document describes what **`scripts/validate_cards.py`** enforces — **Validator 1** (layout, completeness, internal consistency with the report package, logo rules). It does **not** replace **[validator-2-agent.md](./validator-2-agent.md)** (external fact-check via web search before export).
+
+Run this validation pass after card slots have been planned, filled with copy, and audited for hardcoded wording and logical consistency, but **before** [Validator 2](./validator-2-agent.md) and **before** final image export. If any check fails, revise the failing slot copy or slot mapping and validate again until every check passes.
 
 Validation belongs inside the generation loop:
 
 1. plan card slots
 2. write slot copy
 3. audit hardcoded wording and logic
-4. validate
-5. rewrite only the failing slot
-6. validate again
-7. export only after full pass
+4. **Validator 1:** `validate_cards.py`
+5. rewrite only the failing slot, then **Validator 1** again until clean
+6. **Validator 2:** [validator-2-agent.md](./validator-2-agent.md) — web fact-check every material claim in slots; fix copy and repeat steps 4–5 until **both** pass
+7. export (`generate_social_cards.py`) only after Validator 1 **and** Validator 2 pass
 
 ## Required Checks
 
@@ -64,9 +66,11 @@ python3 scripts/generate_social_cards.py \
 
 (Renderer defaults to this skill repo’s `output/<report_stem>/`; pass `--output-root` to override.)
 
+**After** the commands above succeed, run **[Validator 2](./validator-2-agent.md)** before `generate_social_cards.py`.
+
 ## Failure Policy
 
-- Do not produce final images if validation fails
+- Do not produce final images if **Validator 1** or **Validator 2** fails
 - Fix the failing slot, not the whole report, unless the slot failure reveals an upstream planning mistake
 - Fix content density before shrinking fonts
 - Fix numeric and English line wrapping before shortening copy
