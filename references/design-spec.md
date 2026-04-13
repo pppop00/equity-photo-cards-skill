@@ -73,9 +73,9 @@ Rendering colors depend on **`generate_social_cards.py --palette`** (`default` |
 - Card 3 explanation bullets: max `58` characters each including punctuation and English, and the 3 bullets together must fit inside the enlarged yellow panel's total height budget
 - Card 5 yellow panel bullets: exactly 3 bullets, each max 28 Chinese characters
 - Final brand card main statement: max 3 lines
-- Card 6 title: max 2 lines
-- Card 6 content: exactly 4 bullet lines, each max 2 lines
-- Card 6 hashtags: max 4 lines and max 5 hashtags
+- Card 6 title: max 2 lines and must start with `一天吃透一家公司：`
+- Card 6 content: exactly 4 bullet lines, each max 2 lines; exactly 3 statements + 1 question
+- Card 6 hashtags: max 4 lines and max 7 hashtags; final tags must include `#A股` and `#美股`
 - Any font increase must be checked against section bounds, spacing, and overlap before export
 - Never allow overlap, clipping, or hidden text
 
@@ -84,7 +84,7 @@ Rendering colors depend on **`generate_social_cards.py --palette`** (`default` |
 ## Card 1
 
 - Title: `每天学习一个公司`
-- Company name in red, use short company name only
+- Company name in red: renderer uses **`display_name(company_cn)`** from the HTML node **`.company-name-cn`** — this must be the **short Chinese** name (e.g. `华纳兄弟探索`), not English; English legal name + ticker belong in **`.company-name-en`** below
 - Small English/ticker line below company name
 - Three metric cards in one row
 - One rounded highlight panel titled `公司看点`
