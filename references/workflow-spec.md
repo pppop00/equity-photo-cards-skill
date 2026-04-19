@@ -325,7 +325,7 @@ If **Validator 1** or **Validator 2** fails, do not export.
 2. **Layout fill agent** refines copy per [design-spec.md](./design-spec.md) and [validation-agent.md](../agents/validation-agent.md) (Validator 1 policy).
 3. `python3 scripts/validate_cards.py --input …/Report_CN.html --slots …` until clean (**Validator 1**).
 4. **Validator 2:** follow [validator-2-agent.md](../agents/validator-2-agent.md) — web-search every material fact in the cards; fix copy and repeat step 3 until **both** Validator 1 and Validator 2 pass.
-5. `python3 scripts/generate_social_cards.py --input …/Report_CN.html --slots … --palette default|b|c` (palette must match the customer’s confirmed choice from step 0).
+5. `python3 scripts/generate_social_cards.py --input …/Report_CN.html --slots … --palette default|b|c|d` (palette must match the customer’s confirmed choice from step 0).
 
 **`--slots` argument:** For **one** HTML file, pass the JSON file path **or** the **folder** that contains `<stem>.card_slots.json`. For **several** HTML files under `--input`, `--slots` **must** be a **directory** containing one `<stem>.card_slots.json` per HTML.
 

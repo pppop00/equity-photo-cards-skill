@@ -25,7 +25,7 @@ Preferred input is a report folder containing `*_Research_CN.html` + sibling JSO
 
 ## P0 gates (enforced in scripts)
 
-- **Palette:** `generate_social_cards.py` **requires** `--palette default|b|c` in non-interactive runs (Agent, CI). Omitting it exits with an error — no silent `default`.
+- **Palette:** `generate_social_cards.py` **requires** `--palette default|b|c|d` in non-interactive runs (Agent, CI). Omitting it exits with an error — no silent `default`.
 - **Logo:** `validate_cards.py` / export **fail** if `card_slots.json` has no `logo_asset_path`, unless `--allow-no-logo` is passed (customer explicitly waived logo).
 
 ## Commands
@@ -67,7 +67,7 @@ python3 scripts/generate_social_cards.py ... --no-copy-slots
 
 ### Pipeline stages (strict order)
 
-0. **Palette gate** — customer confirms `default` | `b` | `c`; no work before this
+0. **Palette gate** — customer confirms `default` | `b` | `c` | `d`; no work before this
 1. Ingest report package (`*_Research_CN.html` + sibling JSON: `financial_data.json`, `financial_analysis.json`, `porter_analysis.json`)
 2. Extract → Normalize → Plan card slots → Logo production (web search; ≥840 px wide)
 3. Content production agent → Layout fill agent → write `<stem>.card_slots.json` beside HTML
@@ -95,7 +95,7 @@ python3 scripts/generate_social_cards.py ... --no-copy-slots
 
 - Logical canvas: 1080×1350. `LAYOUT_SCALE=2` → internal buffer 2160×2700.
 - `apply_palette(name)` in `generate_social_cards.py` switches all global color vars. Must be called once before rendering.
-- `default` and `b` palettes: light header (no filled bar). `c` palette: dark `HEADER_BG` bar — visually distinct. All six cards in one report **must** use the same palette; palette is **not** stored in `card_slots.json`.
+- `default` and `b` palettes: light header (no filled bar). `c` palette: dark `HEADER_BG` bar. `d` palette: macaron pink/blue/green with a soft periwinkle header. All six cards in one report **must** use the same palette; palette is **not** stored in `card_slots.json`.
 - `assert_card_slots_complete` runs at slot load time; missing required keys abort execution.
 - `validate_cards.py` imports `load_card_slots`, `parse_html`, `resolve_slots_path`, `set_currency_label`, `validate_report` directly from `generate_social_cards`.
 

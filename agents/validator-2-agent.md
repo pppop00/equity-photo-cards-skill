@@ -57,7 +57,7 @@ python3 scripts/generate_social_cards.py \
   --input "/abs/path/Company_Research_CN.html" \
   --slots "/abs/path/Company_Research_CN.card_slots.json" \
   --brand "金融豹" \
-  --palette <customer-confirmed: default|b|c>
+  --palette <customer-confirmed: default|b|c|d>
 ```
 
 （`--palette` 须与客户在步骤 0 确认的一致；不可省略，也不可假设为 `default`。）

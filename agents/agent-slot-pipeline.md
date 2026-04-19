@@ -9,8 +9,8 @@ End state: six PNGs with **human-grade** Chinese copy **without** losing facts f
 **两个硬门禁都必须解决，才能进入 Stage A–F：**
 
 ### 门禁 1: 配色确认
-- 客户未在对话中明确选定 `default` | `b` | `c` 之一前，禁止任何后续工作。
-- 接到任务后第一步：向客户列出三种配色并等待明确回答（见 [SKILL.md §配色选择](../SKILL.md#palette-choice)）。
+- 客户未在对话中明确选定 `default` | `b` | `c` | `d` 之一前，禁止任何后续工作。
+- 接到任务后第一步：向客户列出四种配色并等待明确回答（见 [SKILL.md §配色选择](../SKILL.md#palette-choice)）。
 - 客户确认后，将选定配色记为本次任务唯一的 `--palette` 参数；后续所有 `generate_social_cards.py` 调用必须使用同一参数。
 - 「默认 default」「先做着再说」均违规。
 
@@ -25,7 +25,7 @@ End state: six PNGs with **human-grade** Chinese copy **without** losing facts f
 
 | Stage | Agent | Input | Output |
 |-------|--------|--------|--------|
-| **0** | **Palette gate** | Customer conversation | Customer explicitly confirms `default` \| `b` \| `c`; record for all downstream CLI calls — **no stage below until this is done** |
+| **0** | **Palette gate** | Customer conversation | Customer explicitly confirms `default` \| `b` \| `c` \| `d`; record for all downstream CLI calls — **no stage below until this is done** |
 | A | Logo production | HTML identity + web search | `logo_official.png` in **output folder** (create it first); `card_slots.json` updated with **`logo_asset_path`** and **`cover_company_name_cn`** (verified Chinese short name for Card 1 red text) |
 | B | Content production | Report HTML + `financial_*.json` + `porter_analysis.json` + logo path | `card_slots.json` (draft) |
 | B.5 | Hardcode & logic audit | `card_slots.json` (draft) + normalized report facts | Same file, body copy verified against report facts (see [hardcode-audit-agent.md](./hardcode-audit-agent.md)) |
@@ -52,7 +52,7 @@ Store **`card_slots.json` alongside** `Company_Research_CN.html` in the report w
 ```bash
 python3 scripts/validate_cards.py --input “/path/Company_Research_CN.html” --slots “/path/Company_Research_CN.card_slots.json” --brand “金融豹”
 # … Validator 2: follow validator-2-agent.md (web search every factual claim) …
-python3 scripts/generate_social_cards.py --input “/path/Company_Research_CN.html” --slots “/path/Company_Research_CN.card_slots.json” --brand “金融豹” --palette <customer-confirmed: default|b|c>
+python3 scripts/generate_social_cards.py --input “/path/Company_Research_CN.html” --slots “/path/Company_Research_CN.card_slots.json” --brand “金融豹” --palette <customer-confirmed: default|b|c|d>
 ```
 
 HTML still supplies Sankey numbers, tables, and company metadata. The Card 1 logo file and **red-title Chinese short name** are supplied through `card_slots.logo_asset_path` and **`card_slots.cover_company_name_cn`**, both produced by the logo production agent when a logo is used. JSON slots override copy fields and may also set `porter_scores` (five integers).
