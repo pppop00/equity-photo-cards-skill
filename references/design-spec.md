@@ -84,7 +84,7 @@ Rendering colors depend on **`generate_social_cards.py --palette`** (`default` |
 ## Card 1
 
 - Title: `每天学习一个公司`
-- Company name in red: renderer uses **`display_name(company_cn)`** from the HTML node **`.company-name-cn`** — this must be the **short Chinese** name (e.g. `华纳兄弟探索`), not English; English legal name + ticker belong in **`.company-name-en`** below
+- Company name in red: renderer uses **`company_short_cn()`** — **short Chinese** name. **When `logo_asset_path` is set**, the name comes from **`card_slots.cover_company_name_cn`**, set by the **logo production agent** (verify vs HTML if Chinese; translate if HTML is English; strip trailing **`公司`** via `display_name`). **Without a logo**, Chinese may come from HTML `.company-name-cn` (CJK) or from **`cover_company_name_cn`** if filled. English legal name + ticker stay in **`.company-name-en`**. Validator requires CJK in the resolved string and requires **`cover_company_name_cn`** whenever a logo path is set.
 - Small English/ticker line below company name
 - Three metric cards in one row
 - One rounded highlight panel titled `公司看点`

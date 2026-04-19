@@ -20,6 +20,11 @@ def main() -> None:
         required=True,
         help="Path to card_slots.json (single HTML), or directory of <stem>.card_slots.json (batch).",
     )
+    parser.add_argument(
+        "--allow-no-logo",
+        action="store_true",
+        help="Allow validation without logo_asset_path (customer explicitly waived logo). Default: require logo.",
+    )
     args = parser.parse_args()
 
     src = Path(args.input).expanduser().resolve()
@@ -33,7 +38,7 @@ def main() -> None:
         slots_path = resolve_slots_path(html, Path(args.slots), multiple_html=multiple)
         data.card_slots = load_card_slots(slots_path)
         set_currency_label(data)
-        validate_report(data, args.brand)
+        validate_report(data, args.brand, allow_no_logo=args.allow_no_logo)
         print(f"validated: {html}")
 
 

@@ -16,8 +16,8 @@ passes with **zero** issues (Validator 1 only). After that, **[validator-2-agent
 ## Rules
 
 1. **Do not invent facts.** If a trim would remove a critical number, shorten another clause or merge redundant phrases.
-2. **Preserve Agent A’s structure:** same slot keys; same count of bullets (`background_bullets` 4, `revenue_explainer_points` 3, `current_business_points` 4, `future_watch_points` 4, `post_content_lines` 4, `memory_points` 3).
-3. **Human voice checks:** Several slots require informal markers (see `HUMAN_MARKERS` in `generate_social_cards.py` — e.g. 说白了, 真要看, 别看). Card 6 **each** of the four lines must pass **`card6_line_sounds_human`** — standard markers **or** `CARD6_COLLOQUIAL_MARKERS` (贴吧口语 token).
+2. **Preserve the content production agent’s structure:** same slot keys; same count of bullets (`background_bullets` 4, `revenue_explainer_points` 3, `current_business_points` 4, `future_watch_points` 4, `post_content_lines` 4, `memory_points` 3).
+3. **Human voice checks:** Several slots require informal markers (see `HUMAN_MARKERS` in `generate_social_cards.py` — e.g. 说白了, 真要看, 别看). Card 6 **each** of the four lines must pass **`card6_line_sounds_human`** — standard markers **or** `CARD6_COLLOQUIAL_MARKERS` (贴吧口语 token). Card 6 also must stay **three statements + one question**.
 4. **Judgement + brand lines:** Must satisfy `is_human_copy` in validator — avoid pure analyst cliché without a marker.
 5. **Porter scores:** If present, must be length **5**. Otherwise delete the key so the renderer uses auto scores.
 6. **Run the validator iteratively.** Fix the **first** reported slot; re-run until clean.
@@ -25,12 +25,13 @@ passes with **zero** issues (Validator 1 only). After that, **[validator-2-agent
 ## Typical fixes
 
 - **Card 2 conclusion exceeds box:** Remove parallel clauses; keep subject–verb–object; one period.
-- **Card 1 yellow too short / too long:** Tune `company_focus_paragraph` toward 60–132 Chinese characters with two sharp ideas.
+- **Card 1 yellow too short / too long:** Tune `company_focus_paragraph` to **150–165 characters** (including punctuation and English) with two sharp ideas. Below 150 fails `MIN_CARD1_FOCUS_CHARS`; above 165 fails `LIMIT_CARD1_FOCUS_CHARS`.
 - **Card 3 explainer exceeds yellow panel:** Height is measured from real glyph bounding boxes; prefer shorter third bullet or fewer wraps. Panel allows a fixed pixel budget — tighten wording before asking for renderer changes.
 - **Card 3 bullet char limit:** Split one long bullet into two shorter ideas *only if* you still output exactly three bullets total (merge elsewhere).
 - **Card 6 “lacks human voice”:** Add a marker from `HUMAN_MARKERS` **or** a colloquial hit from `CARD6_COLLOQUIAL_MARKERS` (e.g. 这波、离谱、吃瓜).
-- **Card 6 sounds like a路演:** Send back to Agent A — Card 6 should read **贴吧/嘴炮楼**, not analyst summary; do not flatten jokes into FYxxxx 复读.
+- **Card 6 sounds like a路演:** Send back to the content production agent — Card 6 should read **贴吧/嘴炮楼**, not analyst summary; do not flatten jokes into FYxxxx 复读.
+- **Card 6 title/tags:** Title must start with `一天吃透一家公司：`; final hashtags must include `#A股` and `#美股` and stay within 7 tags.
 
 ## Output
 
-Overwrite `card_slots.json` with the **final** version, then hand off to `generate_social_cards.py --slots`.
+Overwrite `card_slots.json` with the **final** version, then hand off to **[Validator 2](./validator-2-agent.md)** (external fact-check per validator-2-agent.md). Only after Validator 2 passes may you proceed to `generate_social_cards.py --slots`.

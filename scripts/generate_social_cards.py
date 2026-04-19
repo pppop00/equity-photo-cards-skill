@@ -131,6 +131,8 @@ LEADING_PUNCT = set("，。；：、,.!?！？）》】」』）")
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp"}
 LOGO_CLEANUP_EXTS = IMAGE_EXTS | {".svg"}
 WORD_TOKEN = re.compile(r"^[A-Za-z0-9.+/%$-]+$")
+# CJK blocks for cover/footer company display (Card 1 red title must read Chinese when report is CN-facing)
+_CJK_RE = re.compile(r"[\u4e00-\u9fff]")
 TEXT_RENDER_SCALE = 6
 
 
@@ -240,6 +242,9 @@ CARD6_COLLOQUIAL_MARKERS = (
     "真的会谢",
     "绷",
 )
+POST_TITLE_PREFIX = "一天吃透一家公司："
+REQUIRED_POST_TAGS = ("#A股", "#美股")
+MAX_POST_TAGS = 7
 SOURCE_DISCLAIMER_MARKERS = (
     "不构成买入价位建议",
     "情景预测不构成",
@@ -398,6 +403,7 @@ class CardSlotOverrides:
     memory_points: list[str] | None = None
     cta_line: str | None = None
     logo_asset_path: str | None = None
+    cover_company_name_cn: str | None = None
     post_title: str | None = None
     post_content_lines: list[str] | None = None
     hashtags: list[str] | None = None
@@ -421,6 +427,7 @@ class CardSlotOverrides:
             "memory_points",
             "cta_line",
             "logo_asset_path",
+            "cover_company_name_cn",
             "post_title",
             "post_content_lines",
             "hashtags",
@@ -664,6 +671,34 @@ def porter_scores_for_card(data: ReportData) -> list[int]:
 
 def display_name(name: str) -> str:
     return name[:-2] if name.endswith("公司") else name
+
+
+def has_cjk(text: str) -> bool:
+    return bool(_CJK_RE.search(clean(text)))
+
+
+def company_short_cn(data: ReportData) -> str:
+    """
+    Short Chinese name for Card 1 red title, footers, and post-title fallback.
+
+    When ``card_slots.logo_asset_path`` is set, ``cover_company_name_cn`` must be
+    set by the logo production agent (verified Chinese short name vs HTML; strip
+    trailing ``公司`` via ``display_name``). The renderer does not translate.
+
+    When no logo path: prefer HTML ``.company-name-cn`` if it contains CJK; else
+    use ``cover_company_name_cn`` when present (e.g. English HTML before logo).
+    """
+    slots = data.card_slots
+    logo_on = bool(slots and (slots.logo_asset_path or "").strip())
+    cover = clean(slots.cover_company_name_cn or "") if slots else ""
+    html_cn = clean(data.company_cn)
+    if logo_on:
+        return display_name(cover) if cover else display_name(html_cn)
+    if has_cjk(html_cn):
+        return display_name(html_cn)
+    if cover:
+        return display_name(cover)
+    return display_name(html_cn)
 
 
 def export_date_cn() -> str:
@@ -1126,8 +1161,6 @@ def metric_current_percent(data: ReportData, metric_name: str) -> float | None:
 
 def profitability(data: ReportData) -> dict[str, Any]:
     prof = get_nested(data.financial_analysis, "profitability", default={}) or {}
-    if "gross_margin_pct" in prof or "operating_margin_pct" in prof or "net_margin_pct" in prof:
-        return prof
     normalized = dict(prof)
     if "gross_margin_current" in prof:
         normalized["gross_margin_pct"] = prof["gross_margin_current"]
@@ -1135,11 +1168,12 @@ def profitability(data: ReportData) -> dict[str, Any]:
         normalized["operating_margin_pct"] = prof["operating_margin_current"]
     if "net_margin_current" in prof:
         normalized["net_margin_pct"] = prof["net_margin_current"]
-    current = income_current(data)
-    revenue = as_float(current.get("revenue"))
-    gross = as_float(current.get("gross_profit"))
-    op = as_float(current.get("operating_income"))
-    net = as_float(current.get("net_income"))
+    # Use finance() so null operating_income can fall back to Sankey-derived op profit.
+    fin = finance(data)
+    revenue = as_float(fin.get("revenue"))
+    gross = as_float(fin.get("gross"))
+    op = as_float(fin.get("op"))
+    net = as_float(fin.get("net"))
     if revenue:
         if normalized.get("gross_margin_pct") is None:
             normalized["gross_margin_pct"] = (gross / revenue * 100) if gross is not None else metric_current_percent(data, "毛利率")
@@ -1249,35 +1283,57 @@ def sankey_value_by_node_name(data: ReportData, keywords: tuple[str, ...]) -> fl
 
 
 def finance(data: ReportData) -> dict[str, float]:
-    current = income_current(data)
-    if current:
-        return {
-            "revenue": float(current.get("revenue", 0.0)),
-            "cogs": float(current.get("cogs", 0.0)),
-            "gross": float(current.get("gross_profit", 0.0)),
-            "op": float(current.get("operating_income", 0.0)),
-            "net": float(current.get("net_income", 0.0)),
-        }
     links = data.sankey_actual.get("links", [])
     lookup = {(l["source"], l["target"]): float(l["value"]) for l in links}
+    sankey_fin = {"revenue": 0.0, "cogs": 0.0, "gross": 0.0, "op": 0.0, "net": 0.0}
     if links:
         revenue = sum(l["value"] for l in links if l["source"] == 0)
         cogs = lookup.get((0, 1), 0.0) or sankey_value_by_node_name(data, ("营业成本", "成本", "人工成本", "cogs"))
         gross = lookup.get((0, 2), 0.0) or sankey_value_by_node_name(data, ("毛利", "gross"))
         op = lookup.get((2, 6), 0.0) or sankey_value_by_node_name(data, ("营业利润", "operating profit", "operating income"))
         net = lookup.get((6, 8), 0.0) or sankey_value_by_node_name(data, ("净利润", "归母净利润", "net income"))
-        return {
+        sankey_fin = {
             "revenue": revenue,
             "cogs": cogs,
             "gross": gross,
             "op": op,
             "net": net,
         }
-    return {"revenue": 0.0, "cogs": 0.0, "gross": 0.0, "op": 0.0, "net": 0.0}
+
+    current = income_current(data)
+    if not current:
+        return sankey_fin
+
+    # Prefer normalized financial_data values when present; if a field is null/missing,
+    # fall back to Sankey-derived values instead of coercing null to 0.
+    def _prefer_current(field: str, fallback_key: str) -> float:
+        value = current.get(field)
+        if value is None:
+            return sankey_fin[fallback_key]
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return sankey_fin[fallback_key]
+
+    return {
+        "revenue": _prefer_current("revenue", "revenue"),
+        "cogs": _prefer_current("cogs", "cogs"),
+        "gross": _prefer_current("gross_profit", "gross"),
+        "op": _prefer_current("operating_income", "op"),
+        "net": _prefer_current("net_income", "net"),
+    }
 
 
 def yi(value: float) -> float:
     return value / 100
+
+
+def chart_value_as_yi(value: float) -> float:
+    """Headline amounts for Card 3 bars: millions → 亿 via yi(); native亿元 uses value as-is."""
+    global _MONEY_VALUE_SCALE
+    if _MONEY_VALUE_SCALE == "yi":
+        return float(value)
+    return yi(value)
 
 
 _CURRENCY_LABEL: str = "美元"
@@ -1441,7 +1497,7 @@ def has_source_anchor(text: str, data: ReportData, source_terms: list[str] | Non
         return False
     if re.search(r"\d", core):
         return True
-    if display_name(data.company_cn) in core or data.company_en in core or data.ticker in core:
+    if company_short_cn(data) in core or data.company_en in core or data.ticker in core:
         return True
     for term in source_terms or audit_source_terms(data):
         if term and term in core:
@@ -1798,8 +1854,8 @@ def brand_statement(data: ReportData) -> str:
             "别看收入还在长，真正值钱的是客户不走、价格还能往上抬",
         ],
         "general": [
-            f"说白了，{display_name(data.company_cn)}现在最值钱的，还是主业现金流和新投入兑现速度",
-            f"别看故事还在展开，真正决定{display_name(data.company_cn)}定价的，还是基本盘和回报率",
+            f"说白了，{company_short_cn(data)}现在最值钱的，还是主业现金流和新投入兑现速度",
+            f"别看故事还在展开，真正决定{company_short_cn(data)}定价的，还是基本盘和回报率",
         ],
     }
     return fit_copy(source_candidates + candidates.get(theme, candidates["general"]), 34, human=True)
@@ -2054,7 +2110,7 @@ def watch_sentence(data: ReportData) -> str:
 def post_title(data: ReportData) -> str:
     if data.card_slots and data.card_slots.post_title:
         return clean(data.card_slots.post_title)
-    return f"一天吃透一家上市公司：{display_name(data.company_cn)}"
+    return f"{POST_TITLE_PREFIX}{company_short_cn(data)}"
 
 
 def post_content_lines(data: ReportData) -> list[str]:
@@ -2064,21 +2120,21 @@ def post_content_lines(data: ReportData) -> list[str]:
     fin = finance(data)
     rev_yoy = revenue_yoy(data)
     label, value, _ = operational_metric(data)
+    watch = clean(watch_sentence(data)).rstrip("。！？!?")
     lines = [
         fit_copy([brand_statement(data)], 42, human=True),
         fit_copy([f"{fiscal_year(data)} 营收 {money_text(fin['revenue'])}，同比{pct_text(rev_yoy, signed=True)}，钱还在进。"], 44),
         fit_copy([f"{label} {value}，这就是它眼下最值得盯的经营抓手。"], 44, human=True),
-        fit_copy([f"后面真要看的是：{watch_sentence(data)}"], 44, human=True),
+        fit_copy([f"后面真要看的是：{watch}？"], 44, human=True),
     ]
     return dedupe_texts(lines, 4)
 
 
 def keyword_tags(data: ReportData) -> list[str]:
     text = all_text(data)
-    tags: list[str] = [hashtag_token(display_name(data.company_cn))]
+    tags: list[str] = [hashtag_token(company_short_cn(data))]
     if data.ticker:
         tags.append(hashtag_token(data.ticker))
-    tags.append("#美股")
     sector = str(get_nested(data.financial_data, "sector", default=""))
     if "通信" in sector or "广告" in text:
         tags.append("#数字广告")
@@ -2091,13 +2147,34 @@ def keyword_tags(data: ReportData) -> list[str]:
     if "电动车" in text:
         tags.append("#电动车")
     tags.extend(["#商业模式", "#上市公司", "#金融豹"])
-    return dedupe_texts([hashtag_token(tag) for tag in tags], 5)
+    return normalize_post_tags(tags)
+
+
+def normalize_post_tags(raw_tags: list[Any]) -> list[str]:
+    tags: list[str] = []
+    seen: set[str] = set()
+    base_limit = max(0, MAX_POST_TAGS - len(REQUIRED_POST_TAGS))
+    required = set(REQUIRED_POST_TAGS)
+    for raw in raw_tags:
+        if not clean(str(raw)):
+            continue
+        token = hashtag_token(str(raw).lstrip("#"))
+        if not token or token in seen or token in required:
+            continue
+        tags.append(token)
+        seen.add(token)
+        if len(tags) >= base_limit:
+            break
+    for token in REQUIRED_POST_TAGS:
+        if token not in seen:
+            tags.append(token)
+            seen.add(token)
+    return tags[:MAX_POST_TAGS]
 
 
 def post_hashtags(data: ReportData) -> str:
     if data.card_slots and data.card_slots.hashtags:
-        tags = [hashtag_token(str(t).lstrip("#")) for t in data.card_slots.hashtags if clean(str(t))]
-        return " ".join(dedupe_texts(tags, 5))
+        return " ".join(normalize_post_tags(data.card_slots.hashtags))
     return " ".join(keyword_tags(data))
 
 
@@ -2237,7 +2314,7 @@ def hardcode_logic_issues(data: ReportData) -> list[str]:
                 if phrase in normalized:
                     issues.append(f"{label} still contains forbidden hardcoded template wording: {phrase}")
             for marker in CROSS_REPORT_NAME_MARKERS:
-                if marker in normalized and marker not in source_blob and marker not in data.company_cn and marker not in data.company_en:
+                if marker in normalized and marker not in source_blob and marker not in data.company_cn and marker not in data.company_en and marker not in company_short_cn(data):
                     issues.append(f"{label} contains cross-report residue not found in this report package: {marker}")
             if (
                 data.card_slots is None
@@ -2264,7 +2341,7 @@ def hardcode_logic_issues(data: ReportData) -> list[str]:
     return dedupe_texts(issues)
 
 
-def validate_report(data: ReportData, brand: str) -> None:
+def validate_report(data: ReportData, brand: str, *, allow_no_logo: bool = False) -> None:
     img = Image.new("RGB", (W, H), BG)
     draw = ScaledDraw(ImageDraw.Draw(img), LAYOUT_SCALE)
     issues: list[str] = []
@@ -2280,6 +2357,20 @@ def validate_report(data: ReportData, brand: str) -> None:
             issues.append("card_slots.logo_asset_path is set, but the logo file was not found or is not a supported image type.")
         else:
             issues.extend(logo_asset_dimension_issues(logo_path))
+    else:
+        if allow_no_logo:
+            print(
+                "WARNING: card_slots.logo_asset_path is not set — Card 1 will render without a logo "
+                "(export used --allow-no-logo; use only when the customer explicitly waived the logo).",
+                file=sys.stderr,
+            )
+        else:
+            issues.append(
+                "P0/logo: `card_slots.logo_asset_path` is empty. Run the logo production agent, "
+                "save a ≥840px-wide transparent wordmark beside the report, set `logo_asset_path` and "
+                "`cover_company_name_cn`, then validate again. If the customer explicitly waives the logo, "
+                "re-run validation/export with `--allow-no-logo`."
+            )
     issues.extend(hardcode_logic_issues(data))
 
     focus = company_focus_paragraph(data)
@@ -2299,7 +2390,59 @@ def validate_report(data: ReportData, brand: str) -> None:
     source_revenue = as_float(current_income.get("revenue"))
     source_net = as_float(current_income.get("net_income"))
 
-    if display_name(data.company_cn).endswith("公司"):
+    # Card 3 hard gate: do not allow empty numeric fields/placeholder output ("--").
+    required_fin = [
+        ("revenue", "revenue", "Card 3 revenue"),
+        ("cogs", "cogs", "Card 3 cogs"),
+        ("gross_profit", "gross", "Card 3 gross profit"),
+        ("operating_income", "op", "Card 3 operating profit"),
+        ("net_income", "net", "Card 3 net income"),
+    ]
+    for source_key, fin_key, label in required_fin:
+        source_value = as_float(current_income.get(source_key))
+        rendered_value = as_float(fin.get(fin_key))
+        if source_value is None and (rendered_value is None or abs(rendered_value) < 1e-9):
+            issues.append(
+                f"{label} is missing from both financial_data and Sankey fallback. "
+                "Card output may not contain empty numeric placeholders."
+            )
+
+    # Zero-revenue guard: revenue=0 is a data error (missing extraction), not a valid company state.
+    if source_revenue is not None and abs(source_revenue) < 1e-9:
+        issues.append(
+            "Card 3: financial_data.income_statement.current_year.revenue is zero. "
+            "This indicates a data extraction error — re-extract from the report package before export."
+        )
+    rendered_revenue = as_float(fin.get("revenue"))
+    if rendered_revenue is not None and source_revenue is None and abs(rendered_revenue) < 1e-9:
+        issues.append(
+            "Card 3: Sankey revenue resolves to zero. "
+            "Verify sankeyActualData in the HTML or supply revenue via financial_data.json."
+        )
+
+    required_margins = [
+        ("gross_margin_pct", "Card 3 gross margin"),
+        ("operating_margin_pct", "Card 3 operating margin"),
+        ("net_margin_pct", "Card 3 net margin"),
+    ]
+    for margin_key, label in required_margins:
+        if as_float(prof.get(margin_key)) is None:
+            issues.append(f"{label} is missing; cards must not show placeholder values like '--'.")
+
+    cn_disp = company_short_cn(data)
+    if logo_path_raw:
+        cover_slot = clean(data.card_slots.cover_company_name_cn or "") if data.card_slots else ""
+        if not cover_slot:
+            issues.append(
+                "When card_slots.logo_asset_path is set, logo production must also set "
+                "card_slots.cover_company_name_cn (verified Chinese short name for Card 1 red title and footers)."
+            )
+    if not has_cjk(cn_disp):
+        issues.append(
+            "Card cover/footer company name must be Chinese: with a logo, set cover_company_name_cn in logo "
+            "production; without a logo, use Chinese in HTML .company-name-cn or set cover_company_name_cn."
+        )
+    elif cn_disp.endswith("公司"):
         issues.append("Company display name must use the short Chinese name without '公司'.")
     if not data.date:
         issues.append("Date is missing.")
@@ -2320,9 +2463,7 @@ def validate_report(data: ReportData, brand: str) -> None:
         for margin_key, source_key, label in margin_sources:
             source_value = as_float(current_income.get(source_key))
             actual_margin = as_float(prof.get(margin_key))
-            if source_value is not None and actual_margin is None:
-                issues.append(f"{label} is missing even though financial_data can compute it.")
-            elif source_value is not None and actual_margin is not None:
+            if source_value is not None and actual_margin is not None:
                 expected_margin = source_value / source_revenue * 100
                 if abs(actual_margin - expected_margin) > 0.5:
                     issues.append(f"{label} does not match financial_data income_statement.current_year.")
@@ -2478,10 +2619,17 @@ def validate_report(data: ReportData, brand: str) -> None:
 
     if len(wrap(draw, clean(title), f(FONT_POST_TITLE, True), 860)) > 2:
         issues.append("Card 6 title exceeds its allowed block.")
+    if not clean(title).startswith(POST_TITLE_PREFIX):
+        issues.append(f"Card 6 title must start with {POST_TITLE_PREFIX!r}.")
+    if "一天吃透一家上市公司" in clean(title):
+        issues.append("Card 6 title must use 一天吃透一家公司, not 一天吃透一家上市公司.")
     if has_bad_linebreak(title, 860, f(FONT_POST_TITLE, True), draw):
         issues.append("Card 6 title contains a punctuation-led line break.")
     if len(lines) != 4:
         issues.append("Card 6 content must contain exactly 4 bullet lines.")
+    question_count = sum(1 for line in lines if clean(line).endswith(("？", "?")))
+    if len(lines) == 4 and question_count != 1:
+        issues.append("Card 6 content must contain exactly three statements and one question.")
     for line in lines:
         if not is_complete_copy(line):
             issues.append(f"Card 6 content line must be a complete sentence without ellipsis: {line}")
@@ -2495,8 +2643,12 @@ def validate_report(data: ReportData, brand: str) -> None:
         issues.append("Card 6 hashtags exceed their section.")
     if has_bad_linebreak(tags, 860, f(FONT_POST_TAG), draw):
         issues.append("Card 6 hashtags contain a punctuation-led line break.")
-    if len(keyword_tags(data)) > 5:
-        issues.append("Card 6 hashtags may not exceed 5 tags.")
+    tag_tokens = clean(tags).split()
+    for required_tag in REQUIRED_POST_TAGS:
+        if required_tag not in tag_tokens:
+            issues.append(f"Card 6 hashtags must include {required_tag}.")
+    if len(tag_tokens) > MAX_POST_TAGS:
+        issues.append(f"Card 6 hashtags may not exceed {MAX_POST_TAGS} tags.")
 
     if issues:
         raise ValueError("Validation failed:\n- " + "\n- ".join(issues))
@@ -2581,7 +2733,7 @@ def paste_logo(img: Image.Image, path: Path | None, box: tuple[int, int, int, in
     x0, y0, x1, y1 = box[0] * s, box[1] * s, box[2] * s, box[3] * s
     max_w = x1 - x0
     max_h = y1 - y0
-    logo.thumbnail((max_w, max_h))
+    logo.thumbnail((max_w, max_h), Image.LANCZOS)
     canvas = Image.new("RGBA", img.size, (255, 255, 255, 0))
     x = x0 + (max_w - logo.width) // 2
     y = y0 + (max_h - logo.height) // 2
@@ -2657,7 +2809,7 @@ def header(draw: ImageDraw.ImageDraw, card_no: int) -> None:
 
 
 def footer(draw: ImageDraw.ImageDraw, data: ReportData) -> None:
-    draw_text(draw, (72, 1288), f"{display_name(data.company_cn)} | {export_date_cn()}", f(FONT_FOOTER), MUTED)
+    draw_text(draw, (72, 1288), f"{company_short_cn(data)} | {export_date_cn()}", f(FONT_FOOTER), MUTED)
 
 
 def metric(draw: ImageDraw.ImageDraw, x: int, y: int, w: int, label: str, value: str, accent: str) -> None:
@@ -2714,8 +2866,8 @@ def card_1(data: ReportData) -> Image.Image:
     d = ScaledDraw(ImageDraw.Draw(img), LAYOUT_SCALE)
     header(d, 1)
     draw_text(d, (72, 198), "每天学习一个公司", f(58, True), TEXT)
-    company_font = fit_font(d, display_name(data.company_cn), 860, 96, 58)
-    draw_text(d, (72, 292), display_name(data.company_cn), company_font, RED)
+    company_font = fit_font(d, company_short_cn(data), 860, 96, 58)
+    draw_text(d, (72, 292), company_short_cn(data), company_font, RED)
     draw_text(d, (78, 412), f"{data.company_en} · {data.ticker}", f(FONT_COVER_META), MUTED)
     block(d, cover_intro(data), 78, 454, 860, f(FONT_INTRO), "#344054", 12, 2)
     for idx, (label, value, color) in enumerate(cover_metrics(data)):
@@ -2767,18 +2919,19 @@ def card_3(data: ReportData) -> Image.Image:
     draw_text(d, (108, 360), f"{fiscal_year(data)} 收入流", f(34, True), TEXT)
     fin = finance(data)
     rows = [
-        ("总收入", yi(fin["revenue"]), GOLD),
-        ("营业成本", yi(fin["cogs"]), RED),
-        ("毛利润", yi(fin["gross"]), GREEN),
-        ("营业利润", yi(fin["op"]), BLUE),
-        ("净利润", yi(fin["net"]), TEXT),
+        ("总收入", chart_value_as_yi(fin["revenue"]), GOLD),
+        ("营业成本", chart_value_as_yi(fin["cogs"]), RED),
+        ("毛利润", chart_value_as_yi(fin["gross"]), GREEN),
+        ("营业利润", chart_value_as_yi(fin["op"]), BLUE),
+        ("净利润", chart_value_as_yi(fin["net"]), TEXT),
     ]
-    maxv = max(v for _, v, _ in rows) or 1
+    maxv = max(abs(v) for _, v, _ in rows) or 1
     for idx, (label, value, color) in enumerate(rows):
         y = 438 + idx * 56
         draw_text(d, (108, y), label, f(FONT_CHART_LABEL), "#475467")
         d.rounded_rectangle((244, y + 6, 744, y + 28), radius=11, fill=LINE)
-        d.rounded_rectangle((244, y + 6, 244 + int(500 * value / maxv), y + 28), radius=11, fill=color)
+        bar_color = RED if value < 0 else color
+        d.rounded_rectangle((244, y + 6, 244 + int(500 * abs(value) / maxv), y + 28), radius=11, fill=bar_color)
         draw_text(d, (782, y - 6), f"{value:.1f} 亿{_CURRENCY_LABEL}", f(FONT_CHART_VALUE, True), TEXT)
     for idx, (label, value, color) in enumerate(rate_metrics(data)):
         metric(d, 108 + idx * 242, 710, 220, label, value, color)
@@ -2826,7 +2979,7 @@ def card_5(data: ReportData, brand: str) -> Image.Image:
     subtitle = (
         clean(data.card_slots.brand_subheading)
         if data.card_slots and data.card_slots.brand_subheading
-        else f"一句话看{display_name(data.company_cn)}"
+        else f"一句话看{company_short_cn(data)}"
     )
     subtitle_font = fit_font(d, subtitle, 760, 46, 34)
     draw_text(d, (78, 346), subtitle, subtitle_font, ORANGE)
@@ -2863,7 +3016,7 @@ def card_6(data: ReportData) -> Image.Image:
 
     d.rounded_rectangle((72, y + 10, 1008, y + 210), radius=28, fill="#171B22")
     draw_text(d, (102, y + 42), post_hashtags(data), f(FONT_POST_TAG), "#F8FAFC")
-    draw_text(d, (72, 1288), f"{display_name(data.company_cn)} | 发帖文案图", f(FONT_POST_FOOTER), "#94A3B8")
+    draw_text(d, (72, 1288), f"{company_short_cn(data)} | 发帖文案图", f(FONT_POST_FOOTER), "#94A3B8")
     return finalize_export(img)
 
 
@@ -2874,11 +3027,12 @@ def render_one(
     slots_path: Path,
     *,
     copy_slots_to_output: bool = True,
+    allow_no_logo: bool = False,
 ) -> list[Path]:
     data = parse_html(path)
     data.card_slots = load_card_slots(slots_path)
     set_currency_label(data)
-    validate_report(data, brand)
+    validate_report(data, brand, allow_no_logo=allow_no_logo)
     out_dir = output_root / data.stem
     out_dir.mkdir(parents=True, exist_ok=True)
     cards = [
@@ -2911,7 +3065,7 @@ _DEFAULT_OUTPUT_ROOT = _SKILL_REPO_ROOT / "output"
 
 
 def resolve_palette(cli_palette: str | None) -> str:
-    """If --palette was omitted: prompt in a TTY; otherwise use default (CI / automation)."""
+    """If --palette was omitted: prompt only in a real TTY. Non-interactive runs must pass --palette (P0)."""
     if cli_palette is not None:
         return cli_palette
     if sys.stdin.isatty() and sys.stdout.isatty():
@@ -2921,12 +3075,11 @@ def resolve_palette(cli_palette: str | None) -> str:
         print("  3 = c — 暖纸色底 + 深色顶栏（杂志感）", file=sys.stderr)
         choice = input("配色 [1/2/3，默认 1]: ").strip() or "1"
         return {"1": "default", "2": "b", "3": "c"}.get(choice, "default")
-    print(
-        "提示：未指定 --palette，非交互环境已使用 default。"
-        " 请显式传入 --palette default|b|c。",
-        file=sys.stderr,
+    raise SystemExit(
+        "P0/palette: `--palette` is required in non-interactive environments (Agent, CI, scripts). "
+        "Ask the customer to choose default | b | c, then pass e.g. `--palette default`. "
+        "Silent defaults are not allowed."
     )
-    return "default"
 
 
 def main() -> None:
@@ -2963,8 +3116,15 @@ def main() -> None:
         choices=["default", "b", "c"],
         help=(
             "配色：default | b | c（三种均保留在代码中）。"
-            "省略本参数时：在终端里会交互询问；非终端（如脚本/CI）则用 default。"
-            "自动化或 Agent 生成时请显式传入，例如 --palette b。"
+            "在非交互环境（CI、Agent）下本参数为必填；仅在交互式终端可省略并由程序询问。"
+        ),
+    )
+    parser.add_argument(
+        "--allow-no-logo",
+        action="store_true",
+        help=(
+            "Allow export without card_slots.logo_asset_path (Card 1 has no logo). "
+            "Use only when the customer explicitly waived the logo; default is to fail validation."
         ),
     )
     args = parser.parse_args()
@@ -2981,7 +3141,14 @@ def main() -> None:
     copy_slots = not args.no_copy_slots
     for html in files:
         slots_path = resolve_slots_path(html, Path(args.slots), multiple_html=multiple)
-        render_one(html, out_root, args.brand, slots_path, copy_slots_to_output=copy_slots)
+        render_one(
+            html,
+            out_root,
+            args.brand,
+            slots_path,
+            copy_slots_to_output=copy_slots,
+            allow_no_logo=args.allow_no_logo,
+        )
         print(f"generated: {html}")
 
 

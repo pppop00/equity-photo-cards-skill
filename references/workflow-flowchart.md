@@ -29,38 +29,54 @@ flowchart TB
         TPL["可选：references/templates/\ncard_slots.template.json\n复制为 stem.card_slots.json"]
     end
 
-    subgraph EXTRACT["理解与起草"]
+    subgraph LOGO["Logo 生产（Stage A）"]
+        LG["Logo Agent\n建 output folder → 存 logo_official.png\n→ 设 logo_asset_path"]
+    end
+
+    subgraph EXTRACT["内容起草（Stage B）"]
         C["Content Agent\n依据 HTML/JSON 写满\nstem.card_slots.json"]
     end
 
-    subgraph REFINE["约束与审计"]
-        L["Layout Agent\n按 design-spec 压缩换行、\n控制字数与口语标记"]
-        H["Hardcode / logic audit\n（政策见 agents/）\n槽位文案与事实一致"]
+    subgraph AUDIT["硬编码审计（Stage B.5）"]
+        H["Hardcode / logic audit\n槽位文案须有公司锚点\n且与 normalized facts 一致"]
     end
 
-    subgraph GATE["Python 门槛"]
+    subgraph REFINE["排版压缩（Stage C）"]
+        L["Layout Agent\n按 design-spec 压缩换行\n控制字数与口语标记"]
+    end
+
+    subgraph GATE["Python 门槛（Stage D）"]
         A["load_card_slots\nassert_card_slots_complete"]
         V["validate_cards.py\nvalidate_report：\n语义 + 排版像素近似"]
     end
 
+    subgraph V2["外部事实核查（Stage E）"]
+        F2["Validator 2\n联网核对财报 / IR / SEC\n全部通过才允许导出"]
+    end
+
     subgraph RENDER["渲染"]
-        G["generate_social_cards.py\nHTML + slots → 6×PNG"]
+        G["generate_social_cards.py\nHTML + slots + --palette → 6×PNG"]
     end
 
     subgraph OUT["输出"]
-        PNG["output/&lt;stem&gt;/\n01–06.png\n+ card_slots.json 副本\n（主副本仍在报告目录）"]
+        PNG["output/&lt;stem&gt;/\n01–06.png + logo_official.png\n+ card_slots.json 副本"]
     end
 
     TPL -.->|新报告可复制| C
+    HTML --> LG
     HTML --> C
     JSON --> C
-    C --> L
-    L --> H
-    H --> A
+    LG --> C
+    C --> H
+    H -->|有问题| C
+    H -->|通过| L
+    L --> A
     A -->|缺字段| ERR["退出：补全 JSON"]
     A -->|通过| V
     V -->|失败| L
-    V -->|通过| G
+    V -->|通过| F2
+    F2 -->|有错| L
+    F2 -->|通过| G
     G --> PNG
 ```
 
@@ -111,17 +127,20 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-    S0["0 配色确认\nclient: default|b|c"] --> S1["1 ingest"]
-    S1 --> S2["2 extract"]
-    S2 --> S3["3 normalize"]
-    S3 --> S4["4 plan slots"]
-    S4 --> S5["5 write JSON\nContent + Layout"]
-    S5 --> S6["6 audit"]
-    S6 --> S7["7 Validator 1\nvalidate_cards --slots"]
-    S7 --> S7b["8 Validator 2\n联网事实核查"]
-    S7b --> S8{"9 通过？"}
-    S8 -->|否| S5
-    S8 -->|是| S9["10 export\n--slots --palette"]
+    S0["0 配色确认\nclient: default|b|c"] --> SA["1 Logo 生产\n建 output folder\n存 logo_official.png"]
+    SA --> S1["2 ingest"]
+    S1 --> S2["3 extract"]
+    S2 --> S3["4 normalize"]
+    S3 --> S4["5 plan slots"]
+    S4 --> S5["6 write JSON\nContent Agent (Stage B)"]
+    S5 --> S6["7 Hardcode 审计\nStage B.5"]
+    S6 -->|有问题| S5
+    S6 -->|通过| S7["8 Layout Agent\nStage C"]
+    S7 --> S8["9 Validator 1\nvalidate_cards --slots"]
+    S8 -->|失败| S7
+    S8 -->|通过| S9["10 Validator 2\n联网事实核查"]
+    S9 -->|有错| S7
+    S9 -->|通过| S10["11 export\n--slots --palette <confirmed>"]
 ```
 
 详述与必填槽位列表见 [workflow-spec.md §10](./workflow-spec.md)。

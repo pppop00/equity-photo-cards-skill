@@ -37,13 +37,14 @@
     "记忆点三：请写一句估值或叙事锚。"
   ],
   "cta_line": "关注金融豹，每天学习一个公司。",
+  "cover_company_name_cn": "有 logo 时必填：由 logo production agent 写入（核对/翻译 HTML .company-name-cn 后的中文简称）。无 logo 时：若 HTML 已为中文可省略；若 HTML 为英文则由 content agent 填入。",
   "logo_asset_path": "可选：logo-production-agent 联网查官方来源并重新生成的透明 logo 文件路径（横版字标建议宽≥840px，见 validate_cards）；没有可信官方 logo 时删除本字段。",
-  "post_title": "一天吃透一家上市公司：请替换为公司简称",
+  "post_title": "一天吃透一家公司：请替换为公司简称",
   "post_content_lines": [
     "说白了，请写第一句总括：报告最核心的信号是什么。",
     "说白了，请写第二句：带关键营收或利润数字。",
-    "真要看的是，请写第三句：未来最该跟踪的变量。",
-    "说白了，这里只拆公开信息不构成买卖建议类合规收束。"
+    "说白了，请写第三句：数字背后最容易被低估的隐藏洞察。",
+    "真要看的是，请写第四句疑问：市场接下来会不会继续给它溢价？"
   ],
-  "hashtags": ["公司简称", "Ticker", "行业标签", "金融豹"]
+  "hashtags": ["公司简称", "Ticker", "行业标签", "金融豹", "A股", "美股"]
 }

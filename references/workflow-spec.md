@@ -54,7 +54,7 @@ Required raw extraction buckets:
 
 Extraction should preserve source detail even if some of it is not used later.
 
-Logo acquisition is part of extraction and must use web search. Do not rely on local logo discovery. Search for the company's official logo, brand assets, press kit, IR media kit, or reputable official logo file. Use that official reference to regenerate a clean transparent PNG/WEBP asset at sufficient resolution (e.g. **≥840 px** wide for horizontal wordmarks at default `LAYOUT_SCALE` — see `logo_asset_dimension_issues` in `generate_social_cards.py`), save it locally, and preserve its file path and source URL in working notes. Do not use screenshots, search-result thumbnails, favicons, or ticker-letter placeholders; never upscale a small raster into a “large” PNG.
+Logo acquisition is part of extraction and must use web search. Do not rely on local logo discovery. Search for the company's official logo, brand assets, press kit, IR media kit, or reputable official logo file. Use that official reference to regenerate a clean transparent PNG/WEBP asset at sufficient resolution (e.g. **≥840 px** wide for horizontal wordmarks at default `LAYOUT_SCALE` — see `logo_asset_dimension_issues` in `generate_social_cards.py`), and preserve its file path and source URL in working notes. Do not use screenshots, search-result thumbnails, favicons, or ticker-letter placeholders; never upscale a small raster into a “large” PNG. **Save order:** create the output folder first, save the logo there (not in the source report folder), then set `logo_asset_path` — see [logo-production-agent.md](../agents/logo-production-agent.md) §Output for the mandatory sequence.
 
 ## 3. Normalized Report Model
 
@@ -118,6 +118,7 @@ english_ticker_line
 intro_sentence
 metrics_row[3]
 company_focus_paragraph
+cover_company_name_cn (optional in schema; **required when `logo_asset_path` is set** — written by logo production agent together with the logo file)
 logo_asset_path (optional)
 ```
 
@@ -126,6 +127,8 @@ Planning rule:
 - `intro_sentence` should state the central tension or what the market is really watching
 - `company_focus_paragraph` should explain the current setup in 150–165 characters, usually 2 complete sentences
 - use actual metrics to support the framing, not replace it
+- **`cover_company_name_cn` + `logo_asset_path`:** Logo production agent sets both when a logo is used — reconcile or translate vs HTML `.company-name-cn`, short Chinese for Card 1 red line (strip trailing `公司` in slot or rely on `display_name` in code). Later agents must not clear these keys.
+- without a logo: `company_short_cn()` may use HTML `.company-name-cn` when it contains CJK, or **`cover_company_name_cn`** if the content agent fills it for English-only HTML; Validator 1 still requires CJK in the resolved string
 - set `logo_asset_path` from the logo production agent's regenerated official logo asset; otherwise omit it and never synthesize a ticker-letter logo
 - after export, remove logo source downloads and unused logo variants so only the `logo_asset_path` file remains
 
@@ -193,15 +196,16 @@ Planning rule:
 ```text
 post_title
 post_content_lines[4]
-hashtags[3..5]
+hashtags[3..5 authored, renderer appends #A股/#美股; final max 7]
 ```
 
 Planning rule:
 
 - this should read like a **Chinese forum / 贴吧** hot thread: emotional, meme-adjacent, argumentative — **not** sell-side deck tone
 - every line must be publishable without additional editing
-- **`post_content_lines`:** exactly four lines; ground facts in the report but **voice** should feel like **recent gossip + hot takes** (products, news, sentiment — good, bad, funny, angry) — see [content-production-agent.md](../agents/content-production-agent.md) Card 6 and `CARD6_COLLOQUIAL_MARKERS` in `generate_social_cards.py`
-- **`post_title`:** scroll-bait energy like a 贴吧 title; avoid generic “年报速读”
+- **`post_content_lines`:** exactly four lines as **three statements + one question**; ground facts in the report but **voice** should feel like **recent gossip + hot takes** (products, news, sentiment — good, bad, funny, angry), and dig into the hidden insight instead of just recapping numbers — see [content-production-agent.md](../agents/content-production-agent.md) Card 6 and `CARD6_COLLOQUIAL_MARKERS` in `generate_social_cards.py`
+- **`post_title`:** must start with `一天吃透一家公司：`; after the colon use the company short name
+- **`hashtags`:** author 3–5 company/industry/topic tags; renderer guarantees final `#A股` and `#美股`
 
 ## 5. Copywriting Rules
 
