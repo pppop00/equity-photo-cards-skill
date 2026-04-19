@@ -25,7 +25,7 @@ Preferred input is a report folder containing `*_Research_CN.html` + sibling JSO
 
 ## P0 gates (enforced in scripts)
 
-- **Palette:** `generate_social_cards.py` **requires** `--palette default|b|c` in non-interactive runs (Agent, CI). Omitting it exits with an error — no silent `default`.
+- **Palette:** `macaron` is the default palette for `validate_cards.py` and `generate_social_cards.py`; legacy palettes remain available as `--palette default|b|c`.
 - **Logo:** `validate_cards.py` / export **fail** if `card_slots.json` has no `logo_asset_path`, unless `--allow-no-logo` is passed (customer explicitly waived logo).
 
 ## Commands
@@ -37,21 +37,22 @@ Run `validate_cards.py` from the **repository root** so `scripts/` imports resol
 python3 scripts/validate_cards.py \
   --input "/abs/path/Company_Research_CN.html" \
   --slots "/abs/path/Company_Research_CN.card_slots.json" \
-  --brand "金融豹"
+  --brand "金融豹" \
+  --palette macaron
 
-# Render (non-interactive: --palette required; must match customer's confirmed choice)
+# Render (defaults to macaron; pass --palette default|b|c for legacy looks)
 python3 scripts/generate_social_cards.py \
   --input "/abs/path/Company_Research_CN.html" \
   --slots "/abs/path/Company_Research_CN.card_slots.json" \
   --brand "金融豹" \
-  --palette default
+  --palette macaron
 
 # Batch (--slots must be a directory containing <stem>.card_slots.json per HTML)
 python3 scripts/generate_social_cards.py \
   --input "/abs/path/reports/" \
   --slots "/abs/path/reports/" \
   --brand "金融豹" \
-  --palette default
+  --palette macaron
 
 # Override output directory
 python3 scripts/generate_social_cards.py ... --output-root /other/path
@@ -67,14 +68,14 @@ python3 scripts/generate_social_cards.py ... --no-copy-slots
 
 ### Pipeline stages (strict order)
 
-0. **Palette gate** — customer confirms `default` | `b` | `c`; no work before this
+0. **Palette record** — use `macaron` by default, or record customer-selected `default` | `b` | `c`
 1. Ingest report package (`*_Research_CN.html` + sibling JSON: `financial_data.json`, `financial_analysis.json`, `porter_analysis.json`)
 2. Extract → Normalize → Plan card slots → Logo production (web search; ≥840 px wide)
 3. Content production agent → Layout fill agent → write `<stem>.card_slots.json` beside HTML
 4. Hardcode/logic audit
 5. Validator 1: `validate_cards.py` — structure, layout, internal consistency
 6. Validator 2: web fact-check all material numbers; fix slots and repeat from step 5 until both pass
-7. Export: `generate_social_cards.py` with confirmed `--palette`
+7. Export: `generate_social_cards.py` with the same `--palette` used by Validator 1
 
 ### Key files
 
@@ -95,7 +96,7 @@ python3 scripts/generate_social_cards.py ... --no-copy-slots
 
 - Logical canvas: 1080×1350. `LAYOUT_SCALE=2` → internal buffer 2160×2700.
 - `apply_palette(name)` in `generate_social_cards.py` switches all global color vars. Must be called once before rendering.
-- `default` and `b` palettes: light header (no filled bar). `c` palette: dark `HEADER_BG` bar — visually distinct. All six cards in one report **must** use the same palette; palette is **not** stored in `card_slots.json`.
+- `macaron` is the default visual system: warm cream canvas, dark header band, pastel accent strips. `default` and `b` use light headers; `c` uses a dark header. All six cards in one report **must** use the same palette; palette is **not** stored in `card_slots.json`.
 - `assert_card_slots_complete` runs at slot load time; missing required keys abort execution.
 - `validate_cards.py` imports `load_card_slots`, `parse_html`, `resolve_slots_path`, `set_currency_label`, `validate_report` directly from `generate_social_cards`.
 

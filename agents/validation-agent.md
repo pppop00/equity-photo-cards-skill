@@ -30,7 +30,7 @@ Validation belongs inside the generation loop:
 
 ## What Validator 1 does **not** check
 
-- **Runtime `--palette` consistency:** The same report’s six PNGs must all be rendered with the **same** `--palette` (`default` | `b` | `c`). The slot file does not store palette; if someone re-renders only `01_cover.png` with a different palette than cards 2–6, the **top header colors** will mismatch. There is no automated assertion for this — use the same CLI flags as the full export, or re-export all six cards.
+- **Runtime `--palette` consistency:** The same report’s six PNGs must all be rendered with the **same** `--palette` (`macaron` | `default` | `b` | `c`). Validator 1 now accepts `--palette` and defaults to `macaron`; use the same palette for validation and export. The slot file does not store palette, so if someone re-renders only `01_cover.png` with a different palette than cards 2–6, the **top header colors** will mismatch.
 
 ## Three categories of Validator 1 checks
 
@@ -99,12 +99,14 @@ Do not try to fix an overflow by compressing whitespace alone. Rewrite the copy 
 python3 scripts/validate_cards.py \
   --input "/abs/path/to/Company_Research_CN.html" \
   --slots "/abs/path/to/Company_Research_CN.card_slots.json" \
-  --brand "金融豹"
+  --brand "金融豹" \
+  --palette macaron
 
 python3 scripts/generate_social_cards.py \
   --input "/abs/path/to/Company_Research_CN.html" \
   --slots "/abs/path/to/Company_Research_CN.card_slots.json" \
-  --brand "金融豹"
+  --brand "金融豹" \
+  --palette macaron
 ```
 
 (Renderer defaults to this skill repo’s `output/<report_stem>/`; pass `--output-root` to override.)

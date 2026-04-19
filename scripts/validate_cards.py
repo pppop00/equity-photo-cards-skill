@@ -4,7 +4,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from generate_social_cards import load_card_slots, parse_html, resolve_slots_path, set_currency_label, validate_report
+from generate_social_cards import apply_palette, load_card_slots, parse_html, resolve_slots_path, set_currency_label, validate_report
 
 
 def input_files(src: Path) -> list[Path]:
@@ -25,7 +25,14 @@ def main() -> None:
         action="store_true",
         help="Allow validation without logo_asset_path (customer explicitly waived logo). Default: require logo.",
     )
+    parser.add_argument(
+        "--palette",
+        default="macaron",
+        choices=["macaron", "default", "b", "c"],
+        help="Palette used for validation geometry/color paths. Defaults to macaron.",
+    )
     args = parser.parse_args()
+    apply_palette(args.palette)
 
     src = Path(args.input).expanduser().resolve()
     files = input_files(src)

@@ -23,33 +23,71 @@ W = EXPORT_W * LAYOUT_SCALE
 H = EXPORT_H * LAYOUT_SCALE
 # When True, finalize_export() downscales to EXPORT_W×EXPORT_H. Default False = full canvas for zoom-friendly PNGs.
 _EXPORT_DOWN_SAMPLE_TO_LOGICAL: bool = False
+_DEFAULT_PALETTE = "macaron"
+_ACTIVE_PALETTE = _DEFAULT_PALETTE
 
-BG = "#FCFCFD"
-TEXT = "#111827"
-MUTED = "#667085"
-LINE = "#EAECF0"
-PANEL = "#FFF7ED"
-RED = "#E82127"
-ORANGE = "#B45309"
-GOLD = "#C9A35D"
-GREEN = "#12B76A"
-BLUE = "#1570EF"
+# Macaron palette: mirrors the updated HTML visual tokens.
+BG = "#FBF6EF"
+TEXT = "#3B3A4A"
+MUTED = "#6C6A7C"
+LINE = "#E9E2D6"
+PANEL = "#FFF2E2"
+RED = "#D86B79"
+ORANGE = "#D68852"
+GOLD = "#E9C17A"
+GREEN = "#8FCF9F"
+BLUE = "#9FB9E2"
 WHITE = "#FFFFFF"
 
-# Palette "c": optional dark header strip on cards 1–5; None = single flat background.
-HEADER_BG: str | None = None
-HEADER_BRAND_TEXT = "#F8FAFC"
-HEADER_SUBTITLE_TEXT = "#FBBF24"
-HEADER_PAGE_TEXT = "#F8FAFC"
-HEADER_RULE = "#334155"
+HEADER_BG: str | None = "#141A2C"
+HEADER_BRAND_TEXT = "#FFFFFF"
+HEADER_SUBTITLE_TEXT = "#F6B48A"
+HEADER_PAGE_TEXT = "#F2EFE6"
+HEADER_RULE = "#2A3046"
+
+PANEL_MINT = "#E6F5E4"
+PANEL_SKY = "#DCE9F7"
+PANEL_PINK = "#FBE0E4"
+PANEL_LILAC = "#EADCF3"
+PANEL_CREAM = "#FFF2E2"
+TRACK = "#F0EBE0"
+PORTER_COLORS = ["#F6B48A", "#F4A5AE", "#9FB9E2", "#8FCF9F", "#B9A2D9"]
 
 import os as _os
 
 
 def apply_palette(name: str) -> None:
     """Switch global colors for preview / alternate looks. Call before rendering."""
+    global _ACTIVE_PALETTE
     global BG, TEXT, MUTED, LINE, PANEL, RED, ORANGE, GOLD, GREEN, BLUE, WHITE
     global HEADER_BG, HEADER_BRAND_TEXT, HEADER_SUBTITLE_TEXT, HEADER_PAGE_TEXT, HEADER_RULE
+    global PANEL_MINT, PANEL_SKY, PANEL_PINK, PANEL_LILAC, PANEL_CREAM, TRACK, PORTER_COLORS
+    _ACTIVE_PALETTE = name
+    if name == "macaron":
+        BG = "#FBF6EF"
+        TEXT = "#3B3A4A"
+        MUTED = "#6C6A7C"
+        LINE = "#E9E2D6"
+        PANEL = "#FFF2E2"
+        RED = "#D86B79"
+        ORANGE = "#D68852"
+        GOLD = "#E9C17A"
+        GREEN = "#8FCF9F"
+        BLUE = "#9FB9E2"
+        WHITE = "#FFFFFF"
+        HEADER_BG = "#141A2C"
+        HEADER_BRAND_TEXT = "#FFFFFF"
+        HEADER_SUBTITLE_TEXT = "#F6B48A"
+        HEADER_PAGE_TEXT = "#F2EFE6"
+        HEADER_RULE = "#2A3046"
+        PANEL_MINT = "#E6F5E4"
+        PANEL_SKY = "#DCE9F7"
+        PANEL_PINK = "#FBE0E4"
+        PANEL_LILAC = "#EADCF3"
+        PANEL_CREAM = "#FFF2E2"
+        TRACK = "#F0EBE0"
+        PORTER_COLORS = ["#F6B48A", "#F4A5AE", "#9FB9E2", "#8FCF9F", "#B9A2D9"]
+        return
     if name == "default":
         BG = "#FCFCFD"
         TEXT = "#111827"
@@ -63,6 +101,17 @@ def apply_palette(name: str) -> None:
         BLUE = "#1570EF"
         WHITE = "#FFFFFF"
         HEADER_BG = None
+        HEADER_BRAND_TEXT = "#F8FAFC"
+        HEADER_SUBTITLE_TEXT = "#FBBF24"
+        HEADER_PAGE_TEXT = "#F8FAFC"
+        HEADER_RULE = "#334155"
+        PANEL_MINT = PANEL
+        PANEL_SKY = WHITE
+        PANEL_PINK = PANEL
+        PANEL_LILAC = PANEL
+        PANEL_CREAM = PANEL
+        TRACK = LINE
+        PORTER_COLORS = []
         return
     if name == "b":
         # Xiaohongshu-friendly: soft violet canvas + purple / emerald accents.
@@ -78,6 +127,17 @@ def apply_palette(name: str) -> None:
         BLUE = "#6366F1"
         WHITE = "#FFFFFF"
         HEADER_BG = None
+        HEADER_BRAND_TEXT = "#F8FAFC"
+        HEADER_SUBTITLE_TEXT = "#FBBF24"
+        HEADER_PAGE_TEXT = "#F8FAFC"
+        HEADER_RULE = "#334155"
+        PANEL_MINT = PANEL
+        PANEL_SKY = WHITE
+        PANEL_PINK = PANEL
+        PANEL_LILAC = PANEL
+        PANEL_CREAM = PANEL
+        TRACK = LINE
+        PORTER_COLORS = []
         return
     if name == "c":
         # Magazine-style: warm paper body + dark header bar.
@@ -97,6 +157,13 @@ def apply_palette(name: str) -> None:
         HEADER_SUBTITLE_TEXT = "#FBBF24"
         HEADER_PAGE_TEXT = "#F8FAFC"
         HEADER_RULE = "#334155"
+        PANEL_MINT = PANEL
+        PANEL_SKY = WHITE
+        PANEL_PINK = PANEL
+        PANEL_LILAC = PANEL
+        PANEL_CREAM = PANEL
+        TRACK = LINE
+        PORTER_COLORS = []
         return
     raise ValueError(f"Unknown palette: {name!r}")
 
@@ -106,27 +173,42 @@ def _pick_font_path(candidates: list) -> str:
             return p
     raise FileNotFoundError(f"None of the candidate fonts found: {candidates}")
 
-# Primary font: supports both CJK and Latin when available (macOS Arial Unicode)
-# Fallback split: DejaVuSans for Latin/numbers, DroidSansFallbackFull for CJK
+SERIF = _pick_font_path([
+    "/System/Library/Fonts/STSong.ttc",
+    "/System/Library/Fonts/Supplemental/Songti.ttc",
+    "/System/Library/Fonts/Hiragino Sans GB.ttc",
+    "/usr/share/fonts/opentype/noto/NotoSerifCJK-Bold.ttc",
+    "/usr/share/fonts/opentype/noto/NotoSerifCJK-Regular.ttc",
+    "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
+    "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf",
+])
+# Primary sans font for CJK body, labels, footer, and header.
 ARIAL = _pick_font_path([
+    "/System/Library/Fonts/PingFang.ttc",
+    "/System/Library/Fonts/Hiragino Sans GB.ttc",
     "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
     "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf",
 ])
 ARIAL_BOLD = _pick_font_path([
+    "/System/Library/Fonts/PingFang.ttc",
+    "/System/Library/Fonts/Hiragino Sans GB.ttc",
     "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
     "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf",
 ])
-# Latin-only fallback font (covers ASCII, digits, punctuation)
+# Latin / number font, approximating Inter with system fonts.
 _LATIN_FONT_PATH = _pick_font_path([
+    "/System/Library/Fonts/SFNS.ttf",
+    "/System/Library/Fonts/Helvetica.ttc",
     "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
     "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
 ])
 _LATIN_BOLD_PATH = _pick_font_path([
+    "/System/Library/Fonts/SFNS.ttf",
+    "/System/Library/Fonts/HelveticaNeue.ttc",
     "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
     "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
 ])
-# True when a single font covers all characters (macOS)
-_SINGLE_FONT_MODE = _os.path.exists("/System/Library/Fonts/Supplemental/Arial Unicode.ttf")
+_SINGLE_FONT_MODE = True
 LEADING_PUNCT = set("，。；：、,.!?！？）》】」』）")
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp"}
 LOGO_CLEANUP_EXTS = IMAGE_EXTS | {".svg"}
@@ -525,7 +607,13 @@ class ReportData:
 
 
 def f(size: int, bold: bool = False) -> ImageFont.FreeTypeFont:
-    return ImageFont.truetype(ARIAL, size=size * LAYOUT_SCALE)
+    path = ARIAL_BOLD if bold else ARIAL
+    return ImageFont.truetype(path, size=size * LAYOUT_SCALE)
+
+
+def fs(size: int, bold: bool = False) -> ImageFont.FreeTypeFont:
+    """Serif font for title, company, and value display."""
+    return ImageFont.truetype(SERIF, size=size * LAYOUT_SCALE)
 
 
 def _fl(size: int, bold: bool = False) -> ImageFont.FreeTypeFont:
@@ -871,6 +959,18 @@ def fit_font(draw: ImageDraw.ImageDraw, text: str, max_width: int, start_size: i
             return font_obj
         size -= 2
     return f(min_size, True)
+
+
+def _fit_serif(draw: ImageDraw.ImageDraw, text: str, max_width: int, start_size: int, min_size: int) -> ImageFont.FreeTypeFont:
+    size = start_size
+    max_px = max_width * LAYOUT_SCALE
+    while size > min_size:
+        font_obj = fs(size, True)
+        measure = draw.textlength(text, font=font_obj)
+        if measure <= max_px:
+            return font_obj
+        size -= 2
+    return fs(min_size, True)
 
 
 def sentence_chunks(text: str, limit: int = 3) -> list[str]:
@@ -2792,20 +2892,17 @@ def panel(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int], fill: str =
 
 def header(draw: ImageDraw.ImageDraw, card_no: int) -> None:
     if HEADER_BG:
-        draw.rounded_rectangle((0, 0, 1080, 128), radius=0, fill=HEADER_BG)
-        brand = HEADER_BRAND_TEXT
-        sub = HEADER_SUBTITLE_TEXT
-        page = HEADER_PAGE_TEXT
-        rule = HEADER_RULE
+        draw.rounded_rectangle((0, 0, 1080, 150), radius=0, fill=HEADER_BG)
+        draw.line((72, 126, 1008, 126), fill=HEADER_RULE, width=1)
     else:
-        brand = TEXT
-        sub = ORANGE
-        page = TEXT
-        rule = LINE
-    draw_text(draw, (72, 56), "金融豹", f(FONT_HEADER_BRAND, True), brand)
-    draw_text(draw, (72, 92), "FINANCE LEOPARD", f(FONT_HEADER_SUBTITLE), sub)
-    draw_text(draw, (942, 56), f"{card_no:02d}", f(FONT_HEADER_PAGE, True), page)
-    draw.line((72, 126, 1008, 126), fill=rule, width=2)
+        draw.line((72, 126, 1008, 126), fill=LINE, width=2)
+
+    brand = HEADER_BRAND_TEXT if HEADER_BG else TEXT
+    sub = HEADER_SUBTITLE_TEXT if HEADER_BG else ORANGE
+    page = HEADER_PAGE_TEXT if HEADER_BG else TEXT
+    draw_text(draw, (72, 44), "金融豹", f(FONT_HEADER_BRAND, True), brand)
+    draw_text(draw, (72, 86), "F I N A N C E   L E O P A R D", f(FONT_HEADER_SUBTITLE, True), sub)
+    draw_text(draw, (948, 58), f"{card_no:02d}", _fl(FONT_HEADER_PAGE, True), page)
 
 
 def footer(draw: ImageDraw.ImageDraw, data: ReportData) -> None:
@@ -2814,11 +2911,11 @@ def footer(draw: ImageDraw.ImageDraw, data: ReportData) -> None:
 
 def metric(draw: ImageDraw.ImageDraw, x: int, y: int, w: int, label: str, value: str, accent: str) -> None:
     panel(draw, (x, y, x + w, y + 110), WHITE)
-    draw.rounded_rectangle((x, y, x + 8, y + 110), radius=18, fill=accent)
+    draw.rounded_rectangle((x + 14, y + 14, x + 18, y + 96), radius=4, fill=accent)
     label_font = fit_font(draw, label, w - 42, FONT_METRIC_LABEL_START, FONT_METRIC_LABEL_MIN)
     value_font = fit_font(draw, value, w - 42, FONT_METRIC_VALUE_START, FONT_METRIC_VALUE_MIN)
-    draw_text(draw, (x + 24, y + 16), label, label_font, MUTED)
-    draw_text(draw, (x + 24, y + 52), value, value_font, TEXT)
+    draw_text(draw, (x + 30, y + 18), label, label_font, MUTED)
+    draw_text(draw, (x + 30, y + 52), value, value_font, TEXT)
 
 
 def bullets(
@@ -2844,11 +2941,11 @@ def cover_metrics(data: ReportData) -> list[tuple[str, str, str]]:
     fin = finance(data)
     second_label = "净利润" if fin["net"] else "营业利润"
     second_value = money_text(fin["net"] or fin["op"])
-    third_label, third_value, third_color = operational_metric(data)
+    third_label, third_value, _ = operational_metric(data)
     return [
         (f"{fiscal_year(data)} 总收入", money_text(fin["revenue"]), GOLD),
         (second_label, second_value, RED),
-        (third_label, third_value, third_color),
+        (third_label, third_value, GREEN),
     ]
 
 
@@ -2865,8 +2962,8 @@ def card_1(data: ReportData) -> Image.Image:
     img = background()
     d = ScaledDraw(ImageDraw.Draw(img), LAYOUT_SCALE)
     header(d, 1)
-    draw_text(d, (72, 198), "每天学习一个公司", f(58, True), TEXT)
-    company_font = fit_font(d, company_short_cn(data), 860, 96, 58)
+    draw_text(d, (72, 198), "每天学习一个公司", fs(58, True), TEXT)
+    company_font = _fit_serif(d, company_short_cn(data), 860, 96, 58)
     draw_text(d, (72, 292), company_short_cn(data), company_font, RED)
     draw_text(d, (78, 412), f"{data.company_en} · {data.ticker}", f(FONT_COVER_META), MUTED)
     block(d, cover_intro(data), 78, 454, 860, f(FONT_INTRO), "#344054", 12, 2)
@@ -2897,13 +2994,14 @@ def card_2(data: ReportData) -> Image.Image:
     draw_text(d, (656, 362), "波特五力", f(34, True), TEXT)
     labels = ["供应商", "买方", "新进入者", "替代品", "竞争强度"]
     y = 430
-    for label, score in zip(labels, porter_scores_for_card(data)):
+    for idx, (label, score) in enumerate(zip(labels, porter_scores_for_card(data))):
         draw_text(d, (656, y), label, f(FONT_PORTER_LABEL), "#475467")
-        d.rounded_rectangle((656, y + 36, 856, y + 52), radius=8, fill=LINE)
-        color = RED if score >= 4 else GOLD
-        d.rounded_rectangle((656, y + 36, 656 + int(200 * score / 5), y + 52), radius=8, fill=color)
+        d.rounded_rectangle((656, y + 36, 856, y + 46), radius=8, fill=TRACK)
+        color = PORTER_COLORS[idx] if idx < len(PORTER_COLORS) else (RED if score >= 4 else GOLD)
+        d.rounded_rectangle((656, y + 36, 656 + int(200 * score / 5), y + 46), radius=8, fill=color)
         draw_text(d, (880, y + 6), f"{score}/5", f(FONT_PORTER_SCORE, True), TEXT)
         y += 110
+    d.rounded_rectangle((622, 960, 1008, 1224), radius=28, fill=PANEL_PINK)
     draw_text(d, (656, 1018), "一句结论", f(30, True), TEXT)
     block(d, conclusion_block(data), 656, 1066, 300, f(FONT_CONCLUSION), "#344054", 12, 4)
     footer(d, data)
@@ -2929,7 +3027,7 @@ def card_3(data: ReportData) -> Image.Image:
     for idx, (label, value, color) in enumerate(rows):
         y = 438 + idx * 56
         draw_text(d, (108, y), label, f(FONT_CHART_LABEL), "#475467")
-        d.rounded_rectangle((244, y + 6, 744, y + 28), radius=11, fill=LINE)
+        d.rounded_rectangle((244, y + 6, 744, y + 28), radius=11, fill=TRACK)
         bar_color = RED if value < 0 else color
         d.rounded_rectangle((244, y + 6, 244 + int(500 * abs(value) / maxv), y + 28), radius=11, fill=bar_color)
         draw_text(d, (782, y - 6), f"{value:.1f} 亿{_CURRENCY_LABEL}", f(FONT_CHART_VALUE, True), TEXT)
@@ -2947,13 +3045,13 @@ def card_4(data: ReportData) -> Image.Image:
     d = ScaledDraw(ImageDraw.Draw(img), LAYOUT_SCALE)
     header(d, 4)
     draw_text(d, (72, 198), "实际业务 + 未来展望", f(58, True), TEXT)
-    panel(d, (72, 314, 506, 1220))
-    panel(d, (534, 314, 1008, 1220))
+    d.rounded_rectangle((72, 314, 506, 1220), radius=28, fill=PANEL_SKY)
+    d.rounded_rectangle((534, 314, 1008, 1220), radius=28, fill=PANEL_CREAM)
     draw_text(d, (108, 362), "现在靠什么赚钱", f(32, True), TEXT)
     bullets(d, business_now_points(data), 108, 424, 350, 4, 5, 18, font_size=FONT_BULLET_COMPACT, line_gap=10)
     draw_text(d, (570, 362), "未来 2-3 年看什么", f(32, True), TEXT)
     bullets(d, future_watch_points(data), 570, 424, 368, 4, 5, 18, font_size=FONT_BULLET_COMPACT, line_gap=10)
-    d.rounded_rectangle((570, 980, 948, 1176), radius=24, fill=PANEL)
+    d.rounded_rectangle((570, 980, 948, 1176), radius=24, fill=PANEL_PINK)
     draw_text(d, (602, 1028), "一句判断", f(28, True), TEXT)
     judgement = judgement_paragraph(data)
     judgement_font = fit_block_font(
@@ -2975,17 +3073,17 @@ def card_5(data: ReportData, brand: str) -> Image.Image:
     img = background()
     d = ScaledDraw(ImageDraw.Draw(img), LAYOUT_SCALE)
     header(d, 5)
-    draw_text(d, (72, 214), brand, f(110, True), TEXT)
+    draw_text(d, (72, 214), brand, fs(110, True), TEXT)
     subtitle = (
         clean(data.card_slots.brand_subheading)
         if data.card_slots and data.card_slots.brand_subheading
         else f"一句话看{company_short_cn(data)}"
     )
-    subtitle_font = fit_font(d, subtitle, 760, 46, 34)
+    subtitle_font = _fit_serif(d, subtitle, 760, 46, 34)
     draw_text(d, (78, 346), subtitle, subtitle_font, ORANGE)
-    statement_font = fit_font(d, brand_statement(data), 760, 52, 38)
+    statement_font = _fit_serif(d, brand_statement(data), 760, 52, 38)
     block(d, brand_statement(data), 78, 476, 760, statement_font, RED, 14, 3)
-    d.rounded_rectangle((72, 646, 1008, 1006), radius=28, fill=PANEL)
+    d.rounded_rectangle((72, 646, 1008, 1006), radius=28, fill=PANEL_CREAM)
     draw_text(d, (108, 696), "今日总结", f(34, True), TEXT)
     bullets(d, brand_summary_points(data), 108, 758, 820, 3, 3, 22, font_size=FONT_BRAND_SUMMARY, line_gap=12)
     cta = (
@@ -2994,8 +3092,8 @@ def card_5(data: ReportData, brand: str) -> Image.Image:
         else "关注金融豹，每天学习一个公司。"
     )
     draw_text(d, (72, 1098), cta, f(34, True), TEXT)
-    for x, y, s in [(900, 218, 88), (980, 360, 64), (900, 520, 74)]:
-        d.ellipse((x, y, x + s, y + s), outline=RED, width=3)
+    for x, y, s, col in [(900, 218, 88, RED), (980, 360, 64, GREEN), (900, 520, 74, ORANGE)]:
+        d.ellipse((x, y, x + s, y + s), outline=col, width=3)
     paste_logo(img, find_logo_asset(data), (840, 240, 1010, 520))
     footer(d, data)
     return finalize_export(img)
@@ -3010,7 +3108,7 @@ def card_6(data: ReportData) -> Image.Image:
 
     y = 310
     for line in post_content_lines(data):
-        d.ellipse((72, y + 12, 84, y + 24), fill="#F97316")
+        d.ellipse((72, y + 12, 84, y + 24), fill="#F6B48A")
         y = block(d, line, 102, y, 880, f(FONT_POST_LINE), "#E5E7EB", 14, 2)
         y += 30
 
@@ -3065,21 +3163,18 @@ _DEFAULT_OUTPUT_ROOT = _SKILL_REPO_ROOT / "output"
 
 
 def resolve_palette(cli_palette: str | None) -> str:
-    """If --palette was omitted: prompt only in a real TTY. Non-interactive runs must pass --palette (P0)."""
+    """Resolve CLI palette; omitted values use the current default visual system."""
     if cli_palette is not None:
         return cli_palette
     if sys.stdin.isatty() and sys.stdout.isatty():
         print("选择配色（输入数字后回车）：", file=sys.stderr)
-        print("  1 = default — 设计规范原版（灰白底 + 红橙强调）", file=sys.stderr)
-        print("  2 = b — 浅紫底 + 紫/绿强调（偏小红书向）", file=sys.stderr)
-        print("  3 = c — 暖纸色底 + 深色顶栏（杂志感）", file=sys.stderr)
-        choice = input("配色 [1/2/3，默认 1]: ").strip() or "1"
-        return {"1": "default", "2": "b", "3": "c"}.get(choice, "default")
-    raise SystemExit(
-        "P0/palette: `--palette` is required in non-interactive environments (Agent, CI, scripts). "
-        "Ask the customer to choose default | b | c, then pass e.g. `--palette default`. "
-        "Silent defaults are not allowed."
-    )
+        print("  1 = macaron — 米白底 + 深色顶栏 + 粉/桃/薄荷/天空蓝强调（默认）", file=sys.stderr)
+        print("  2 = default — 设计规范原版（灰白底 + 红橙强调）", file=sys.stderr)
+        print("  3 = b — 浅紫底 + 紫/绿强调（偏小红书向）", file=sys.stderr)
+        print("  4 = c — 暖纸色底 + 深色顶栏（杂志感）", file=sys.stderr)
+        choice = input("配色 [1/2/3/4，默认 1]: ").strip() or "1"
+        return {"1": "macaron", "2": "default", "3": "b", "4": "c"}.get(choice, _DEFAULT_PALETTE)
+    return _DEFAULT_PALETTE
 
 
 def main() -> None:
@@ -3112,11 +3207,10 @@ def main() -> None:
     )
     parser.add_argument(
         "--palette",
-        default=None,
-        choices=["default", "b", "c"],
+        default=_DEFAULT_PALETTE,
+        choices=["macaron", "default", "b", "c"],
         help=(
-            "配色：default | b | c（三种均保留在代码中）。"
-            "在非交互环境（CI、Agent）下本参数为必填；仅在交互式终端可省略并由程序询问。"
+            "配色：macaron | default | b | c。省略时使用 macaron。"
         ),
     )
     parser.add_argument(

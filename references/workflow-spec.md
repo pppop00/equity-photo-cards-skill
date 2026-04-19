@@ -315,7 +315,7 @@ If **Validator 1** or **Validator 2** fails, do not export.
 
 ## 10. Standard copy pipeline (only path; enforced in CLI)
 
-**Every** export uses **`--slots`** and a customer-confirmed **`--palette`** (`default` | `b` | `c`). Incomplete JSON is rejected at load time (`assert_card_slots_complete` in `scripts/generate_social_cards.py`) so body copy cannot silently fall back to `company_theme` / `fit_copy` heuristics.
+**Every** export uses **`--slots`** and a recorded **`--palette`** (`macaron` by default; legacy `default` | `b` | `c` if explicitly selected). Incomplete JSON is rejected at load time (`assert_card_slots_complete` in `scripts/generate_social_cards.py`) so body copy cannot silently fall back to `company_theme` / `fit_copy` heuristics.
 
 **Required slot keys (non-empty; list lengths as shown):** `intro_sentence`, `company_focus_paragraph`, `background_bullets` (≥4), `industry_paragraph`, `conclusion_block`, `revenue_explainer_points` (≥3), `current_business_points` (≥4), `future_watch_points` (≥4), `judgement_paragraph`, `brand_statement`, `memory_points` (≥3), `post_title`, `post_content_lines` (≥4), `hashtags` (≥3). **`porter_scores`** is optional (exactly five integers if present); otherwise Porter scores come from the HTML package.
 
@@ -323,9 +323,9 @@ If **Validator 1** or **Validator 2** fails, do not export.
 
 1. **Content production agent** writes **`html_stem.card_slots.json`** beside the HTML — see [content-production-agent.md](../agents/content-production-agent.md) and [card-slots.schema.json](./card-slots.schema.json).
 2. **Layout fill agent** refines copy per [design-spec.md](./design-spec.md) and [validation-agent.md](../agents/validation-agent.md) (Validator 1 policy).
-3. `python3 scripts/validate_cards.py --input …/Report_CN.html --slots …` until clean (**Validator 1**).
+3. `python3 scripts/validate_cards.py --input …/Report_CN.html --slots … --palette macaron` until clean (**Validator 1**).
 4. **Validator 2:** follow [validator-2-agent.md](../agents/validator-2-agent.md) — web-search every material fact in the cards; fix copy and repeat step 3 until **both** Validator 1 and Validator 2 pass.
-5. `python3 scripts/generate_social_cards.py --input …/Report_CN.html --slots … --palette default|b|c` (palette must match the customer’s confirmed choice from step 0).
+5. `python3 scripts/generate_social_cards.py --input …/Report_CN.html --slots … --palette macaron` (or the same legacy palette used by Validator 1).
 
 **`--slots` argument:** For **one** HTML file, pass the JSON file path **or** the **folder** that contains `<stem>.card_slots.json`. For **several** HTML files under `--input`, `--slots` **must** be a **directory** containing one `<stem>.card_slots.json` per HTML.
 

@@ -1,9 +1,9 @@
 ---
 name: equity-photo-cards
 description: >-
-  P0 HARD GATES (two): (1) Color — do not intake, extract, write slots, validate, or export until
-  the customer explicitly picks default / b / c; never assume or silently default palette in Agent
-  or CI.   (2) Logo — P0 is the validate/export gate (not “customer must supply a file”): complete the
+  P0 HARD GATES (two): (1) Color — use macaron as the default palette unless the customer
+  explicitly picks legacy default / b / c; keep one palette consistent through validation and export.
+  (2) Logo — P0 is the validate/export gate (not “customer must supply a file”): complete the
   logo-production subflow or get an explicit waiver; assets are produced by logo-production-agent;
   `logo_asset_path` + `cover_company_name_cn` before final export (wordmark ≥840px wide);
   `generate_social_cards.py` and `validate_cards.py` fail by default if the logo is missing
@@ -15,7 +15,7 @@ description: >-
 
 ## P0 硬门禁（违反任一条不得导出成品图）
 
-1. **配色：** 客户未在对话中明确选定 `default` | `b` | `c` 之一前，禁止实质处理报告、禁止运行 `validate_cards.py`、禁止运行 `generate_social_cards.py`，禁止代选配色。**脚本层已强制：非交互环境必须传入 `--palette`**；省略则进程退出，不再静默使用 `default`。
+1. **配色：** 默认使用 `macaron`（米白底 + 深色顶栏 + 粉/桃/薄荷/天空蓝强调）。如客户明确选择旧版 `default` | `b` | `c`，则本次任务全程使用该 `--palette`；Validator 1 与导出必须使用同一配色。
 2. **Logo（硬门禁）：** **P0 指校验/导出门禁**（脚本层默认拦截），不是要求客户事先自带 logo 文件；**合规字标素材由 [logo-production-agent.md](./agents/logo-production-agent.md) 产出**。**P0 = 流程不可跳过**：导出前须完成 Logo 生产子流程，或取得客户明确弃权后使用 `--allow-no-logo`；子流程由 Logo Agent 执行，找不到可信官方来源或无法达到规格时 **失败则停**，不得静默跳过。执行流程：
    - 运行 [logo-production-agent.md](./agents/logo-production-agent.md)：web 搜索官方 logo，从官方来源再生成清洁透明 PNG（≥840px 宽，水平字标）。
    - **如果找不到官方 logo：立即停止，等待客户决策。不自动跳过，不继续流程。** 客户需要提供以下之一：
@@ -30,19 +30,18 @@ description: >-
 
 <span id="palette-choice"></span>
 
-**接到与本 skill 相关的任何任务后，第一步且仅第一步：向客户提问「需要哪一种配色？」并列出下表全部选项。在客户给出明确选择（`default` / `b` / `c` 之一）之前，禁止开始任何后续工作。**
+**默认使用 `macaron`。** 如果客户没有另选配色，可以直接记录本次任务 `--palette macaron` 并继续；如果客户要旧版视觉，必须从下表明确选择 `default` / `b` / `c` 之一。
 
-**在客户确认配色之前，不得执行包括但不限于：** 接收材料后的实质处理、阅读报告并开始写槽位、运行 `validate_cards.py`、运行 `generate_social_cards.py`、或代客户默认任选一种配色。**「先做着再说」「默认用 default」均违规。**
-
-客户确认后，将所选配色记为本次任务的**唯一** `--palette` 参数，全程沿用至导出。
+将所选配色记为本次任务的**唯一** `--palette` 参数，全程沿用至 Validator 1 与导出。
 
 | 选项 | `--palette` 参数 | 视觉说明 |
 |------|-------------------|----------|
-| **1** | `default` | 设计规范原版：灰白底 + 红橙强调 |
-| **2** | `b` | 浅紫底 + 紫/绿强调（偏小红书向） |
-| **3** | `c` | 暖纸色底 + 深色顶栏（杂志感） |
+| **1** | `macaron` | 默认新版：米白底 + 深色顶栏 + 粉/桃/薄荷/天空蓝强调 |
+| **2** | `default` | 旧版设计规范原版：灰白底 + 红橙强调 |
+| **3** | `b` | 旧版浅紫底 + 紫/绿强调（偏小红书向） |
+| **4** | `c` | 旧版暖纸色底 + 深色顶栏（杂志感） |
 
-三种配色均保留在 [scripts/generate_social_cards.py](./scripts/generate_social_cards.py) 的 `apply_palette()` 中。执行 `generate_social_cards.py` 时必须带上与客户确认一致的 **`--palette default`**、**`--palette b`** 或 **`--palette c`**。若在**无 TTY** 的环境（Agent、CI）中运行脚本，**不能**依赖交互式 `input()`，必须以客户已确认的选项作为唯一来源并显式传入。
+四种配色均保留在 [scripts/generate_social_cards.py](./scripts/generate_social_cards.py) 的 `apply_palette()` 中。`generate_social_cards.py` 与 `validate_cards.py` 均默认使用 **`--palette macaron`**；显式指定旧版时可用 **`--palette default`**、**`--palette b`** 或 **`--palette c`**。
 
 ---
 
@@ -66,9 +65,9 @@ equity-photo-cards/                    # Skill bundle (skill-creator anatomy)
 └── output/                            # Default PNG output (gitignored; use --output-root to override)
 ```
 
-This skill is not a generic image-generation workflow. It is a deterministic report-to-card pipeline — **only after [配色选择](#palette-choice) 已由客户确认**：
+This skill is not a generic image-generation workflow. It is a deterministic report-to-card pipeline — using `macaron` by default unless the customer explicitly chooses a legacy palette:
 
-0. **customer confirms palette** (`default` | `b` | `c`) — **no step below until this is done**
+0. **record palette** (`macaron` default, or customer-selected `default` | `b` | `c`)
 1. extract the report
 2. normalize the facts into a stable internal structure
 3. plan each card's content slots
@@ -109,9 +108,9 @@ The goal is that a new company HTML should normally flow through the same pipeli
 
 Do not treat this skill as "pick an industry and emit canned sentences."
 
-Use this skill as — **only after the customer has confirmed a palette** ([配色选择](#palette-choice)):
+Use this skill as — with the job palette recorded first ([配色选择](#palette-choice)):
 
-0. **`customer confirms palette`** → record `default` | `b` | `c` for this job; **do not proceed without this**
+0. **`record palette`** → use `macaron` unless the customer selected `default` | `b` | `c`
 1. `report folder (JSON-first, HTML as render scaffold) -> structured report facts` (extract then normalize)
 2. `company identity -> official logo asset` via the **logo production agent** ([logo-production-agent.md](./agents/logo-production-agent.md)) — run as soon as company name and ticker are known from extraction; save to the output folder before copy generation begins
 3. `structured report facts -> fixed card slot plan`
@@ -149,9 +148,8 @@ Follow these steps in order every time a new report arrives.
 
 ### 0. 配色确认（硬门禁；未完成则禁止进入步骤 1）
 
-- 按 **[配色选择](#palette-choice)** 向客户列出三种配色，**取得客户的明确确认**（口头/文字均可，但必须对应 `default`、`b`、`c` 之一）。
-- **在客户确认配色之前：不得执行步骤 1～8**（不得做 Intake、Logo 生产、抽取、写槽位、校验、Validator 2、导出，也不得擅自默认配色）。
-- 确认后，记下本次任务的 `--palette`；后续所有 `generate_social_cards.py` 调用必须与之一致。
+- 记录本次任务的 `--palette`：默认 `macaron`；若客户明确选择旧版，则使用 `default`、`b`、`c` 之一。
+- 后续所有 `validate_cards.py` 与 `generate_social_cards.py` 调用必须与之保持一致。
 
 ### 1. Intake
 
@@ -331,18 +329,19 @@ Do not change code merely because one company's current wording feels bland. Fir
 python3 scripts/validate_cards.py \
   --input "/abs/path/Tesla_Research_CN.html" \
   --slots "/abs/path/Tesla_Research_CN.card_slots.json" \
-  --brand "金融豹"
+  --brand "金融豹" \
+  --palette macaron
 
 python3 scripts/generate_social_cards.py \
   --input "/abs/path/Tesla_Research_CN.html" \
   --slots "/abs/path/Tesla_Research_CN.card_slots.json" \
   --brand "金融豹" \
-  --palette <customer-confirmed: default|b|c>
+  --palette macaron
 ```
 
-**配色：** 接任务时必须先问并完成选择，见 **[配色选择](#palette-choice)**。三种预设均保留在 `apply_palette()`。**仅在真实交互终端**且未传 `--palette` 时，脚本会询问 1/2/3。**Agent、CI、无交互 stdin 运行必须显式传入 `--palette`**；省略则**进程退出**，不会静默使用 `default`。**Logo：** 默认要求 `logo_asset_path`；仅在客户明确放弃时，校验与导出均加 **`--allow-no-logo`**。
+**配色：** 默认 `macaron`；旧版可显式传 `--palette default|b|c`。Validator 1 与导出必须使用同一 `--palette`。**Logo：** 默认要求 `logo_asset_path`；仅在客户明确放弃时，校验与导出均加 **`--allow-no-logo`**。
 
-**单张 PNG 重渲（常见坑）：** 若只重跑某一张（例如只更新 `01_cover.png`），**必须使用与整套六张相同的 `--palette`**。`generate_social_cards.py` 在进程内调用 `apply_palette()`；`default` / `b` 顶栏为浅色字；`c` 为深色顶栏（`HEADER_BG`）。混用会导致 **Card 1 顶栏与其他卡片不一致**。`card_slots.json` **不记录** palette，**Validator 1 / 2 均无法从 JSON 发现此问题**——须靠流程约定或整套重渲。
+**单张 PNG 重渲（常见坑）：** 若只重跑某一张（例如只更新 `01_cover.png`），**必须使用与整套六张相同的 `--palette`**。`generate_social_cards.py` 在进程内调用 `apply_palette()`；`macaron` 和 `c` 均有深色顶栏，`default` / `b` 顶栏为浅色。混用会导致 **Card 1 顶栏与其他卡片不一致**。`card_slots.json` **不记录** palette，须靠流程约定或整套重渲。
 
 ## Output Folder Organization
 
@@ -393,7 +392,7 @@ python3 scripts/generate_social_cards.py \
   --input "/path/to/StateGrid_Research_CN.html" \
   --slots "/path/to/StateGrid_Research_CN.card_slots.json" \
   --brand "金融豹" \
-  --palette c \
+  --palette macaron \
   --output-root "/Users/user/projects/workspace" \
   --no-copy-slots
 ```
