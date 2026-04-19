@@ -98,26 +98,6 @@ def apply_palette(name: str) -> None:
         HEADER_PAGE_TEXT = "#F8FAFC"
         HEADER_RULE = "#334155"
         return
-    if name == "d":
-        # Macaron-style: soft pink canvas + mint panels + powder-blue rules + periwinkle header.
-        # User swatches: #ffd5d9 #ffc8d0 #e1f9e8 #d1e9f4 #c2d7f3 #778ccc.
-        BG = "#FFD5D9"
-        TEXT = "#22304A"
-        MUTED = "#5A6680"
-        LINE = "#C2D7F3"
-        PANEL = "#E1F9E8"
-        RED = "#778CCC"
-        ORANGE = "#FFC8D0"
-        GOLD = "#D1E9F4"
-        GREEN = "#A7E6BA"
-        BLUE = "#778CCC"
-        WHITE = "#FFFFFF"
-        HEADER_BG = "#778CCC"
-        HEADER_BRAND_TEXT = "#FFFFFF"
-        HEADER_SUBTITLE_TEXT = "#FFD5D9"
-        HEADER_PAGE_TEXT = "#FFFFFF"
-        HEADER_RULE = "#C2D7F3"
-        return
     raise ValueError(f"Unknown palette: {name!r}")
 
 def _pick_font_path(candidates: list) -> str:
@@ -3093,12 +3073,11 @@ def resolve_palette(cli_palette: str | None) -> str:
         print("  1 = default — 设计规范原版（灰白底 + 红橙强调）", file=sys.stderr)
         print("  2 = b — 浅紫底 + 紫/绿强调（偏小红书向）", file=sys.stderr)
         print("  3 = c — 暖纸色底 + 深色顶栏（杂志感）", file=sys.stderr)
-        print("  4 = d — 马卡龙粉蓝绿 + 柔和蓝紫顶栏", file=sys.stderr)
-        choice = input("配色 [1/2/3/4，默认 1]: ").strip() or "1"
-        return {"1": "default", "2": "b", "3": "c", "4": "d"}.get(choice, "default")
+        choice = input("配色 [1/2/3，默认 1]: ").strip() or "1"
+        return {"1": "default", "2": "b", "3": "c"}.get(choice, "default")
     raise SystemExit(
         "P0/palette: `--palette` is required in non-interactive environments (Agent, CI, scripts). "
-        "Ask the customer to choose default | b | c | d, then pass e.g. `--palette default`. "
+        "Ask the customer to choose default | b | c, then pass e.g. `--palette default`. "
         "Silent defaults are not allowed."
     )
 
@@ -3134,9 +3113,9 @@ def main() -> None:
     parser.add_argument(
         "--palette",
         default=None,
-        choices=["default", "b", "c", "d"],
+        choices=["default", "b", "c"],
         help=(
-            "配色：default | b | c | d（四种均保留在代码中）。"
+            "配色：default | b | c（三种均保留在代码中）。"
             "在非交互环境（CI、Agent）下本参数为必填；仅在交互式终端可省略并由程序询问。"
         ),
     )
