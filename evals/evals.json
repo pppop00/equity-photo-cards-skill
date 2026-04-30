@@ -4,7 +4,7 @@
     {
       "id": 1,
       "prompt": "I have Tesla_Research_CN.html in my report folder with financial_data.json next to it. Generate a complete Tesla_Research_CN.card_slots.json beside it, then tell me the exact validate_cards.py and generate_social_cards.py commands with --slots so I get all six PNGs.",
-      "expected_output": "Ask which color palette (default / b / c) before any work; then complete card_slots.json; both CLI commands with absolute paths and --brand; generate_social_cards.py must include --palette matching the customer choice; no export without --slots.",
+      "expected_output": "Ask which color palette (macaron / default / b / c) before any work; then complete card_slots.json; both CLI commands with absolute paths and --brand; generate_social_cards.py must include --palette matching the customer choice; no export without --slots.",
       "files": []
     },
     {
@@ -22,7 +22,7 @@
     {
       "id": 4,
       "prompt": "Export the six PNGs now — here is the path to my HTML and card_slots.json.",
-      "expected_output": "Do not run validate/generate until the customer has explicitly chosen default, b, or c; then pass --palette accordingly on generate_social_cards.py.",
+      "expected_output": "Do not run validate/generate until the customer has explicitly chosen macaron, default, b, or c; then pass --palette accordingly on generate_social_cards.py.",
       "files": []
     }
   ]

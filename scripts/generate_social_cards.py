@@ -23,8 +23,7 @@ W = EXPORT_W * LAYOUT_SCALE
 H = EXPORT_H * LAYOUT_SCALE
 # When True, finalize_export() downscales to EXPORT_W×EXPORT_H. Default False = full canvas for zoom-friendly PNGs.
 _EXPORT_DOWN_SAMPLE_TO_LOGICAL: bool = False
-_DEFAULT_PALETTE = "macaron"
-_ACTIVE_PALETTE = _DEFAULT_PALETTE
+_ACTIVE_PALETTE: str | None = None
 
 # Macaron palette: mirrors the updated HTML visual tokens.
 BG = "#FBF6EF"
@@ -3162,21 +3161,6 @@ _SKILL_REPO_ROOT = Path(__file__).resolve().parent.parent
 _DEFAULT_OUTPUT_ROOT = _SKILL_REPO_ROOT / "output"
 
 
-def resolve_palette(cli_palette: str | None) -> str:
-    """Resolve CLI palette; omitted values use the current default visual system."""
-    if cli_palette is not None:
-        return cli_palette
-    if sys.stdin.isatty() and sys.stdout.isatty():
-        print("选择配色（输入数字后回车）：", file=sys.stderr)
-        print("  1 = macaron — 米白底 + 深色顶栏 + 粉/桃/薄荷/天空蓝强调（默认）", file=sys.stderr)
-        print("  2 = default — 设计规范原版（灰白底 + 红橙强调）", file=sys.stderr)
-        print("  3 = b — 浅紫底 + 紫/绿强调（偏小红书向）", file=sys.stderr)
-        print("  4 = c — 暖纸色底 + 深色顶栏（杂志感）", file=sys.stderr)
-        choice = input("配色 [1/2/3/4，默认 1]: ").strip() or "1"
-        return {"1": "macaron", "2": "default", "3": "b", "4": "c"}.get(choice, _DEFAULT_PALETTE)
-    return _DEFAULT_PALETTE
-
-
 def main() -> None:
     global _EXPORT_DOWN_SAMPLE_TO_LOGICAL
     parser = argparse.ArgumentParser()
@@ -3207,10 +3191,10 @@ def main() -> None:
     )
     parser.add_argument(
         "--palette",
-        default=_DEFAULT_PALETTE,
+        required=True,
         choices=["macaron", "default", "b", "c"],
         help=(
-            "配色：macaron | default | b | c。省略时使用 macaron。"
+            "配色：macaron | default | b | c。必须使用 P0 已确认的配色。"
         ),
     )
     parser.add_argument(
@@ -3222,7 +3206,7 @@ def main() -> None:
         ),
     )
     args = parser.parse_args()
-    apply_palette(resolve_palette(args.palette))
+    apply_palette(args.palette)
     _EXPORT_DOWN_SAMPLE_TO_LOGICAL = args.export_logical_size
 
     src = Path(args.input).expanduser().resolve()

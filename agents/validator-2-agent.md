@@ -57,10 +57,10 @@ python3 scripts/generate_social_cards.py \
   --input "/abs/path/Company_Research_CN.html" \
   --slots "/abs/path/Company_Research_CN.card_slots.json" \
   --brand "金融豹" \
-  --palette macaron
+  --palette <confirmed_palette>
 ```
 
-（`--palette` 须与 Validator 1 使用的一致；默认是 `macaron`，旧版可显式使用 `default` / `b` / `c`。）
+（`--palette` 须与 Validator 1 使用的一致，且必须来自 P0 已确认的 `macaron` / `default` / `b` / `c`；不得省略或自动默认。）
 
 ## 失败处理原则
 

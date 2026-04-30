@@ -1,8 +1,8 @@
 ---
 name: equity-photo-cards
 description: >-
-  P0 HARD GATES (two): (1) Color — use macaron as the default palette unless the customer
-  explicitly picks legacy default / b / c; keep one palette consistent through validation and export.
+  P0 HARD GATES (two): (1) Color — the customer or USER.md sticky preference must explicitly
+  choose macaron / default / b / c before any work starts; keep one palette consistent through validation and export.
   (2) Logo — P0 is the validate/export gate (not “customer must supply a file”): complete the
   logo-production subflow or get an explicit waiver; assets are produced by logo-production-agent;
   `logo_asset_path` + `cover_company_name_cn` before final export (wordmark ≥840px wide);
@@ -15,7 +15,7 @@ description: >-
 
 ## P0 硬门禁（违反任一条不得导出成品图）
 
-1. **配色：** 默认使用 `macaron`（米白底 + 深色顶栏 + 粉/桃/薄荷/天空蓝强调）。如客户明确选择旧版 `default` | `b` | `c`，则本次任务全程使用该 `--palette`；Validator 1 与导出必须使用同一配色。
+1. **配色：** 必须先由客户或 `USER.md` sticky preference 明确选择 `macaron` | `default` | `b` | `c` 之一；不得把 `macaron` 当作未确认时的默认值。本次任务全程使用该 `--palette`；Validator 1 与导出必须使用同一配色。
 2. **Logo（硬门禁）：** **P0 指校验/导出门禁**（脚本层默认拦截），不是要求客户事先自带 logo 文件；**合规字标素材由 [logo-production-agent.md](./agents/logo-production-agent.md) 产出**。**P0 = 流程不可跳过**：导出前须完成 Logo 生产子流程，或取得客户明确弃权后使用 `--allow-no-logo`；子流程由 Logo Agent 执行，找不到可信官方来源或无法达到规格时 **失败则停**，不得静默跳过。执行流程：
    - 运行 [logo-production-agent.md](./agents/logo-production-agent.md)：web 搜索官方 logo，从官方来源再生成清洁透明 PNG（≥840px 宽，水平字标）。
    - **如果找不到官方 logo：立即停止，等待客户决策。不自动跳过，不继续流程。** 客户需要提供以下之一：
@@ -30,18 +30,18 @@ description: >-
 
 <span id="palette-choice"></span>
 
-**默认使用 `macaron`。** 如果客户没有另选配色，可以直接记录本次任务 `--palette macaron` 并继续；如果客户要旧版视觉，必须从下表明确选择 `default` / `b` / `c` 之一。
+客户必须明确选择一组配色，或由 `USER.md:default_palette` 提供 sticky preference。没有用户回复或 sticky preference 时，必须停止等待；不得自动记录 `--palette macaron` 继续。
 
 将所选配色记为本次任务的**唯一** `--palette` 参数，全程沿用至 Validator 1 与导出。
 
 | 选项 | `--palette` 参数 | 视觉说明 |
 |------|-------------------|----------|
-| **1** | `macaron` | 默认新版：米白底 + 深色顶栏 + 粉/桃/薄荷/天空蓝强调 |
+| **1** | `macaron` | 米白底 + 深色顶栏 + 粉/桃/薄荷/天空蓝强调 |
 | **2** | `default` | 旧版设计规范原版：灰白底 + 红橙强调 |
 | **3** | `b` | 旧版浅紫底 + 紫/绿强调（偏小红书向） |
 | **4** | `c` | 旧版暖纸色底 + 深色顶栏（杂志感） |
 
-四种配色均保留在 [scripts/generate_social_cards.py](./scripts/generate_social_cards.py) 的 `apply_palette()` 中。`generate_social_cards.py` 与 `validate_cards.py` 均默认使用 **`--palette macaron`**；显式指定旧版时可用 **`--palette default`**、**`--palette b`** 或 **`--palette c`**。
+四种配色均保留在 [scripts/generate_social_cards.py](./scripts/generate_social_cards.py) 的 `apply_palette()` 中。`generate_social_cards.py` 与 `validate_cards.py` 都必须显式传入本轮已确认的 **`--palette macaron`**、**`--palette default`**、**`--palette b`** 或 **`--palette c`**。
 
 ---
 
@@ -65,9 +65,9 @@ equity-photo-cards/                    # Skill bundle (skill-creator anatomy)
 └── output/                            # Default PNG output (gitignored; use --output-root to override)
 ```
 
-This skill is not a generic image-generation workflow. It is a deterministic report-to-card pipeline — using `macaron` by default unless the customer explicitly chooses a legacy palette:
+This skill is not a generic image-generation workflow. It is a deterministic report-to-card pipeline with a mandatory palette gate:
 
-0. **record palette** (`macaron` default, or customer-selected `default` | `b` | `c`)
+0. **record palette** (customer- or `USER.md`-confirmed `macaron` | `default` | `b` | `c`; no implicit default)
 1. extract the report
 2. normalize the facts into a stable internal structure
 3. plan each card's content slots
@@ -110,7 +110,7 @@ Do not treat this skill as "pick an industry and emit canned sentences."
 
 Use this skill as — with the job palette recorded first ([配色选择](#palette-choice)):
 
-0. **`record palette`** → use `macaron` unless the customer selected `default` | `b` | `c`
+0. **`record palette`** → require customer- or `USER.md`-confirmed `macaron` | `default` | `b` | `c`; stop if none is available
 1. `report folder (JSON-first, HTML as render scaffold) -> structured report facts` (extract then normalize)
 2. `company identity -> official logo asset` via the **logo production agent** ([logo-production-agent.md](./agents/logo-production-agent.md)) — run as soon as company name and ticker are known from extraction; save to the output folder before copy generation begins
 3. `structured report facts -> fixed card slot plan`
@@ -148,7 +148,7 @@ Follow these steps in order every time a new report arrives.
 
 ### 0. 配色确认（硬门禁；未完成则禁止进入步骤 1）
 
-- 记录本次任务的 `--palette`：默认 `macaron`；若客户明确选择旧版，则使用 `default`、`b`、`c` 之一。
+- 记录本次任务的 `--palette`：必须来自客户明确选择或 `USER.md:default_palette` sticky preference，值为 `macaron`、`default`、`b`、`c` 之一；不得自动默认到 `macaron`。
 - 后续所有 `validate_cards.py` 与 `generate_social_cards.py` 调用必须与之保持一致。
 
 ### 1. Intake
@@ -330,16 +330,16 @@ python3 scripts/validate_cards.py \
   --input "/abs/path/Tesla_Research_CN.html" \
   --slots "/abs/path/Tesla_Research_CN.card_slots.json" \
   --brand "金融豹" \
-  --palette macaron
+  --palette <confirmed_palette>
 
 python3 scripts/generate_social_cards.py \
   --input "/abs/path/Tesla_Research_CN.html" \
   --slots "/abs/path/Tesla_Research_CN.card_slots.json" \
   --brand "金融豹" \
-  --palette macaron
+  --palette <confirmed_palette>
 ```
 
-**配色：** 默认 `macaron`；旧版可显式传 `--palette default|b|c`。Validator 1 与导出必须使用同一 `--palette`。**Logo：** 默认要求 `logo_asset_path`；仅在客户明确放弃时，校验与导出均加 **`--allow-no-logo`**。
+**配色：** `--palette` 必须使用 P0 已确认的 `macaron|default|b|c` 之一；Validator 1 与导出必须使用同一 `--palette`。**Logo：** 默认要求 `logo_asset_path`；仅在客户明确放弃时，校验与导出均加 **`--allow-no-logo`**。
 
 **单张 PNG 重渲（常见坑）：** 若只重跑某一张（例如只更新 `01_cover.png`），**必须使用与整套六张相同的 `--palette`**。`generate_social_cards.py` 在进程内调用 `apply_palette()`；`macaron` 和 `c` 均有深色顶栏，`default` / `b` 顶栏为浅色。混用会导致 **Card 1 顶栏与其他卡片不一致**。`card_slots.json` **不记录** palette，须靠流程约定或整套重渲。
 
@@ -392,7 +392,7 @@ python3 scripts/generate_social_cards.py \
   --input "/path/to/StateGrid_Research_CN.html" \
   --slots "/path/to/StateGrid_Research_CN.card_slots.json" \
   --brand "金融豹" \
-  --palette macaron \
+  --palette <confirmed_palette> \
   --output-root "/Users/user/projects/workspace" \
   --no-copy-slots
 ```

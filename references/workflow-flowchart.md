@@ -127,7 +127,7 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-    S0["0 配色记录\nmacaron default"] --> SA["1 Logo 生产\n建 output folder\n存 logo_official.png"]
+    S0["0 配色确认\nmacaron default b c"] --> SA["1 Logo 生产\n建 output folder\n存 logo_official.png"]
     SA --> S1["2 ingest"]
     S1 --> S2["3 extract"]
     S2 --> S3["4 normalize"]
