@@ -3035,9 +3035,10 @@ def cover_metrics(data: ReportData) -> list[tuple[str, str, str]]:
 
 def rate_metrics(data: ReportData) -> list[tuple[str, str, str]]:
     prof = profitability(data)
+    margin_labels = get_nested(data.financial_data, "income_statement", "margin_labels", default={}) or {}
     return [
-        ("毛利率", pct_text(prof.get("gross_margin_pct")), GREEN),
-        ("营业利润率", pct_text(prof.get("operating_margin_pct")), BLUE),
+        (str(margin_labels.get("gross_margin") or "毛利率"), pct_text(prof.get("gross_margin_pct")), GREEN),
+        (str(margin_labels.get("operating_margin") or "营业利润率"), pct_text(prof.get("operating_margin_pct")), BLUE),
         ("净利率", pct_text(prof.get("net_margin_pct")), RED),
     ]
 
@@ -3100,12 +3101,13 @@ def card_3(data: ReportData) -> Image.Image:
     panel(d, (72, 314, 1008, 856))
     draw_text(d, (108, 360), f"{fiscal_year(data)} 收入流", f(34, True), TEXT)
     fin = finance(data)
+    chart_labels = get_nested(data.financial_data, "income_statement", "chart_labels", default={}) or {}
     rows = [
-        ("总收入", chart_value_as_yi(fin["revenue"]), GOLD),
-        ("营业成本", chart_value_as_yi(fin["cogs"]), RED),
-        ("毛利润", chart_value_as_yi(fin["gross"]), GREEN),
-        ("营业利润", chart_value_as_yi(fin["op"]), BLUE),
-        ("净利润", chart_value_as_yi(fin["net"]), TEXT),
+        (str(chart_labels.get("revenue") or "总收入"), chart_value_as_yi(fin["revenue"]), GOLD),
+        (str(chart_labels.get("cogs") or "营业成本"), chart_value_as_yi(fin["cogs"]), RED),
+        (str(chart_labels.get("gross") or "毛利润"), chart_value_as_yi(fin["gross"]), GREEN),
+        (str(chart_labels.get("op") or "营业利润"), chart_value_as_yi(fin["op"]), BLUE),
+        (str(chart_labels.get("net") or "净利润"), chart_value_as_yi(fin["net"]), TEXT),
     ]
     maxv = max(abs(v) for _, v, _ in rows) or 1
     for idx, (label, value, color) in enumerate(rows):
