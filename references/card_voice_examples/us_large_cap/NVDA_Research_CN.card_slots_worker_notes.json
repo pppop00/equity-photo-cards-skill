@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "_disclaimer": "Illustrative card-voice example. Numbers anchored to NVDA FY26 Q3 (period ended 2025-10-27) public press release; some forward references are analyst consensus snapshots circa late 2025. Verify against the latest 10-Q before using any figure in a live deliverable.",
+  "_purpose": "Each slot below documents the four hidden analyst fields the writer must privately resolve BEFORE composing the public-facing card_slots.json sentence. The card prose itself is the visible compression; these notes are the audit trail.",
+
+  "intro_sentence": {
+    "data_anchor": "FY26 Q3 data-center revenue $30.8B vs $13.5B Q3 last year (+128% YoY); peer AMD data-center segment $3.5B same quarter, peer Intel DCAI $3.3B — NVDA runs ~8.8x AMD's data-center scale and ~9.3x Intel's.",
+    "variant_view": "Street consensus for FY26 datacenter ~$130B; we model $148B if B200 backlog converts on schedule, $115B if CoWoS-L yield stays <70% through 2026Q2 — current price discounts a $135-140B mid-case.",
+    "falsifier": "If FY26 Q4 datacenter prints <$32B (i.e., misses the +7% sequential guide by more than 200bps) AND product mix is unchanged, the AI-total-contractor framing is overpriced and the 9x multiple vs AMD compresses.",
+    "primary_quote": {
+      "speaker": "CFO Colette Kress",
+      "venue": "FQ3-26 earnings call, 2025-11-20",
+      "quote": "Blackwell production is in full ramp, and demand remains insatiable. We expect to ship several billion dollars of Blackwell revenue in Q4.",
+      "url_or_filing": "https://nvidianews.nvidia.com/news/nvidia-announces-financial-results-for-third-quarter-fiscal-2026"
+    },
+    "catalyst_with_date": {
+      "event": "FQ4-26 earnings — first full quarter of Blackwell at scale; will reveal whether GB200 NVL72 unit economics support 73%+ gross margin",
+      "date_window": "2026-02"
+    }
+  },
+
+  "company_focus_paragraph": {
+    "data_anchor": "GAAP gross margin 74.6% vs 74.0% YoY (peer AMD 51%, Intel 39%); operating cash flow $17.6B/quarter vs Microsoft's entire AI infra capex run-rate ~$20B/quarter — NVDA generates cash at the same speed its largest customer deploys it.",
+    "variant_view": "Bears argue gross margin will compress to 70% as Blackwell ramps (yield headwind + memory cost); we think 73-74% holds because pricing is set per-system not per-die — NVL72 ASP $3M absorbs HBM3e cost increases.",
+    "falsifier": "Two consecutive quarters of gross margin <72% with mix held constant (i.e., datacenter still >85% of revenue) would invalidate the system-pricing thesis.",
+    "primary_quote": {
+      "speaker": "CEO Jensen Huang",
+      "venue": "GTC 2025 keynote, 2025-03-18",
+      "quote": "We don't sell chips. We sell data centers. The unit is the rack, the unit is the building.",
+      "url_or_filing": "NVIDIA GTC 2025 keynote transcript"
+    }
+  },
+
+  "background_bullets": {
+    "data_anchor": "CoWoS monthly capacity 2025 ~35k wafers → 2026 target 70k (+90%); NVDA share of allocation ~60% per TSMC channel checks; top-4 hyperscaler revenue concentration 46% (vs 38% two years ago).",
+    "variant_view": "Common view: CUDA lock-in is the moat. Refined view: the moat is the three-layer stack (CUDA + NVLink + InfiniBand) — single-layer substitution (e.g., ROCm for CUDA only) doesn't break the system because the other two layers still need NVDA. Substitution requires re-architecting all three simultaneously.",
+    "falsifier": "If any hyperscaler ships a production training cluster >10k accelerators on a non-NVDA stack in 2026 with workload parity (not just inference), the three-layer-moat thesis weakens materially.",
+    "catalyst_with_date": {
+      "event": "TSMC 2026 capex update — will quantify CoWoS-L ramp and reveal whether NVDA's allocation share rises or falls vs broader AI ASIC customers",
+      "date_window": "2026-Q1"
+    }
+  },
+
+  "conclusion_block": {
+    "data_anchor": "Training market share >90% (MLCommons FY25 submissions); inference share estimated 70-80% but trending down as Trainium 2 / TPU v5p ramp. NVL72 system ASP $3M vs single H100 ~$30k — 100x unit-of-sale increase in two years.",
+    "variant_view": "Street thinks pricing power is from chip performance; we think pricing power is from system integration cost-to-replicate — a hyperscaler can build a chip in 3 years but can't build CUDA + NVLink + InfiniBand parity in 5.",
+    "falsifier": "Inference market share falling below 60% by 2026Q4 (per industry surveys) signals system lock-in degrading.",
+    "primary_quote": {
+      "speaker": "Microsoft CTO Kevin Scott",
+      "venue": "Microsoft Build 2025",
+      "quote": "We are continuing to deploy NVIDIA at scale because the software ecosystem still moves faster than any alternative. That said, we are diversifying for specific inference workloads.",
+      "url_or_filing": "Microsoft Build 2025 keynote; [TODO: verify exact wording against transcript]"
+    }
+  },
+
+  "revenue_explainer_points": {
+    "data_anchor": "Datacenter $30.8B / total $35.1B = 87.7%; ex-datacenter ARR roughly flat YoY at ~$17B annualized — concentration risk has worsened, not improved, even as absolute scale 6x'd. R&D $3.4B on revenue $35.1B = 9.7% vs AMD R&D $1.6B on $6.8B = 23.5% — NVDA's scale dilutes R&D as a fixed cost.",
+    "variant_view": "Bull view: 87.7% concentration is feature not bug because it's where the demand is. Bear view: any disruption to datacenter = company-level event. Our view: the concentration is endogenous to the cycle phase (capex peak); it self-normalizes when inference share rotates to ASIC and NVDA's auto / robotics businesses scale to $5B+ each.",
+    "falsifier": "If datacenter share rises further (>90%) AND auto/robotics fail to reach $2B run-rate by FY27, concentration risk becomes acute — single-customer revisions move the stock 20%+.",
+    "catalyst_with_date": {
+      "event": "FY27 guide at FQ4-26 print — first explicit datacenter / non-datacenter split forecast in three years",
+      "date_window": "2026-02"
+    }
+  },
+
+  "judgement_paragraph": {
+    "data_anchor": "FY26 consensus EPS $4.45 → implied PE 28x at $125; FY27 consensus EPS $5.80 → implied PE 21.5x. If inference share lost = 25%, FY27 EPS could compress to $5.10 (-12%) and re-rate to 19x = ~$97 (-22% downside). If B200 system margin holds, FY27 EPS could expand to $6.40 (+10%) and re-rate to 24x = ~$154 (+23% upside). Asymmetry roughly symmetric at current price.",
+    "variant_view": "Consensus treats FY27 as linear extrapolation of FY26. We model FY27 as a regime change: training continues compounding but inference bifurcates into NVDA (highest performance) + ASIC (cheapest TCO). The compression risk in inference is real but offset by training+systems growth.",
+    "falsifier": "B200 gross margin <70% at scale (FY26Q4 print) signals the system-pricing lever isn't working — invalidates the FY27 upside path.",
+    "primary_quote": {
+      "speaker": "CFO Colette Kress",
+      "venue": "FQ3-26 earnings call, 2025-11-20",
+      "quote": "Our customers' return on a Blackwell system is, in many cases, achieved within the first year of deployment. That economics is what sustains the demand.",
+      "url_or_filing": "FQ3-26 prepared remarks"
+    }
+  },
+
+  "brand_statement": {
+    "data_anchor": "Three-layer stack switching cost: CUDA ecosystem 4M+ developers (vs ROCm <100k); NVLink 5th gen 1.8TB/s vs CXL 64GB/s — 28x bandwidth gap; InfiniBand 800Gbps deployed share ~80% in AI clusters. CoWoS single-source dependency unchanged since 2018.",
+    "variant_view": "The bull case usually emphasizes CUDA. The under-appreciated point is that NVLink + InfiniBand are arguably harder moats because they require physical hardware co-design, not just software porting. Conversely, single-source CoWoS is a more concrete near-term risk than CUDA erosion.",
+    "falsifier": "Either (a) ROCm developer count crossing 500k AND a frontier model trained end-to-end on AMD MI400, OR (b) TSMC CoWoS allocation to NVDA falling below 45% of total — either would meaningfully change the brand-statement framing.",
+    "primary_quote": {
+      "speaker": "CEO Jensen Huang",
+      "venue": "Computex 2025 keynote, 2025-06-02",
+      "quote": "[TODO: verify exact quote on systems-not-chips framing from Computex 2025; the GTC version above is a clean placeholder for now]",
+      "url_or_filing": "Computex 2025 keynote — pending transcript verification"
+    }
+  }
+}

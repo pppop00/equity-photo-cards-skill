@@ -2,23 +2,81 @@
 from __future__ import annotations
 
 import argparse
+import json
+import sys
 from pathlib import Path
 
-from generate_social_cards import apply_palette, load_card_slots, parse_html, resolve_slots_path, set_currency_label, validate_report
+from generate_social_cards import (
+    apply_palette,
+    load_card_slots,
+    parse_html,
+    resolve_slots_path,
+    set_currency_label,
+    validate_card1_5_analytical_content,
+    validate_report,
+)
 
 
 def input_files(src: Path) -> list[Path]:
     return [src] if src.is_file() else sorted(src.glob("*.html"))
 
 
+def worker_notes_path_for(slots_path: Path) -> Path:
+    """Return the convention-mate worker_notes sibling for a given slots path.
+
+    Convention: if `slots_path` is `<dir>/<stem>.card_slots.json`,
+    worker notes live at `<dir>/<stem>.card_slots_worker_notes.json`.
+    """
+    name = slots_path.name
+    if name.endswith(".card_slots.json"):
+        stem = name[: -len(".card_slots.json")]
+    else:
+        stem = slots_path.stem
+    return slots_path.with_name(f"{stem}.card_slots_worker_notes.json")
+
+
+def load_worker_notes(slots_path: Path) -> dict | None:
+    """Load <stem>.card_slots_worker_notes.json if present, else return None."""
+    notes_path = worker_notes_path_for(slots_path)
+    if not notes_path.is_file():
+        return None
+    with notes_path.open("r", encoding="utf-8") as f:
+        data = json.load(f)
+    if not isinstance(data, dict):
+        return None
+    return data
+
+
+def load_card_slots_raw(slots_path: Path) -> dict:
+    """Load card_slots.json as a raw dict (for content gate)."""
+    with slots_path.open("r", encoding="utf-8") as f:
+        data = json.load(f)
+    if not isinstance(data, dict):
+        return {}
+    return data
+
+
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Validation agent for equity social cards.")
+    parser = argparse.ArgumentParser(
+        description=(
+            "Validation agent for equity social cards. Runs structural checks plus the "
+            "Cards 1-5 analyst-voice gate (plan v3). Each HTML must have a sibling "
+            "<stem>.card_slots.json AND a sibling <stem>.card_slots_worker_notes.json "
+            "with the hidden analyst fields (data_anchor / variant_view / "
+            "falsifier|primary_quote|catalyst_with_date)."
+        )
+    )
     parser.add_argument("--input", required=True, help="HTML file or folder.")
     parser.add_argument("--brand", default="金融豹", help="Brand name.")
     parser.add_argument(
         "--slots",
         required=True,
-        help="Path to card_slots.json (single HTML), or directory of <stem>.card_slots.json (batch).",
+        help=(
+            "Path to card_slots.json (single HTML), or directory of "
+            "<stem>.card_slots.json (batch). Each must have a sibling "
+            "<stem>.card_slots_worker_notes.json (required by the plan-v3 "
+            "Cards 1-5 analyst-content gate)."
+        ),
     )
     parser.add_argument(
         "--allow-no-logo",
@@ -40,13 +98,42 @@ def main() -> None:
         raise SystemExit(f"No HTML files found at: {src}")
     multiple = len(files) > 1
 
+    overall_failed = False
     for html in files:
         data = parse_html(html)
         slots_path = resolve_slots_path(html, Path(args.slots), multiple_html=multiple)
         data.card_slots = load_card_slots(slots_path)
         set_currency_label(data)
         validate_report(data, args.brand, allow_no_logo=args.allow_no_logo)
+
+        # Cards 1-5 analyst-content gate (plan v3, blocking).
+        raw_slots = load_card_slots_raw(slots_path)
+        worker_notes = load_worker_notes(slots_path)
+        content_issues = validate_card1_5_analytical_content(raw_slots, worker_notes)
+        if content_issues:
+            overall_failed = True
+            print(
+                f"\n=== Card 1-5 analytical-content gate FAILED for {html} ===",
+                file=sys.stderr,
+            )
+            print(
+                f"  slots:        {slots_path}\n"
+                f"  worker_notes: {worker_notes_path_for(slots_path)}",
+                file=sys.stderr,
+            )
+            for issue in content_issues:
+                print(f"  - {issue}", file=sys.stderr)
+            print(
+                "  (Cards 1-5 analyst-voice contract — plan v3. See "
+                "references/card_voice_examples/ for required substrate.)",
+                file=sys.stderr,
+            )
+            continue
+
         print(f"validated: {html}")
+
+    if overall_failed:
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":

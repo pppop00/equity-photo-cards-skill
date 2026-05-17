@@ -24,6 +24,7 @@ Preferred primary input:
 
 Expected package files when available:
 
+- **`<Company>_Research_<lang>.analyst_call.json`** — the analyst-layer sidecar from the Equity Research Skill (schema: [`analyst_call.schema.json`](../../Equity%20Research%20Skill/references/analyst_call.schema.json) in the sister repo). **Required driver for Cards 1–5.** If absent, the content production agent must abort the run rather than heuristic-extract from the HTML. Cards 1–5 slot prose maps directly to this file's `call`, `consensus_view`, `variant_view`, `key_number`, `comp_anchors`, `catalysts_positive`, `catalysts_negative`, `falsifiers`, `primary_quotes`, `asymmetry`, and `conviction` fields — see §4 per-card slot rules.
 - `financial_data.json`
 - `financial_analysis.json`
 - `porter_analysis.json`
@@ -32,7 +33,7 @@ Expected package files when available:
 
 The workflow should assume the report package may have schema drift. It should not assume every report uses the exact same field names.
 
-Read JSON first. JSON is the canonical source for numeric facts, margins, segments, cash flow, Porter details, and latest operating updates. Read HTML second for identity/date, rendered section prose, embedded data blocks such as `sankeyActualData`, and the render scaffold. If only HTML is provided, locate sibling JSON in the same folder. If only JSON is provided, draft analysis/copy from it but do not export final cards until the HTML is available.
+**Reading order:** `analyst_call.json` **first** (it carries the analyst layer the cards quote). HTML + financial / Porter JSON **second** for grounding numbers, segment shares, and verbatim filing quotes. News / macro JSON **third** for Card 6 Step 0 only. If only HTML is provided, locate sibling JSON in the same folder. If only JSON is provided, draft analysis/copy from it but do not export final cards until the HTML is available.
 
 ## 2. Extraction Contract
 
@@ -119,6 +120,8 @@ Normalization rules:
 
 Each card should be planned as a dictionary of fixed placeholders. Rendering should consume placeholders, not raw source data.
 
+**Cards 1–5 are analyst notes, not HTML compression.** Their narrative slots draw from `analyst_call.json` (the analyst-layer sidecar — see §1) using the slot ↔ field mapping table in [content-production-agent.md](../agents/content-production-agent.md) § Cards 1–5 methodology contract. Card 6 keeps its existing 金融豹判断逻辑 voice (see [card6-voice.md](card6-voice.md)).
+
 ### Card 1 Slots
 
 ```text
@@ -134,8 +137,8 @@ logo_asset_path (optional)
 
 Planning rule:
 
-- `intro_sentence` should state the central tension or what the market is really watching
-- `company_focus_paragraph` should explain the current setup in 150–165 characters, usually 2 complete sentences
+- **`intro_sentence` is the analyst's call.** Compose from `analyst_call.json.call` + `variant_view[0]` + the highest-magnitude `comp_anchor`. State the position and one anchored number; do not write a generic “market is watching X” line.
+- **`company_focus_paragraph` is consensus vs the one number.** Use `consensus_view` + `key_number` (metric, our_estimate, consensus, bridge) + 1 `comp_anchor`. 150–165 characters, usually 2 complete sentences. Keep one operating driver as grounding.
 - use actual metrics to support the framing, not replace it
 - **`cover_company_name_cn` + `logo_asset_path`:** Logo production agent sets both when a logo is used — reconcile or translate vs HTML `.company-name-cn`, short Chinese for Card 1 red line (strip trailing `公司` in slot or rely on `display_name` in code). Later agents must not clear these keys.
 - without a logo: `company_short_cn()` may use HTML `.company-name-cn` when it contains CJK, or **`cover_company_name_cn`** if the content agent fills it for English-only HTML; Validator 1 still requires CJK in the resolved string
@@ -154,10 +157,9 @@ conclusion_block
 
 Planning rule:
 
-- `background_bullets` are Card 2 left-side Porter evidence, not generic company background. Use the four most decision-useful details from the report's Porter analysis: which force is high or low, why, what evidence supports it, and how it affects margins, pricing power, growth, or risk.
-- Prefer the highest-signal forces over covering all five mechanically. Each bullet should name the force or actor (供应商、买方、新进入者、替代品、竞争强度) and include a concrete driver such as concentration, switching cost, regulation, technology moat, capacity cycle, price war, or customer bargaining power.
-- `industry_paragraph` synthesizes the five forces into one industry-structure paragraph: where pressure is concentrated, where the company has defenses, and what changes would alter the balance.
-- `conclusion_block` compresses the Porter takeaway into one short judgement
+- `background_bullets` are Card 2 left-side Porter evidence — **each of the 4 bullets must include 1 number + 1 comp** (peer / 历史 / guidance / consensus). Pull facts from `financial_*.json` / `porter_analysis.json`; map each bullet to a Porter force (供应商、买方、新进入者、替代品、竞争强度) and tie the driver (concentration, switching cost, regulation, moat, capacity cycle, price war, bargaining power) to margins, pricing power, growth, or risk.
+- `industry_paragraph` synthesizes the five forces **paired with explicit consensus-vs-variant framing** from `consensus_view` / `variant_view`. Read as: industry structure + “市场认为 X，我们认为 Y” — not as an industry encyclopedia entry.
+- `conclusion_block` names the 1–2 second-order variables the market is missing, drawn from `variant_view` against `consensus_view`. Forward-looking and specific.
 
 ### Card 3 Slots
 
@@ -169,10 +171,10 @@ revenue_explainer_points[3]
 
 Planning rule:
 
-- this is the data-forward card
-- use `financial_data.income_statement.current_year` as fallback when the HTML Sankey omits net income or margin fields
+- **`revenue_explainer_points` is the one number + comp triangle.** Bullet 1 = `analyst_call.json.key_number.metric` + `our_estimate` vs `consensus`. Bullets 2–3 = two `comp_anchors` (one each — peer / 历史 / guidance). Optional bullet 4 = `key_number.bridge` translated to prose explaining the gap.
+- `revenue_flow_rows` and `margin_metric_cards` come from the HTML Sankey and `financial_data.income_statement.current_year` (fallback when HTML omits net income or margin fields); this is the data-forward card.
 - do not allow `0.0` net income or `--` margin cards when source financial data can compute those values
-- the explanatory bullets should interpret the flow, not repeat the numbers blindly
+- the explanatory bullets should interpret the gap to consensus, not just restate the Sankey bars
 
 ### Card 4 Slots
 
@@ -184,9 +186,9 @@ judgement_paragraph
 
 Planning rule:
 
-- left column explains where money is made now
-- right column explains what changes the story over the next 2 to 3 years
-- judgement compresses the full card into one investable view
+- `current_business_points` — 3–4 segment facts from `financial_analysis.json`, **each with a comp** (peer / 历史 / guidance).
+- `future_watch_points` — **catalyst calendar** merged from `analyst_call.json.catalysts_positive` and `catalysts_negative`. **Every item must carry a `date_window`** (`YYYY-MM`, `YYYY-Qn`, `YYYY-H[12]`, or range with `..`).
+- `judgement_paragraph` casts `falsifiers[0]` as the verdict: `未来 {horizon_months} 个月的核心验证点是 {falsifier}。` `worker_notes.judgement_paragraph.primary_quote` is required (CFO/CEO/filing).
 
 ### Card 5 Slots
 
@@ -199,8 +201,10 @@ cta_line
 
 Planning rule:
 
-- `brand_statement` is the strongest single-line company take
-- `memory_points` should help the reader remember the company in 3 facts or frames
+- `brand_subheading` — `analyst_call.json.call` rendered as a 1-line subhead (e.g. `长期供给瓶颈，cautious-bias on hyperscaler capex risk`).
+- `brand_statement` — `asymmetry` reframed as a PM-soundbite; **must include explicit `conviction`** (high / medium / low or literal 1–5). `worker_notes.brand_statement.primary_quote` is required.
+- `memory_points` — exactly 3 bullets: 1 anchored number, 1 catalyst (with date), 1 falsifier. One each, in that order.
+- `cta_line` — 下季验证清单: 2–3 items pulled from `falsifiers` + nearest `catalysts_*.date_window`. Format: `下季关键验证：[item 1]、[item 2]、[item 3]。` Banned: `关注 ... 每天 ... 学`.
 
 ### Card 6 Slots
 
@@ -332,7 +336,9 @@ If **Validator 1** or **Validator 2** fails, do not export.
 
 **Standard flow (every new `*_Research_CN.html`):**
 
-1. **Content production agent** writes **`html_stem.card_slots.json`** beside the HTML — see [content-production-agent.md](../agents/content-production-agent.md) and [card-slots.schema.json](./card-slots.schema.json).
+1. **Content production agent** writes two files beside the HTML — see [content-production-agent.md](../agents/content-production-agent.md) and [card-slots.schema.json](./card-slots.schema.json):
+   - **`<stem>.card_slots.json`** — the slot file the renderer consumes.
+   - **`<stem>.card_slots_worker_notes.json`** — parallel hidden analytical fields for Cards 1–5 narrative slots; written **before** the prose. Schema documented in §11 below.
 2. **Layout fill agent** refines copy per [design-spec.md](./design-spec.md) and [validation-agent.md](../agents/validation-agent.md) (Validator 1 policy).
 3. `python3 scripts/validate_cards.py --input …/Report_CN.html --slots … --palette macaron` until clean (**Validator 1**).
 4. **Validator 2:** follow [validator-2-agent.md](../agents/validator-2-agent.md) — web-search every material fact in the cards; fix copy and repeat step 3 until **both** Validator 1 and Validator 2 pass.
@@ -345,3 +351,38 @@ Hand-off overview: [agent-slot-pipeline.md](../agents/agent-slot-pipeline.md).
 **流程图（Mermaid）:** [workflow-flowchart.md](./workflow-flowchart.md)
 
 Example (PDD-shaped): [examples/pdd_holdings_card_slots.example.json](./examples/pdd_holdings_card_slots.example.json).
+
+## 11. `card_slots_worker_notes.json` schema
+
+A parallel JSON file produced by the content production agent for **every** Cards 1–5 run. It captures the analytical substrate the writer pulled from `analyst_call.json` *before* drafting slot prose, so Validator 1 / Validator 2 can confirm the writer did not skip straight to rhetoric.
+
+**File name:** `<Company>_Research_<lang>.card_slots_worker_notes.json` (saved beside `card_slots.json`).
+
+**Top-level shape:**
+
+```json
+{
+  "schema_version": 1,
+  "intro_sentence":           { "data_anchor": "...", "variant_view": "...", "falsifier": "...", "primary_quote": { ... } },
+  "company_focus_paragraph":  { "data_anchor": "...", "variant_view": "...", "catalyst_with_date": { ... } },
+  "conclusion_block":         { "data_anchor": "...", "variant_view": "...", "falsifier": "..." },
+  "revenue_explainer_points": { "data_anchor": "...", "variant_view": "...", "catalyst_with_date": { ... } },
+  "judgement_paragraph":      { "data_anchor": "...", "variant_view": "...", "falsifier": "...", "primary_quote": { ... } },
+  "brand_statement":          { "data_anchor": "...", "variant_view": "...", "primary_quote": { ... } }
+}
+```
+
+**Required keys per slot block:**
+
+- `data_anchor` (string, ≥10 chars) — must contain a number and at least one comp keyword (`peer`, `历史`, `guidance`, `consensus`).
+- `variant_view` (string, ≥15 chars) — one specific divergence from consensus with a stated mechanism.
+- **At least one** of:
+  - `falsifier` (string, ≥20 chars) — observable event in a specified time window.
+  - `primary_quote` (object with `speaker`, `venue`, `quote`, `url_or_filing`) — copied from `analyst_call.json.primary_quotes`.
+  - `catalyst_with_date` (object with `event`, `date_window` matching `^[0-9]{4}(-(Q[1-4]|[0-9]{2}|H[12]))$` or a range with `..`, and `implication`).
+
+**`primary_quote` is required (not optional)** for `brand_statement` and `judgement_paragraph`. These slots carry analyst authority; if no quote is available, write `[TODO: speaker]` so the validator flags it.
+
+**Array slots** (Card 2 `background_bullets`, Card 4 `current_business_points` / `future_watch_points`, Card 5 `memory_points`) — the worker_notes entry is **one** set of fields covering the array as a whole, not one block per bullet. These may be added as additional top-level keys in the same JSON file when the writer wants the audit trail per array.
+
+Card 6 slots are **not** represented in `card_slots_worker_notes.json` — Card 6's substrate is Step 0 news/macro lookup plus [card6-voice.md](card6-voice.md), not the analyst-call sidecar.

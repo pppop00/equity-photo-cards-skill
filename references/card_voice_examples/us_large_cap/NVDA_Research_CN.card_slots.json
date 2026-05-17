@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "cover_company_name_cn": "英伟达",
+  "logo_asset_path": "assets/logos/nvidia.png",
+  "intro_sentence": "市场把英伟达当成“AI 算力总承包商”定价：FY26 Q3 数据中心收入 $30.8B、同比 +112%，相当于 AMD 同期数据中心 $3.5B 的近 9 倍——这个倍数差，是当前估值溢价的真实锚。",
+  "company_focus_paragraph": "FY26 Q3 总营收 $35.1B、同比 +94%，其中数据中心 $30.8B 占 87.7%；GAAP 毛利率 74.6%（vs 上年同期 74.0%），运营利润率 62.0%。经营现金流单季 $17.6B，净现金约 $34B。投资主线只有两条：H200/B200 出货节奏能否覆盖客户消化期，以及 Blackwell 良率与 NVL72 系统配件供应能否在 2026Q1 之前到位——前者决定 FY26 兑现度，后者决定 FY27 起点。",
+  "background_bullets": [
+    "供应商：台积电 CoWoS 是单点瓶颈，2026 年产能预计 +90% 至月产 70k 片，但 NVDA 单家占用约 60%，议价权在 TSMC 一侧。",
+    "买方：前四大云厂客户集中度约 46%（Microsoft、Meta、Amazon、Google 合计），但单客户切换成本因 CUDA 软件栈锁定极高。",
+    "竞争强度：AMD MI300X 全年收入指引 $5B、Google TPU v5p、AWS Trainium 2 同步推进，但训练市场 NVDA 份额仍 >90%；推理是 2026 年真正的战场。",
+    "护城河：CUDA 生态 + NVLink + InfiniBand 三层栈构成系统级锁定，单纯做“更便宜的芯片”无法撬动训练侧客户。"
+  ],
+  "industry_paragraph": "AI 算力当前处于“系统集成 > 单芯片”阶段：客户采购单元已从 H100 单卡（约 $30k）升级为 NVL72 整柜（72 颗 GB200 + 交换 + 液冷，单柜 $3M 量级），单笔订单价值放大约 100 倍。压力来自两侧——上游 CoWoS 与 HBM3e 供应吃紧抬高交付周期；下游云厂自研芯片加速但只覆盖自家推理负载。真正会改变力量对比的是 2026 年下半年推理芯片性价比交叉点，以及 TSMC 2nm 节点开放后非 NVDA 客户的产能可得性。",
+  "porter_scores": [
+    4,
+    3,
+    3,
+    2,
+    2
+  ],
+  "conclusion_block": "训练侧 CUDA 锁定仍硬，推理侧 2026H2 见分晓；定价权来自系统而非芯片。",
+  "revenue_explainer_points": [
+    "数据中心 $30.8B（vs 同业 AMD 数据中心 $3.5B、Intel DCAI $3.3B；同比 $13.5B 接近翻 1.3 倍），占总营收 87.7%、占毛利约 89%——这是估值的唯一锚。",
+    "游戏 $3.3B 同比 +15%、专业可视化 $0.49B、汽车 $0.45B 同比 +72%——三项合计仅 12%，但汽车在 FY27 是潜在第二曲线。",
+    "运营利润率 62.0% vs 同业 AMD 11%、Intel -3%；研发费用 $3.4B 占营收 9.7%，绝对额是 AMD（$1.6B）2 倍多，但费率反而更低——规模效应在 OPEX 端兑现。"
+  ],
+  "current_business_points": [
+    "Blackwell 系列已开始量产爬坡，FY26 Q4 指引数据中心环比 +7% 至约 $33B，对应隐含 GB200 系统出货 12-15 万颗等效。",
+    "网络业务（InfiniBand + Spectrum-X 以太网）季度收入约 $3.1B，同比 +20%，是 NVL72 配套刚需，毛利率与计算芯片相当。",
+    "美国本土收入占比从两年前 35% 升至当前约 53%（hyperscaler 集中在美西），中国区受出口管制影响降至 <10%，地理结构已重塑。",
+    "软件与服务收入年化已突破 $2B（AI Enterprise + DGX Cloud），毛利率 >90%，是低基数高斜率的可选项。"
+  ],
+  "future_watch_points": [
+    "推理 ASIC 替代：Google TPU v6e、AWS Trainium 3、Meta MTIA v2 均规划 2026 年上量，若推理负载迁移超 25% 将压缩 NVDA 数据中心增量。",
+    "中国出口管制：H20 已被实质叫停，下一代特供芯片若再受限，潜在影响营收 5-8%（按 FY24 中国区占比反推）。",
+    "CoWoS 产能：TSMC 2026 年 CoWoS-L 良率若卡在 70% 以下，会直接限制 B200 出货上限，是最大单点风险。",
+    "客户消化周期：四大云厂 2026 年合计 capex 指引约 $360B（同比 +35%），但折旧周期已从 5 年延长至 6 年——任何一家若回调指引会引发板块重估。"
+  ],
+  "judgement_paragraph": "训练侧 CUDA 锁定让 NVDA 在 FY26 仍是 single source；FY27 起点取决于两件事：B200 系统级良率（决定毛利率能否守住 73%），以及推理市场份额（决定 TAM 切分）。当前估值已 price-in FY26 兑现，没 price-in FY27 推理被分流——这就是非对称性所在。",
+  "brand_subheading": "一句话看英伟达",
+  "brand_statement": "估值锚定在系统级出货能力——CUDA 软件栈、NVLink 互联、InfiniBand 网络三层叠加构成 6-8 个季度的客户锁定；同等深度的单点供应风险（CoWoS / HBM3e）也叠加在同一条曲线上。",
+  "memory_points": [
+    "数据中心 $30.8B 占营收 87.7%、是 AMD 同业务的近 9 倍——估值锚就一根，断了重估幅度可能 -30% 到 -40%。",
+    "medium conviction long-bias：FY26 已被 price-in，FY27 推理分流是真分歧；asymmetry 偏正向因 CUDA 锁定让下行有底，但上行需要 B200 良率配合。",
+    "CoWoS 与 HBM3e 上游单点瓶颈、TSMC 议价权 > NVDA——买方研究普遍低估这个反向风险。"
+  ],
+  "cta_line": "下季关键验证：B200 系统良率突破 75%、Q4 数据中心环比兑现 +7% 指引、推理 ASIC 客户迁移指标（看 Meta MTIA 部署进度）。",
+  "post_title": "一天吃透一家公司：英伟达",
+  "post_content_lines": [
+    "英伟达 FY26 Q3 数据中心 $30.8B 占总营收 87.7%，是 AMD 同业务的 9 倍——表面看是芯片公司，本质上是“AI 算力总承包商”，卖的是 NVL72 整柜不是 H100 单卡。",
+    "五年前数据中心占比 40%、游戏占比 47%；今天数据中心 87.7%、游戏 9%——说白了，这家公司已经被 hyperscaler 的 capex 周期重新定义了一次。",
+    "对比 Google TPU 和 AWS Trainium，NVDA 真正的护城河不在芯片，而在 CUDA + NVLink + InfiniBand 三层系统栈——单点切芯片不痛，整栈迁移才痛。",
+    "真正要验证的是，2026H2 推理市场如果被云厂自研 ASIC 切走 25%，CUDA 锁定还撑不撑得住毛利率 73%？"
+  ],
+  "hashtags": [
+    "英伟达",
+    "NVDA",
+    "AI算力",
+    "半导体",
+    "金融豹"
+  ]
+}
