@@ -4,7 +4,7 @@ This file defines the canonical workflow for turning a research report package i
 
 The pipeline is:
 
-0. **customer confirms color palette** (`default` | `b` | `c`) — **no ingestion, extraction, slot writing, validation, or export until confirmed**; see [SKILL.md](../SKILL.md) § 配色选择.
+0. **customer confirms color palette** (`macaron` | `default` | `b` | `c`) — **no ingestion, logo check, web search, extraction, slot writing, validation, or export until confirmed**; see [SKILL.md](../SKILL.md) § 配色选择.
 1. ingest
 2. extract
 3. normalize
@@ -50,11 +50,16 @@ Required raw extraction buckets:
 - `financials`
 - `segments_or_products`
 - `operational_kpis`
+- `competitors`
+- `five_year_change`
+- `operating_geography`
+- `revenue_geography`
+- `forward_outlook_variables`
 - `available_assets`
 
 Extraction should preserve source detail even if some of it is not used later.
 
-Logo acquisition is part of extraction and must use web search. Do not rely on local logo discovery. Search for the company's official logo, brand assets, press kit, IR media kit, or reputable official logo file. Use that official reference to regenerate a clean transparent PNG/WEBP asset at sufficient resolution (e.g. **≥840 px** wide for horizontal wordmarks at default `LAYOUT_SCALE` — see `logo_asset_dimension_issues` in `generate_social_cards.py`), and preserve its file path and source URL in working notes. Do not use screenshots, search-result thumbnails, favicons, or ticker-letter placeholders; never upscale a small raster into a “large” PNG. **Save order:** create the output folder first, save the logo there (not in the source report folder), then set `logo_asset_path` — see [logo-production-agent.md](../agents/logo-production-agent.md) §Output for the mandatory sequence.
+Logo acquisition starts only after palette confirmation. First inspect `card_slots.logo_asset_path`, the final output folder, and the report folder for an existing valid logo image. If no valid logo exists, search for the company's official logo, brand assets, press kit, IR media kit, or reputable official logo file. Use that official reference to regenerate a clean transparent PNG/WEBP asset at sufficient resolution (e.g. **≥840 px** wide for horizontal wordmarks at default `LAYOUT_SCALE` — see `logo_asset_dimension_issues` in `generate_social_cards.py`), and preserve its file path and source URL in working notes. Do not use screenshots, search-result thumbnails, favicons, or ticker-letter placeholders; never upscale a small raster into a “large” PNG. **Save order:** create the output folder first, copy/save the logo there (not a temp path), then set `logo_asset_path` — see [logo-production-agent.md](../agents/logo-production-agent.md) §Output for the mandatory sequence.
 
 ## 3. Normalized Report Model
 
@@ -92,6 +97,11 @@ free_cash_flow
 segment_mix[]
 key_products[]
 operational_kpis[]
+competitors[]
+five_year_change[]
+operating_geography[]
+revenue_geography[]
+forward_outlook_variables[]
 logo_asset_path
 theme_hint
 ```
@@ -144,8 +154,9 @@ conclusion_block
 
 Planning rule:
 
-- `background_bullets` explain company setup, scale, mix, and economics
-- `industry_paragraph` explains how the industry works and where current pressure sits
+- `background_bullets` are Card 2 left-side Porter evidence, not generic company background. Use the four most decision-useful details from the report's Porter analysis: which force is high or low, why, what evidence supports it, and how it affects margins, pricing power, growth, or risk.
+- Prefer the highest-signal forces over covering all five mechanically. Each bullet should name the force or actor (供应商、买方、新进入者、替代品、竞争强度) and include a concrete driver such as concentration, switching cost, regulation, technology moat, capacity cycle, price war, or customer bargaining power.
+- `industry_paragraph` synthesizes the five forces into one industry-structure paragraph: where pressure is concentrated, where the company has defenses, and what changes would alter the balance.
 - `conclusion_block` compresses the Porter takeaway into one short judgement
 
 ### Card 3 Slots
@@ -201,9 +212,9 @@ hashtags[3..5 authored, renderer appends #A股/#美股; final max 7]
 
 Planning rule:
 
-- this should read like a **Chinese forum / 贴吧** hot thread: emotional, meme-adjacent, argumentative — **not** sell-side deck tone
+- this should follow the 金融豹判断逻辑 in [card6-voice.md](card6-voice.md): grounded, educational, mechanism-first, and connected to competitors, past-five-year changes, future outlook, operating/revenue geography, and recent company / industry / policy / market context — not clickbait, not sell-side boilerplate, not marker-stuffed prompt output, and not forced surface imitation
 - every line must be publishable without additional editing
-- **`post_content_lines`:** exactly four lines as **three statements + one question**; ground facts in the report but **voice** should feel like **recent gossip + hot takes** (products, news, sentiment — good, bad, funny, angry), and dig into the hidden insight instead of just recapping numbers — see [content-production-agent.md](../agents/content-production-agent.md) Card 6 and `CARD6_COLLOQUIAL_MARKERS` in `generate_social_cards.py`
+- **`post_content_lines`:** exactly four lines as **three statements + one question**; ground facts in the report, include at least one financial / operating anchor and one current-context anchor, analyze competitors, past-five-year changes, future outlook, and operating/revenue geography where material, and explain the hidden insight with the same diagnostic logic as 金融豹大白话 — see [content-production-agent.md](../agents/content-production-agent.md) Card 6, [card6-voice.md](card6-voice.md), and `CARD6_EDUCATIONAL_MARKERS` in `generate_social_cards.py`
 - **`post_title`:** must start with `一天吃透一家公司：`; after the colon use the company short name
 - **`hashtags`:** author 3–5 company/industry/topic tags; renderer guarantees final `#A股` and `#美股`
 
@@ -221,7 +232,7 @@ Required style rules:
 - publishable Chinese prose
 - complete sentences
 - concise but not skeletal
-- strong human voice
+- strong human reasoning aligned with [card6-voice.md](card6-voice.md) for Card 6
 - voice consistency may be standardized, but substantive claims must be derived from the current report's extracted facts
 - no internal strategy notes
 - no clipped thesis fragments
@@ -315,7 +326,7 @@ If **Validator 1** or **Validator 2** fails, do not export.
 
 ## 10. Standard copy pipeline (only path; enforced in CLI)
 
-**Every** export uses **`--slots`** and a recorded **`--palette`** (`macaron` by default; legacy `default` | `b` | `c` if explicitly selected). Incomplete JSON is rejected at load time (`assert_card_slots_complete` in `scripts/generate_social_cards.py`) so body copy cannot silently fall back to `company_theme` / `fit_copy` heuristics.
+**Every** export uses **`--slots`** and an explicitly customer-confirmed **`--palette`** (`macaron` | `default` | `b` | `c`; no default). Incomplete JSON is rejected at load time (`assert_card_slots_complete` in `scripts/generate_social_cards.py`) so body copy cannot silently fall back to `company_theme` / `fit_copy` heuristics.
 
 **Required slot keys (non-empty; list lengths as shown):** `intro_sentence`, `company_focus_paragraph`, `background_bullets` (≥4), `industry_paragraph`, `conclusion_block`, `revenue_explainer_points` (≥3), `current_business_points` (≥4), `future_watch_points` (≥4), `judgement_paragraph`, `brand_statement`, `memory_points` (≥3), `post_title`, `post_content_lines` (≥4), `hashtags` (≥3). **`porter_scores`** is optional (exactly five integers if present); otherwise Porter scores come from the HTML package.
 

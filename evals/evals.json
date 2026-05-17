@@ -24,6 +24,12 @@
       "prompt": "Export the six PNGs now — here is the path to my HTML and card_slots.json.",
       "expected_output": "Do not run validate/generate until the customer has explicitly chosen default, b, or c; then pass --palette accordingly on generate_social_cards.py.",
       "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "Write Card 6 post_title, post_content_lines, and hashtags for a new report. Make it sound like 金融豹, but don't force the same wording as old examples.",
+      "expected_output": "Read references/card6-voice.md; produce exactly four complete post_content_lines as three statements plus one question; use the same diagnostic logic (hard fact -> hidden mechanism -> useful comparison/current context -> measurable question), not repeated markers like 财报里/换句话说/结合最近/真要看; analyze competitors, past-five-year changes, future outlook, and operating/revenue geography; include at least one report-grounded number or operating anchor and one current-context anchor.",
+      "files": ["references/card6-voice.md"]
     }
   ]
 }

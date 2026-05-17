@@ -27,9 +27,9 @@ def main() -> None:
     )
     parser.add_argument(
         "--palette",
-        default="macaron",
+        required=True,
         choices=["macaron", "default", "b", "c"],
-        help="Palette used for validation geometry/color paths. Defaults to macaron.",
+        help="Required palette confirmed by the customer: macaron | default | b | c.",
     )
     args = parser.parse_args()
     apply_palette(args.palette)

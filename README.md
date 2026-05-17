@@ -14,7 +14,7 @@ Agent skill and Python tooling that turn **equity research HTML** (plus optional
 | Output | Role |
 |--------|------|
 | Card 1 | Cover + core tension |
-| Card 2 | Background + industry + Porter |
+| Card 2 | Porter evidence + industry structure + Porter bars |
 | Card 3 | Revenue / profit flow |
 | Card 4 | Current business + next 2–3 years |
 | Card 5 | Brand close + three memory points |
@@ -81,16 +81,17 @@ Produce a **complete** JSON per [content-production-agent.md](agents/content-pro
 python3 scripts/validate_cards.py \
   --input "/absolute/path/to/Company_Research_CN.html" \
   --slots "/absolute/path/to/Company_Research_CN.card_slots.json" \
-  --brand "金融豹"
+  --brand "金融豹" \
+  --palette macaron
 
 python3 scripts/generate_social_cards.py \
   --input "/absolute/path/to/Company_Research_CN.html" \
   --slots "/absolute/path/to/Company_Research_CN.card_slots.json" \
   --brand "金融豹" \
-  --palette default
+  --palette macaron
 ```
 
-（配色须与客户确认一致：`default` | `b` | `c`；见 [SKILL.md](SKILL.md) 配色一节。）
+（配色须先由客户明确确认，并在 Validator 1 与导出中显式传入同一个值：`macaron` | `default` | `b` | `c`；见 [SKILL.md](SKILL.md) 配色一节。）
 
 **批量多只 HTML：** `--input` 指向含多个 `*.html` 的目录时，`--slots` **必须为目录**，且内含与每个 `stem` 对应的 `<stem>.card_slots.json`。
 

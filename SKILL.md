@@ -1,10 +1,10 @@
 ---
 name: equity-photo-cards
 description: >-
-  P0 HARD GATES (two): (1) Color — use macaron as the default palette unless the customer
-  explicitly picks legacy default / b / c; keep one palette consistent through validation and export.
-  (2) Logo — P0 is the validate/export gate (not “customer must supply a file”): complete the
-  logo-production subflow or get an explicit waiver; assets are produced by logo-production-agent;
+  P0 HARD GATES (two): (1) Color — ask the customer to explicitly choose macaron / default / b / c
+  before any intake, logo check, extraction, validation, or export; never assume macaron.
+  (2) Logo — after color confirmation, inspect the report/output folder and existing slots for a
+  valid logo asset; if absent, run logo-production web search or get an explicit waiver;
   `logo_asset_path` + `cover_company_name_cn` before final export (wordmark ≥840px wide);
   `generate_social_cards.py` and `validate_cards.py` fail by default if the logo is missing
   (`--allow-no-logo` only if the customer explicitly waives the logo). After gates: equity research HTML → `*.card_slots.json` →
@@ -15,9 +15,10 @@ description: >-
 
 ## P0 硬门禁（违反任一条不得导出成品图）
 
-1. **配色：** 默认使用 `macaron`（米白底 + 深色顶栏 + 粉/桃/薄荷/天空蓝强调）。如客户明确选择旧版 `default` | `b` | `c`，则本次任务全程使用该 `--palette`；Validator 1 与导出必须使用同一配色。
-2. **Logo（硬门禁）：** **P0 指校验/导出门禁**（脚本层默认拦截），不是要求客户事先自带 logo 文件；**合规字标素材由 [logo-production-agent.md](./agents/logo-production-agent.md) 产出**。**P0 = 流程不可跳过**：导出前须完成 Logo 生产子流程，或取得客户明确弃权后使用 `--allow-no-logo`；子流程由 Logo Agent 执行，找不到可信官方来源或无法达到规格时 **失败则停**，不得静默跳过。执行流程：
-   - 运行 [logo-production-agent.md](./agents/logo-production-agent.md)：web 搜索官方 logo，从官方来源再生成清洁透明 PNG（≥840px 宽，水平字标）。
+1. **配色：** 必须先问客户并获得明确选择：`macaron` | `default` | `b` | `c`。客户没有说颜色时，不得读取报告、检查 logo、联网搜索、改 slots、校验或导出。**不允许把未指定自动当成 `macaron`。** Validator 1 与导出必须使用同一 `--palette`。
+2. **Logo（硬门禁）：** **只能在配色确认之后开始。** **P0 指校验/导出门禁**（脚本层默认拦截），不是要求客户事先自带 logo 文件；**合规字标素材由 [logo-production-agent.md](./agents/logo-production-agent.md) 产出或复用文件夹中已存在的合规 logo**。**P0 = 流程不可跳过**：导出前须完成 Logo 检查/生产子流程，或取得客户明确弃权后使用 `--allow-no-logo`；找不到可信官方来源或无法达到规格时 **失败则停**，不得静默跳过。执行流程：
+   - 配色确认后，先检查最终 output folder、报告 folder、以及 `card_slots.logo_asset_path` 是否已有合规 logo 图片；有则校验尺寸并写入/保留 `logo_asset_path` 与 `cover_company_name_cn`。
+   - 如果 folder 中没有合规 logo，运行 [logo-production-agent.md](./agents/logo-production-agent.md)：web 搜索官方 logo，从官方来源再生成清洁透明 PNG（≥840px 宽，水平字标）。
    - **如果找不到官方 logo：立即停止，等待客户决策。不自动跳过，不继续流程。** 客户需要提供以下之一：
      - 官方 logo 来源 URL 或文件
      - 明确确认放弃 logo（书面/对话均可）
@@ -30,18 +31,18 @@ description: >-
 
 <span id="palette-choice"></span>
 
-**默认使用 `macaron`。** 如果客户没有另选配色，可以直接记录本次任务 `--palette macaron` 并继续；如果客户要旧版视觉，必须从下表明确选择 `default` / `b` / `c` 之一。
+**必须先问颜色。** 如果客户没有在当前请求中明确说 `macaron` / `default` / `b` / `c`，先停止并提问；在客户回复前不得进入 intake、logo 检查、web search、slot 写入、Validator 或 export。
 
 将所选配色记为本次任务的**唯一** `--palette` 参数，全程沿用至 Validator 1 与导出。
 
 | 选项 | `--palette` 参数 | 视觉说明 |
 |------|-------------------|----------|
-| **1** | `macaron` | 默认新版：米白底 + 深色顶栏 + 粉/桃/薄荷/天空蓝强调 |
+| **1** | `macaron` | 新版：米白底 + 深色顶栏 + 粉/桃/薄荷/天空蓝强调 |
 | **2** | `default` | 旧版设计规范原版：灰白底 + 红橙强调 |
 | **3** | `b` | 旧版浅紫底 + 紫/绿强调（偏小红书向） |
 | **4** | `c` | 旧版暖纸色底 + 深色顶栏（杂志感） |
 
-四种配色均保留在 [scripts/generate_social_cards.py](./scripts/generate_social_cards.py) 的 `apply_palette()` 中。`generate_social_cards.py` 与 `validate_cards.py` 均默认使用 **`--palette macaron`**；显式指定旧版时可用 **`--palette default`**、**`--palette b`** 或 **`--palette c`**。
+四种配色均保留在 [scripts/generate_social_cards.py](./scripts/generate_social_cards.py) 的 `apply_palette()` 中。`generate_social_cards.py` 与 `validate_cards.py` 的 `--palette` 必须显式传入；缺失时脚本直接失败，不得隐式默认。
 
 ---
 
@@ -65,9 +66,9 @@ equity-photo-cards/                    # Skill bundle (skill-creator anatomy)
 └── output/                            # Default PNG output (gitignored; use --output-root to override)
 ```
 
-This skill is not a generic image-generation workflow. It is a deterministic report-to-card pipeline — using `macaron` by default unless the customer explicitly chooses a legacy palette:
+This skill is not a generic image-generation workflow. It is a deterministic report-to-card pipeline — with explicit customer color confirmation before any other work:
 
-0. **record palette** (`macaron` default, or customer-selected `default` | `b` | `c`)
+0. **confirm palette with the customer** (`macaron` | `default` | `b` | `c`; no default)
 1. extract the report
 2. normalize the facts into a stable internal structure
 3. plan each card's content slots
@@ -88,6 +89,7 @@ The goal is that a new company HTML should normally flow through the same pipeli
 - JSON slot contract (machine): [references/card-slots.schema.json](./references/card-slots.schema.json)
 - New-report slot starter (copy → rename to `<stem>.card_slots.json`): [references/templates/card_slots.template.json](./references/templates/card_slots.template.json)
 - Visual and layout rules: [references/design-spec.md](./references/design-spec.md)
+- Card 6 reasoning target (金融豹判断逻辑 + examples): [references/card6-voice.md](./references/card6-voice.md)
 
 **Agents (who does what before export):**
 
@@ -108,9 +110,9 @@ The goal is that a new company HTML should normally flow through the same pipeli
 
 Do not treat this skill as "pick an industry and emit canned sentences."
 
-Use this skill as — with the job palette recorded first ([配色选择](#palette-choice)):
+Use this skill as — with the job palette confirmed first ([配色选择](#palette-choice)):
 
-0. **`record palette`** → use `macaron` unless the customer selected `default` | `b` | `c`
+0. **`confirm palette`** → ask until the customer explicitly chooses `macaron` | `default` | `b` | `c`; do not start anything else before this
 1. `report folder (JSON-first, HTML as render scaffold) -> structured report facts` (extract then normalize)
 2. `company identity -> official logo asset` via the **logo production agent** ([logo-production-agent.md](./agents/logo-production-agent.md)) — run as soon as company name and ticker are known from extraction; save to the output folder before copy generation begins
 3. `structured report facts -> fixed card slot plan`
@@ -126,7 +128,7 @@ Use this skill as — with the job palette recorded first ([配色选择](#palet
 
 **File convention:** **`Company_Research_CN.card_slots.json`** beside **`Company_Research_CN.html`** in the report folder. For a **single** report you may pass `--slots` as either the JSON file path or that **folder** (resolver loads `<stem>.card_slots.json`). For **`--input` 指向多只 HTML**，`--slots` **必须是目录**，且内含与每个 `stem` 对应的 `*.card_slots.json`。
 
-**Logo convention:** Card 1 has a fixed small logo section below `公司看点`, drawn directly on the card background with no white logo container. Do **not** auto-discover local logos. Before writing final slots, run [logo-production-agent.md](./agents/logo-production-agent.md): search the web for official brand / press-kit / IR-media logo sources, regenerate a clean transparent logo asset from the official reference (SVG or high-res PNG; **horizontal wordmarks ≥840 px wide** at default render scale so they are not soft upscales), save it locally, then set `logo_asset_path` in `card_slots.json`. Never use screenshots, search-result thumbnails, or ticker-letter placeholders. `validate_cards.py` rejects logos below the minimum bitmap size. After export, keep only the logo file actually referenced by `logo_asset_path`; delete logo source downloads, alternatives, and temporary logo folders.
+**Logo convention:** Card 1 has a fixed small logo section below `公司看点`, drawn directly on the card background with no white logo container. Start logo work **only after color is confirmed**. First check `card_slots.logo_asset_path`, the final output folder, and the report folder for an existing logo image; if one exists, verify it is a supported image and passes the renderer's size gate before using it. If no valid folder logo exists, run [logo-production-agent.md](./agents/logo-production-agent.md): search the web for official brand / press-kit / IR-media logo sources, regenerate a clean transparent logo asset from the official reference (SVG or high-res PNG; **horizontal wordmarks ≥840 px wide** at default render scale so they are not soft upscales), save it locally, then set `logo_asset_path` in `card_slots.json`. Never use screenshots, search-result thumbnails, or ticker-letter placeholders. `validate_cards.py` rejects logos below the minimum bitmap size. After export, keep only the logo file actually referenced by `logo_asset_path`; delete logo source downloads, alternatives, and temporary logo folders.
 
 **Cover Chinese name:** Card 1 red title, footers, and related fallbacks use **`company_short_cn()`** in `generate_social_cards.py`. When **`logo_asset_path`** is set, **`cover_company_name_cn`** is **owned by the logo production agent** (verify vs HTML if already Chinese; translate to short Chinese if HTML is English-only; strip trailing **`公司`** via `display_name`). The renderer uses that slot for the red line whenever a logo path is present. **Without a logo**, Chinese may come from HTML `.company-name-cn` (CJK path) or from **`cover_company_name_cn`** if the content agent fills it for English-only HTML. **`validate_cards.py`:** with a logo path, **`cover_company_name_cn` is required**; the resolved display string must contain CJK and must not end with `公司`.
 
@@ -144,11 +146,12 @@ The important boundary is this:
 
 ## Required Workflow
 
-Follow these steps in order every time a new report arrives.
+Follow these steps in order every time a new report arrives. Step 0 is a blocking question, not a default.
 
 ### 0. 配色确认（硬门禁；未完成则禁止进入步骤 1）
 
-- 记录本次任务的 `--palette`：默认 `macaron`；若客户明确选择旧版，则使用 `default`、`b`、`c` 之一。
+- 先问客户选择 `macaron` | `default` | `b` | `c`；如果客户已经在当前请求明确写出其中之一，可记录该选择。
+- 客户未确认前，禁止 intake、logo 检查、web search、slots 写入、Validator、export。
 - 后续所有 `validate_cards.py` 与 `generate_social_cards.py` 调用必须与之保持一致。
 
 ### 1. Intake
@@ -179,15 +182,20 @@ Required extraction targets:
 - revenue / margin / cash-flow facts
 - segment or product mix
 - operating KPIs
+- competitor set and substitution pressure
+- five-year business-model / revenue-mix / margin-structure changes
+- operating geography and revenue geography, kept separate when both are available
+- forward outlook variables for the next 1-2 years
 - official logo source candidates from web search
 
 ### 2.5 Logo Production
 
-本节即 §P0 Logo 门禁的**实施步骤**：素材在这里生成并写入 `logo_asset_path`，与「客户自带文件」无关。
+本节即 §P0 Logo 门禁的**实施步骤**：只在步骤 0 配色确认后执行；素材在这里生成或复用并写入 `logo_asset_path`。
 
-Run the **[logo production agent](./agents/logo-production-agent.md)** as soon as company identity (name, ticker, exchange) is known from extraction — before normalization and card planning. Logo search is independent of financial analysis, so doing it early avoids a late bottleneck before copy generation.
+After color confirmation and company identity extraction, run the **[logo production agent](./agents/logo-production-agent.md)** before normalization and card planning. Logo search/check is independent of financial analysis, so doing it early avoids a late bottleneck before copy generation.
 
-- Search the web for the official brand / press-kit / IR-media logo source; do not rely on local file discovery.
+- First check the final output folder, report folder, and `card_slots.logo_asset_path` for an existing valid logo image.
+- If no valid logo image exists in the folder/slots, search the web for the official brand / press-kit / IR-media logo source.
 - Regenerate a clean transparent PNG/WEBP from the official reference (**horizontal wordmarks ≥ 840 px wide**; never upscale a small bitmap).
 - Do not use screenshots, browser crops, search thumbnails, or ticker-letter placeholders.
 - After export, keep only the file referenced by `logo_asset_path`; delete source downloads, rejected variants, and temporary folders.
@@ -200,7 +208,7 @@ Run the **[logo production agent](./agents/logo-production-agent.md)** as soon a
 
 Saving to the output folder first guarantees the logo and the 6 PNGs are always co-located — nothing needs to be moved manually after export.
 
-**⚠️ If starting from a pre-existing `card_slots.json`:** Check that `logo_asset_path` is set and the file exists before proceeding to §6. An absent or empty field means logo production was skipped — run it now.
+**⚠️ If starting from a pre-existing `card_slots.json`:** Check that `logo_asset_path` is set and the file exists before proceeding to §6. An absent or empty field means logo production/check was skipped — after color confirmation, inspect the output/report folder for a valid logo; if absent, run web logo production.
 
 ### 3. Normalization
 
@@ -224,7 +232,7 @@ The slot schema is defined in [references/workflow-spec.md](./references/workflo
 ### 5. Copy Generation (standard = materialize `card_slots.json`)
 
 - **Copy writing order:** content production agent → **hardcode & logic audit** → layout fill agent. `logo_asset_path` must already be set in `card_slots.json` from §2.5 before content production begins; all body copy must be complete before any PNG export. See [content-production-agent.md](./agents/content-production-agent.md), [hardcode-audit-agent.md](./agents/hardcode-audit-agent.md), and [layout-fill-agent.md](./agents/layout-fill-agent.md). Running the audit before layout means bad copy is caught while still full-length — layout compression makes the same problem harder to spot and fix.
-- **Card 6 news search (required):** Before writing `post_content_lines`, the content agent must perform two web searches to find the most-read and most-discussed recent news (≤90 days) about the company. At least two of the four `post_content_lines` must be anchored to these real news events in 贴吧 voice. See [content-production-agent.md §Card 6](./agents/content-production-agent.md) for the exact search protocol.
+- **Card 6 current-context + reasoning check (required):** Before writing `post_content_lines`, the content agent must inspect report-package current context (`news_intel.json`, `macro_factors.json`, `prediction_waterfall.json`, HTML summary/risk text) and search the web only if those files are insufficient. It must also read [references/card6-voice.md](./references/card6-voice.md) and build a compact analysis pack covering competitors, past-five-year changes, future outlook, and operating/revenue geography. Use the 金融豹判断逻辑: hard fact → hidden business mechanism → useful metaphor/comparison when it clarifies → measurable forward question. Card 6 must be based on financial-report facts, written in clear plain Chinese, educational, deep, and connected to recent company/industry/policy/market context. It must **not** force identical phrasing, use clickbait/forum hype, or marker-stuffed boilerplate. See [content-production-agent.md §Card 6](./agents/content-production-agent.md) for the exact protocol.
 - **`card_slots.json` 必须填满** 所有脚本要求的槽位（见 `assert_card_slots_complete`）；不允许依赖内置 `fit_copy` / `company_theme` 自动糊字作为交付物。
 - Write copy slot by slot, not card by card in one pass
 - Use report facts first, thematic framing second
@@ -270,11 +278,11 @@ Rewrite priority:
 The fixed output is always:
 
 - Card 1: cover + core tension
-- Card 2: background + industry + Porter
+- Card 2: Porter evidence + industry structure + Porter bars
 - Card 3: revenue / profit flow
 - Card 4: current business + next 2 to 3 years
 - Card 5: brand close + three memory points
-- Card 6: social post copy image with title, content, hashtags — **贴吧/热帖** tone; title must start with `一天吃透一家公司：`; **four** `post_content_lines` exactly as **three statements + one question**; each line must satisfy `card6_line_sounds_human` in `generate_social_cards.py`; hashtags always include `#A股` and `#美股`; **at least 2 of the 4 lines must be anchored to real recent news events** (most-read + most-discussed within 90 days, searched before writing — see [content-production-agent.md](./agents/content-production-agent.md) §Card 6)
+- Card 6: social post copy image with title, content, hashtags — **金融豹判断逻辑**; title must start with `一天吃透一家公司：`; **four** `post_content_lines` exactly as **three statements + one question**; each line must satisfy `card6_line_sounds_human` in `generate_social_cards.py`, but the real target is [references/card6-voice.md](./references/card6-voice.md): hard fact, hidden mechanism, useful comparison, measurable final question. Hashtags always include `#A股` and `#美股`; content must include at least one report-grounded financial/operating anchor and at least one current-event, policy, market, or industry context anchor, and must analyze competitors, past-five-year changes, future outlook, and operating/revenue geography where material (see [content-production-agent.md](./agents/content-production-agent.md) §Card 6)
 
 Do not change the card count or reorder the card roles unless the design spec is explicitly revised.
 
@@ -339,7 +347,7 @@ python3 scripts/generate_social_cards.py \
   --palette macaron
 ```
 
-**配色：** 默认 `macaron`；旧版可显式传 `--palette default|b|c`。Validator 1 与导出必须使用同一 `--palette`。**Logo：** 默认要求 `logo_asset_path`；仅在客户明确放弃时，校验与导出均加 **`--allow-no-logo`**。
+**配色：** 必须由客户先明确选择 `macaron|default|b|c`，并在 Validator 1 与导出时显式传同一 `--palette`；未指定不得默认。**Logo：** 默认要求 `logo_asset_path`；仅在客户明确放弃时，校验与导出均加 **`--allow-no-logo`**。
 
 **单张 PNG 重渲（常见坑）：** 若只重跑某一张（例如只更新 `01_cover.png`），**必须使用与整套六张相同的 `--palette`**。`generate_social_cards.py` 在进程内调用 `apply_palette()`；`macaron` 和 `c` 均有深色顶栏，`default` / `b` 顶栏为浅色。混用会导致 **Card 1 顶栏与其他卡片不一致**。`card_slots.json` **不记录** palette，须靠流程约定或整套重渲。
 

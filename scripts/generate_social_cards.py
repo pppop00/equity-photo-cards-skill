@@ -293,8 +293,49 @@ STIFF_OPENERS = (
     "一句判断:",
 )
 HUMAN_MARKERS = ("说白了", "别看", "账单", "印钱", "印钞", "踩油门", "真要看", "本质上", "先别", "盯着", "这就是", "眼下")
-# Accepted only for Card 6 `post_content_lines` validation (tieba / forum colloquial voice).
-CARD6_COLLOQUIAL_MARKERS = (
+# Card 6 should be plain-spoken and educational, not clickbait / forum rage bait.
+CARD6_EDUCATIONAL_MARKERS = (
+    "说白了",
+    "真要看",
+    "别只看",
+    "本质上",
+    "换句话说",
+    "这说明",
+    "关键是",
+    "背后",
+    "真正要学",
+    "财报里",
+    "财报上",
+    "结合最近",
+    "放到现在",
+    "眼下",
+)
+CARD6_LOGIC_MARKERS = (
+    "表面",
+    "本质",
+    "不是",
+    "而是",
+    "对比",
+    "更像",
+    "剥开",
+    "真正",
+    "背后",
+    "靠",
+    "撑起",
+    "意味着",
+    "护城河",
+    "收费站",
+    "印钞机",
+    "黑洞",
+    "底盘",
+    "防线",
+    "基石",
+    "定价权",
+    "造血",
+    "利润地基",
+    "估值逻辑",
+)
+CARD6_FORBIDDEN_HYPE_MARKERS = (
     "这波",
     "离谱",
     "吃瓜",
@@ -323,6 +364,44 @@ CARD6_COLLOQUIAL_MARKERS = (
     "杀疯了",
     "真的会谢",
     "绷",
+)
+CARD6_FINANCIAL_ANCHORS = (
+    "财报",
+    "营收",
+    "收入",
+    "利润",
+    "净利",
+    "EPS",
+    "毛利",
+    "毛利率",
+    "利润率",
+    "现金流",
+    "费用",
+    "成本",
+    "负债",
+    "库存",
+    "会员",
+    "订单",
+    "分部",
+    "指引",
+)
+CARD6_CONTEXT_ANCHORS = (
+    "最近",
+    "这次",
+    "公告",
+    "新闻",
+    "监管",
+    "政策",
+    "利率",
+    "降息",
+    "关税",
+    "汇率",
+    "价格战",
+    "AI",
+    "行业",
+    "宏观",
+    "市场",
+    "时事",
 )
 POST_TITLE_PREFIX = "一天吃透一家公司："
 REQUIRED_POST_TAGS = ("#A股", "#美股")
@@ -1027,11 +1106,34 @@ def is_human_copy(text: str) -> bool:
     return any(marker in text for marker in HUMAN_MARKERS)
 
 
+def card6_hype_markers(text: str) -> list[str]:
+    return [marker for marker in CARD6_FORBIDDEN_HYPE_MARKERS if marker in clean(text)]
+
+
+def card6_line_has_report_anchor(text: str) -> bool:
+    normalized = clean(text)
+    return bool(re.search(r"\d|%|％", normalized)) or any(marker in normalized for marker in CARD6_FINANCIAL_ANCHORS)
+
+
+def card6_line_has_context_anchor(text: str) -> bool:
+    normalized = clean(text)
+    return any(marker in normalized for marker in CARD6_CONTEXT_ANCHORS)
+
+
 def card6_line_sounds_human(text: str) -> bool:
-    """Card 6 may use standard HUMAN_MARKERS or extra colloquial markers (see layout-fill / content agent)."""
+    """Card 6 should explain the business mechanism, not just include a stock marker."""
+    if card6_hype_markers(text):
+        return False
     if is_human_copy(text) or "真要看" in text or "钱还在进" in text:
         return True
-    return any(marker in text for marker in CARD6_COLLOQUIAL_MARKERS)
+    if any(marker in text for marker in CARD6_EDUCATIONAL_MARKERS + CARD6_LOGIC_MARKERS):
+        return True
+    return bool(
+        re.search(r"不是.+而是", text)
+        or re.search(r"表面.+本质", text)
+        or re.search(r"对比.+更像", text)
+        or re.search(r"靠.+撑", text)
+    )
 
 
 def fit_copy(candidates: list[str], limit: int, *, human: bool = False) -> str:
@@ -1452,6 +1554,7 @@ def set_currency_label(data: "ReportData") -> None:
         "人民币": "元",
         "AUD": "澳元",
         "EUR": "欧元",
+        "CHF": "瑞郎",
         "HKD": "港元",
         "JPY": "日元",
         "GBP": "英镑",
@@ -1481,10 +1584,11 @@ def money_text(value: float) -> str:
             return f"{v:.2f} 亿{_CURRENCY_LABEL}"
         return f"{v:.1f} 亿{_CURRENCY_LABEL}"
     y = yi(value)
-    if y < 0.01:
+    ay = abs(y)
+    if ay < 0.01:
         wan = value * 100.0
         return f"{wan:.0f} 万{_CURRENCY_LABEL}"
-    if y < 0.1:
+    if ay < 0.1:
         return f"{y:.2f} 亿{_CURRENCY_LABEL}"
     return f"{y:.1f} 亿{_CURRENCY_LABEL}"
 
@@ -2223,7 +2327,7 @@ def post_content_lines(data: ReportData) -> list[str]:
     watch = clean(watch_sentence(data)).rstrip("。！？!?")
     lines = [
         fit_copy([brand_statement(data)], 42, human=True),
-        fit_copy([f"{fiscal_year(data)} 营收 {money_text(fin['revenue'])}，同比{pct_text(rev_yoy, signed=True)}，钱还在进。"], 44),
+        fit_copy([f"财报里，{fiscal_year(data)} 营收 {money_text(fin['revenue'])}，同比{pct_text(rev_yoy, signed=True)}，先看增长质量。"], 44),
         fit_copy([f"{label} {value}，这就是它眼下最值得盯的经营抓手。"], 44, human=True),
         fit_copy([f"后面真要看的是：{watch}？"], 44, human=True),
     ]
@@ -2733,12 +2837,22 @@ def validate_report(data: ReportData, brand: str, *, allow_no_logo: bool = False
     for line in lines:
         if not is_complete_copy(line):
             issues.append(f"Card 6 content line must be a complete sentence without ellipsis: {line}")
+        hype_markers = card6_hype_markers(line)
+        if hype_markers:
+            issues.append(
+                "Card 6 content line uses clickbait/forum hype markers that are no longer allowed "
+                f"({', '.join(hype_markers)}): {line}"
+            )
         if not card6_line_sounds_human(line):
-            issues.append(f"Card 6 content line lacks a human voice: {line}")
+            issues.append(f"Card 6 content line lacks plain-spoken educational voice: {line}")
         if len(wrap(draw, clean(line), f(FONT_POST_LINE), 860)) > 2:
             issues.append(f"Card 6 content line is too long: {line}")
         if has_bad_linebreak(line, 860, f(FONT_POST_LINE), draw):
             issues.append(f"Card 6 content line contains a punctuation-led line break: {line}")
+    if lines and not any(card6_line_has_report_anchor(line) for line in lines):
+        issues.append("Card 6 content must include at least one report-grounded financial or operating anchor.")
+    if lines and not any(card6_line_has_context_anchor(line) for line in lines):
+        issues.append("Card 6 content must include at least one current-event, policy, market, or industry context anchor.")
     if len(wrap(draw, clean(tags), f(FONT_POST_TAG), 860)) > 4:
         issues.append("Card 6 hashtags exceed their section.")
     if has_bad_linebreak(tags, 860, f(FONT_POST_TAG), draw):
@@ -2982,14 +3096,14 @@ def card_2(data: ReportData) -> Image.Image:
     img = background()
     d = ScaledDraw(ImageDraw.Draw(img), LAYOUT_SCALE)
     header(d, 2)
-    draw_text(d, (72, 198), "公司背景 + 行业介绍", f(58, True), TEXT)
+    draw_text(d, (72, 198), "竞争结构 + 波特五力", f(58, True), TEXT)
     panel(d, (72, 314, 598, 1224))
     d.rounded_rectangle((622, 314, 1008, 1224), radius=28, fill=PANEL)
-    draw_text(d, (108, 362), "公司背景", f(34, True), TEXT)
+    draw_text(d, (108, 362), "五力拆解", f(34, True), TEXT)
     left_end_y = bullets(d, background_points(data), 108, 424, 446, 4, 4)
     industry_title_y = max(728, left_end_y + 6)
     industry_body_y = industry_title_y + 58
-    draw_text(d, (108, industry_title_y), "行业层面", f(34, True), TEXT)
+    draw_text(d, (108, industry_title_y), "结构判断", f(34, True), TEXT)
     block(d, industry_paragraph(data), 108, industry_body_y, 446, f(FONT_PANEL_BODY), "#344054", 13, 11)
     draw_text(d, (656, 362), "波特五力", f(34, True), TEXT)
     labels = ["供应商", "买方", "新进入者", "替代品", "竞争强度"]
@@ -3163,18 +3277,12 @@ _DEFAULT_OUTPUT_ROOT = _SKILL_REPO_ROOT / "output"
 
 
 def resolve_palette(cli_palette: str | None) -> str:
-    """Resolve CLI palette; omitted values use the current default visual system."""
+    """Resolve CLI palette; omitted values are blocked by the workflow gate."""
     if cli_palette is not None:
         return cli_palette
-    if sys.stdin.isatty() and sys.stdout.isatty():
-        print("选择配色（输入数字后回车）：", file=sys.stderr)
-        print("  1 = macaron — 米白底 + 深色顶栏 + 粉/桃/薄荷/天空蓝强调（默认）", file=sys.stderr)
-        print("  2 = default — 设计规范原版（灰白底 + 红橙强调）", file=sys.stderr)
-        print("  3 = b — 浅紫底 + 紫/绿强调（偏小红书向）", file=sys.stderr)
-        print("  4 = c — 暖纸色底 + 深色顶栏（杂志感）", file=sys.stderr)
-        choice = input("配色 [1/2/3/4，默认 1]: ").strip() or "1"
-        return {"1": "macaron", "2": "default", "3": "b", "4": "c"}.get(choice, _DEFAULT_PALETTE)
-    return _DEFAULT_PALETTE
+    raise SystemExit(
+        "Missing required --palette. Ask the customer to choose macaron | default | b | c before validation/export."
+    )
 
 
 def main() -> None:
@@ -3207,10 +3315,10 @@ def main() -> None:
     )
     parser.add_argument(
         "--palette",
-        default=_DEFAULT_PALETTE,
+        required=True,
         choices=["macaron", "default", "b", "c"],
         help=(
-            "配色：macaron | default | b | c。省略时使用 macaron。"
+            "配色：macaron | default | b | c。必须由客户确认后显式传入。"
         ),
     )
     parser.add_argument(
