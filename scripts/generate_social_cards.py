@@ -432,6 +432,11 @@ FONT_PANEL_BODY = 25
 FONT_BULLET = 25
 FONT_BULLET_COMPACT = 23
 FONT_BRAND_SUMMARY = 24
+FONT_CARD5_CTA = 34
+FONT_CARD5_CTA_MIN = 24
+CARD5_CTA_WIDTH = 936
+CARD5_CTA_MAX_LINES = 2
+CARD5_CTA_MAX_HEIGHT = 92
 FONT_CONCLUSION = 23
 FONT_PORTER_LABEL = 21
 FONT_PORTER_SCORE = 25
@@ -2818,6 +2823,26 @@ def validate_report(data: ReportData, brand: str, *, allow_no_logo: bool = False
         if has_bad_linebreak(point, 796, f(FONT_BRAND_SUMMARY), draw):
             issues.append(f"Card 5 summary bullet contains a punctuation-led line break: {point}")
 
+    cta = clean(data.card_slots.cta_line) if data.card_slots and data.card_slots.cta_line else "关注金融豹，每天学习一个公司。"
+    cta_font = fit_block_font(
+        draw,
+        cta,
+        CARD5_CTA_WIDTH,
+        CARD5_CTA_MAX_HEIGHT,
+        start_size=FONT_CARD5_CTA,
+        min_size=FONT_CARD5_CTA_MIN,
+        line_gap=10,
+        max_lines=CARD5_CTA_MAX_LINES,
+        bold=True,
+    )
+    cta_lines = wrap(draw, cta, cta_font, CARD5_CTA_WIDTH)
+    if len(cta_lines) > CARD5_CTA_MAX_LINES:
+        issues.append("Card 5 CTA line exceeds its two-line footer budget.")
+    if raster_text_block_height(draw, cta_lines[:CARD5_CTA_MAX_LINES], cta_font, 10) > CARD5_CTA_MAX_HEIGHT:
+        issues.append("Card 5 CTA line exceeds its footer height budget.")
+    if has_bad_linebreak(cta, CARD5_CTA_WIDTH, cta_font, draw):
+        issues.append("Card 5 CTA line contains a punctuation-led line break.")
+
     if len(wrap(draw, clean(title), f(FONT_POST_TITLE, True), 860)) > 2:
         issues.append("Card 6 title exceeds its allowed block.")
     if not clean(title).startswith(POST_TITLE_PREFIX):
@@ -3202,7 +3227,18 @@ def card_5(data: ReportData, brand: str) -> Image.Image:
         if data.card_slots and data.card_slots.cta_line
         else "关注金融豹，每天学习一个公司。"
     )
-    draw_text(d, (72, 1098), cta, f(34, True), TEXT)
+    cta_font = fit_block_font(
+        d,
+        cta,
+        CARD5_CTA_WIDTH,
+        CARD5_CTA_MAX_HEIGHT,
+        start_size=FONT_CARD5_CTA,
+        min_size=FONT_CARD5_CTA_MIN,
+        line_gap=10,
+        max_lines=CARD5_CTA_MAX_LINES,
+        bold=True,
+    )
+    block(d, cta, 72, 1092, CARD5_CTA_WIDTH, cta_font, TEXT, 10, CARD5_CTA_MAX_LINES)
     for x, y, s, col in [(900, 218, 88, RED), (980, 360, 64, GREEN), (900, 520, 74, ORANGE)]:
         d.ellipse((x, y, x + s, y + s), outline=col, width=3)
     paste_logo(img, find_logo_asset(data), (840, 240, 1010, 520))
