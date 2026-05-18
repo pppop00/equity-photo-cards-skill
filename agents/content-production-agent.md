@@ -112,6 +112,16 @@ These are caught at validator time, but the listing belongs here as a writer-sid
 
 These phrases are **symptoms** of the methodology gap, not causes. If `data_anchor` / `variant_view` / `falsifier` / `primary_quote` are filled honestly, you will not reach for them. Do not swap them for a different rhetorical crutch — fill the analyst substrate first; the voice will follow.
 
+### Writing style for Cards 1–5: symbols, comparators, CN/EN mixing (backstop also)
+
+The same single-source writing-style rules used by the HTML report apply to card prose. The full reasoning + examples live in the ER repo at `references/report_style_guide_cn.md` §"符号与比较语规范" and §"中英混杂规范"; the validator (`validate_card1_5_analytical_content` in `scripts/generate_social_cards.py`) enforces them. Three patterns you must avoid even when the card budget is tight:
+
+- **Bare `+` in front of absolute amounts.** `Q1收入6.398亿美元，同比增加34%` ✓ — not `Q1收入6.398亿美元+34%` ✗ and not `净收益+10.17亿美元` ✗. The "+" sign is the marker for a relative change; gluing it onto a level (revenue, ARR, FCF, net income) misreads as same-period growth.
+- **`+N%` without an explicit comparator base.** Always write 同比 / 环比 / 年化 / 较[基期] before the number. Card layout phase will not let you cheat this by dropping "同比" to fit the budget — trim downstream phrasing, not the comparator. `cRPO 351亿美元，同比按报告值增加16%` ✓; `cRPO +16%` ✗.
+- **CN/EN mixing for ratios, units, and time-frame markers.** Company names, product names, and industry abbreviations (Salesforce / Microsoft Dynamics 365 / GAAP / non-GAAP / ARR / RPO / cRPO / SBC) stay English. But `CC` → 恒定汇率, `YoY` → 同比, `QoQ` → 环比, `FX` → 汇率, `pricing power` → 定价权 — these are not acceptable inside card prose. First-mention parentheses are fine (`恒定汇率口径下（CC）`), then drop the English.
+
+Same principle as the banned-phrase backstop: if you fill `data_anchor` (number + comp) and `variant_view` (≥15 chars expressing what the variant view actually is) honestly, you won't be tempted to lean on `+34%` as a substitute for thinking through 同比 vs 环比.
+
 ## Field cheat sheet (copy targets)
 
 | JSON key | Card | Source hints |

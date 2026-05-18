@@ -341,3 +341,84 @@ class WdcBadLinesRegressionTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# ---------------------------------------------------------------------------
+# Writing-style backstop (symbols, comparators, CN/EN mixing)
+# Single source: Equity Research Skill/references/report_style_guide_cn.md
+# ---------------------------------------------------------------------------
+
+
+class TestWritingStyleBackstop(unittest.TestCase):
+    def setUp(self) -> None:
+        self.cards, self.notes = _fresh_fixture()
+
+    def test_bare_plus_on_absolute_amount_flagged(self) -> None:
+        self.cards["intro_sentence"] = "Salesforce 战略投资公允价值净收益+10.17亿美元，扭转去年亏损。"
+        issues = validate_card1_5_analytical_content(self.cards, self.notes)
+        self.assertTrue(
+            any("bare '+'" in i and "intro_sentence" in i for i in issues),
+            f"expected bare-+ flag on intro_sentence, got {issues}",
+        )
+
+    def test_plus_pct_without_comparator_flagged(self) -> None:
+        self.cards["intro_sentence"] = "Q1收入6.398亿美元+34%，订单能见度尚稳。"
+        issues = validate_card1_5_analytical_content(self.cards, self.notes)
+        self.assertTrue(
+            any("bare '+'" in i for i in issues),
+            f"expected bare-+ flag on '+34%', got {issues}",
+        )
+
+    def test_plus_after_tongbi_passes(self) -> None:
+        self.cards["intro_sentence"] = "Q1 收入 6.4 亿美元，同比+34%，订单能见度尚稳。"
+        issues = validate_card1_5_analytical_content(self.cards, self.notes)
+        self.assertFalse(
+            any("bare '+'" in i for i in issues),
+            f"comparator-prefixed + should be allowed, got {issues}",
+        )
+
+    def test_plus_after_huanbi_passes(self) -> None:
+        self.cards["intro_sentence"] = "营业利润率环比+1.05个百分点。"
+        issues = validate_card1_5_analytical_content(self.cards, self.notes)
+        self.assertFalse(
+            any("bare '+'" in i for i in issues),
+            f"comparator-prefixed + should be allowed, got {issues}",
+        )
+
+    def test_CC_abbrev_flagged(self) -> None:
+        self.cards["company_focus_paragraph"] = "cRPO 同比按 CC 增长 13%，弱于按报告值口径。"
+        issues = validate_card1_5_analytical_content(self.cards, self.notes)
+        self.assertTrue(
+            any("'CC'" in i and "company_focus_paragraph" in i for i in issues),
+            f"expected CC abbrev flag, got {issues}",
+        )
+
+    def test_YoY_abbrev_flagged(self) -> None:
+        self.cards["judgement_paragraph"] = "cRPO 351 亿美元同比按报告值 YoY 增长16%。"
+        issues = validate_card1_5_analytical_content(self.cards, self.notes)
+        self.assertTrue(
+            any("'YoY'" in i for i in issues),
+            f"expected YoY abbrev flag, got {issues}",
+        )
+
+    def test_first_mention_parens_whitelists_CC(self) -> None:
+        """`恒定汇率（CC）` once in any Card 1-5 slot → later bare CC OK."""
+        self.cards["intro_sentence"] = "恒定汇率（CC）口径下有机收入约 9%。"
+        self.cards["company_focus_paragraph"] = "cRPO 同比按 CC 增长 13%。"
+        issues = validate_card1_5_analytical_content(self.cards, self.notes)
+        self.assertFalse(
+            any("'CC'" in i for i in issues),
+            f"first-mention 恒定汇率（CC） should whitelist later CC uses, got {issues}",
+        )
+
+    def test_card6_post_copy_exempt_from_writing_style(self) -> None:
+        """Card 6 (post_title / post_content_lines) is exempt — the 金融豹 voice
+        is allowed to break the style rules deliberately."""
+        # Inject violations into Card 6 keys (not in CARD1_5_WORKER_SLOTS).
+        self.cards["post_title"] = "Salesforce Q1+34%，CC 抢眼"
+        self.cards["post_content_lines"] = ["YoY +16%，bull case 还能跑"]
+        issues = validate_card1_5_analytical_content(self.cards, self.notes)
+        self.assertFalse(
+            any("post_title" in i or "post_content_lines" in i for i in issues),
+            f"Card 6 must be exempt from writing-style backstop, got {issues}",
+        )

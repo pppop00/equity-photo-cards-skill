@@ -1168,6 +1168,34 @@ _BINARY_FLIP_RE = re.compile(r"不是.{1,20}[，,]\s*而是")
 _CLICKBAIT_CTA_RE = re.compile(r"关注[^，,。]{1,8}[，,。].*每天.*学")
 _DATE_WINDOW_RE = re.compile(r"\d{4}-(?:0[1-9]|1[0-2]|Q[1-4]|H[12])")
 
+# Writing-style regex bank — same rules as the HTML report (single source:
+# Equity Research Skill/references/report_style_guide_cn.md §"符号与比较语规范"
+# and §"中英混杂规范"). Three patterns, applied to Card 1-5 prose only:
+#
+#   (1) Bare "+" in front of a number without an explicit comparator base
+#       (同比/环比/年化/较/相比/约/±/增长/下降/扩张/收窄/提升/增加) within 15
+#       chars before. Catches both "+34%" shortcuts and "+10.17亿美元"-style
+#       absolute decorations. Card layout phase cannot drop the comparator to
+#       fit char budgets — trim downstream phrasing instead.
+#
+#   (2) Banned English abbreviations (CC / YoY / Y/Y / QoQ / Q/Q / FX / CAGR)
+#       in body prose. First-mention parens like "恒定汇率（CC）" elsewhere
+#       in the same card_slots object whitelists later bare uses.
+_BARE_PLUS_RE = re.compile(
+    r"\+\d+(?:\.\d+)?(?:\s*[-–~至]\s*\d+(?:\.\d+)?)?"
+    r"\s*(?:%|pp|个百分点|亿|万|百万|千|元|美元|港元|人民币)?"
+)
+_COMPARATOR_BEFORE_PLUS_RE = re.compile(
+    r"(同比|环比|年化|较|相比|约|±|增长|下降|扩张|收窄|提升|增加)"
+)
+_STYLE_BANNED_ABBREVS = ("CC", "YoY", "Y/Y", "QoQ", "Q/Q", "FX", "CAGR")
+_STYLE_BANNED_ABBREV_RE = re.compile(
+    r"\b(" + "|".join(re.escape(a) for a in _STYLE_BANNED_ABBREVS) + r")\b"
+)
+_STYLE_FIRST_MENTION_RE = re.compile(
+    r"[（(][^（()）]{0,40}\b(CC|YoY|Y/Y|QoQ|Q/Q|FX|CAGR)\b[^（()）]{0,40}[)）]"
+)
+
 # slot keys covered by Cards 1-5 contract
 CARD1_5_WORKER_SLOTS = (
     "intro_sentence", "company_focus_paragraph",  # Card 1
@@ -1258,6 +1286,21 @@ def validate_card1_5_analytical_content(
         "current_business_points", "future_watch_points", "judgement_paragraph",
         "brand_subheading", "brand_statement", "memory_points",
     )
+
+    # Pre-scan the entire card_slots prose for first-mention parens that
+    # whitelist later bare-abbrev uses. "恒定汇率（CC）" once → later "CC" OK.
+    all_card1_5_text_parts: list[str] = []
+    for key in card1_5_prose_keys:
+        value = card_slots.get(key)
+        if isinstance(value, list):
+            all_card1_5_text_parts.extend(v for v in value if isinstance(v, str))
+        elif isinstance(value, str):
+            all_card1_5_text_parts.append(value)
+    all_card1_5_text = " ".join(all_card1_5_text_parts)
+    style_first_mention_abbrevs: set[str] = set()
+    for m in _STYLE_FIRST_MENTION_RE.finditer(all_card1_5_text):
+        style_first_mention_abbrevs.add(m.group(1))
+
     for key in card1_5_prose_keys:
         value = card_slots.get(key)
         if value is None:
@@ -1277,6 +1320,31 @@ def validate_card1_5_analytical_content(
                     break
             if _BINARY_FLIP_RE.search(text):
                 issues.append(f"card_slots.{key}: contains 'X 不是 Y 而是 Z' template (banned on Cards 1-5)")
+
+            # Writing-style rule (1)+(2): bare "+" without comparator base
+            for m in _BARE_PLUS_RE.finditer(text):
+                window_before = text[max(0, m.start() - 15):m.start()]
+                if _COMPARATOR_BEFORE_PLUS_RE.search(window_before):
+                    continue
+                snippet = text[max(0, m.start() - 15):min(len(text), m.end() + 10)]
+                issues.append(
+                    f"card_slots.{key}: writing-style — bare '+' without comparator base "
+                    f"(同比/环比/年化/较/相比 must precede +N within 15 chars): "
+                    f"...{snippet}..."
+                )
+
+            # Writing-style rule (3): banned English abbreviation
+            for m in _STYLE_BANNED_ABBREV_RE.finditer(text):
+                abbrev = m.group(1)
+                if abbrev in style_first_mention_abbrevs:
+                    continue
+                snippet = text[max(0, m.start() - 10):min(len(text), m.end() + 10)]
+                issues.append(
+                    f"card_slots.{key}: writing-style — English abbreviation '{abbrev}' "
+                    f"in body prose (CC→恒定汇率, YoY→同比, QoQ→环比, FX→汇率, "
+                    f"CAGR→复合年化增长率; first-mention '恒定汇率（CC）' would "
+                    f"whitelist later uses): ...{snippet}..."
+                )
 
     # cta_line: ban subscription-bait
     cta = (card_slots.get("cta_line") or "").strip()
