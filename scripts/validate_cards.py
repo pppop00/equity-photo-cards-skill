@@ -87,7 +87,7 @@ def main() -> None:
         "--palette",
         required=True,
         choices=["macaron", "default", "b", "c"],
-        help="Required palette confirmed by the customer: macaron | default | b | c.",
+        help="Palette used for validation geometry/color paths. Must match the P0-confirmed palette.",
     )
     args = parser.parse_args()
     apply_palette(args.palette)
