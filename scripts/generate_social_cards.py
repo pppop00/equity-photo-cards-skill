@@ -291,9 +291,52 @@ STIFF_OPENERS = (
     "一句判断：",
     "一句判断:",
 )
-HUMAN_MARKERS = ("说白了", "别看", "账单", "印钱", "印钞", "踩油门", "真要看", "本质上", "先别", "盯着", "这就是", "眼下")
-# Accepted only for Card 6 `post_content_lines` validation (tieba / forum colloquial voice).
-CARD6_COLLOQUIAL_MARKERS = (
+# Card 6 only — colloquial / 贴吧-style tone markers used by card6_line_sounds_human().
+# Do NOT use this list as a positive signal for Cards 1-5 (analyst voice, plan v3).
+CARD6_TONE_MARKERS = ("说白了", "别看", "账单", "印钱", "印钞", "踩油门", "真要看", "本质上", "先别", "盯着", "这就是", "眼下")
+# Card 6 should be plain-spoken and educational, not clickbait / forum rage bait.
+CARD6_EDUCATIONAL_MARKERS = (
+    "说白了",
+    "真要看",
+    "别只看",
+    "本质上",
+    "换句话说",
+    "这说明",
+    "关键是",
+    "背后",
+    "真正要学",
+    "财报里",
+    "财报上",
+    "结合最近",
+    "放到现在",
+    "眼下",
+)
+CARD6_LOGIC_MARKERS = (
+    "表面",
+    "本质",
+    "不是",
+    "而是",
+    "对比",
+    "更像",
+    "剥开",
+    "真正",
+    "背后",
+    "靠",
+    "撑起",
+    "意味着",
+    "护城河",
+    "收费站",
+    "印钞机",
+    "黑洞",
+    "底盘",
+    "防线",
+    "基石",
+    "定价权",
+    "造血",
+    "利润地基",
+    "估值逻辑",
+)
+CARD6_FORBIDDEN_HYPE_MARKERS = (
     "这波",
     "离谱",
     "吃瓜",
@@ -323,6 +366,44 @@ CARD6_COLLOQUIAL_MARKERS = (
     "真的会谢",
     "绷",
 )
+CARD6_FINANCIAL_ANCHORS = (
+    "财报",
+    "营收",
+    "收入",
+    "利润",
+    "净利",
+    "EPS",
+    "毛利",
+    "毛利率",
+    "利润率",
+    "现金流",
+    "费用",
+    "成本",
+    "负债",
+    "库存",
+    "会员",
+    "订单",
+    "分部",
+    "指引",
+)
+CARD6_CONTEXT_ANCHORS = (
+    "最近",
+    "这次",
+    "公告",
+    "新闻",
+    "监管",
+    "政策",
+    "利率",
+    "降息",
+    "关税",
+    "汇率",
+    "价格战",
+    "AI",
+    "行业",
+    "宏观",
+    "市场",
+    "时事",
+)
 POST_TITLE_PREFIX = "一天吃透一家公司："
 REQUIRED_POST_TAGS = ("#A股", "#美股")
 MAX_POST_TAGS = 7
@@ -350,6 +431,11 @@ FONT_PANEL_BODY = 25
 FONT_BULLET = 25
 FONT_BULLET_COMPACT = 23
 FONT_BRAND_SUMMARY = 24
+FONT_CARD5_CTA = 34
+FONT_CARD5_CTA_MIN = 24
+CARD5_CTA_WIDTH = 936
+CARD5_CTA_MAX_LINES = 2
+CARD5_CTA_MAX_HEIGHT = 92
 FONT_CONCLUSION = 23
 FONT_PORTER_LABEL = 21
 FONT_PORTER_SCORE = 25
@@ -1023,14 +1109,185 @@ def is_complete_copy(text: str) -> bool:
 
 
 def is_human_copy(text: str) -> bool:
-    return any(marker in text for marker in HUMAN_MARKERS)
+    """Card 6 only — checks for 贴吧/colloquial tone markers.
+
+    NOT to be used as a positive test for Cards 1-5 (analyst voice, plan v3).
+    """
+    return any(marker in text for marker in CARD6_TONE_MARKERS)
+
+
+def card6_hype_markers(text: str) -> list[str]:
+    return [marker for marker in CARD6_FORBIDDEN_HYPE_MARKERS if marker in clean(text)]
+
+
+def card6_line_has_report_anchor(text: str) -> bool:
+    normalized = clean(text)
+    return bool(re.search(r"\d|%|％", normalized)) or any(marker in normalized for marker in CARD6_FINANCIAL_ANCHORS)
+
+
+def card6_line_has_context_anchor(text: str) -> bool:
+    normalized = clean(text)
+    return any(marker in normalized for marker in CARD6_CONTEXT_ANCHORS)
 
 
 def card6_line_sounds_human(text: str) -> bool:
-    """Card 6 may use standard HUMAN_MARKERS or extra colloquial markers (see layout-fill / content agent)."""
+    """Card 6 only — checks for 贴吧/colloquial tone markers.
+
+    NOT to be used as a positive test for Cards 1-5. Cards 1-5 follow the
+    plan-v3 analyst-voice contract (numeric anchors + variant view + falsifier
+    or primary_quote or dated catalyst); see validate_card1_5_analytical_content().
+    """
+    if card6_hype_markers(text):
+        return False
     if is_human_copy(text) or "真要看" in text or "钱还在进" in text:
         return True
-    return any(marker in text for marker in CARD6_COLLOQUIAL_MARKERS)
+    if any(marker in text for marker in CARD6_EDUCATIONAL_MARKERS + CARD6_LOGIC_MARKERS):
+        return True
+    return bool(
+        re.search(r"不是.+而是", text)
+        or re.search(r"表面.+本质", text)
+        or re.search(r"对比.+更像", text)
+        or re.search(r"靠.+撑", text)
+    )
+
+
+# ---------------------------------------------------------------------------
+# Cards 1-5 analyst-voice gate (plan v3)
+# ---------------------------------------------------------------------------
+_NUMBER_RE = re.compile(r"\d+(?:\.\d+)?(?:%|亿|万|TB|EB|bps|x|倍|个|人|百万|亿元|\$|B|M|K)")
+_COMP_KEYWORDS = ("peer", "同业", "consensus", "guide", "历史", "vs", "同比", "环比", "相比", "过去", "去年", "上一", "管理层指引")
+# Additional analyst-comp idioms regex-matched on data_anchor (case-insensitive):
+# scenario-based comp (bull/bear/base case + midpoint + range), fiscal year refs (FY20xx, 财年20xx),
+# bare 4-digit year refs (1900-2099). These are legitimate anchors a strict 1-2 word keyword list misses.
+_COMP_PATTERNS = (
+    re.compile(r"\bfy\d{2,4}\b", re.IGNORECASE),
+    re.compile(r"财年\s*\d{2,4}"),
+    re.compile(r"\b(bull|bear|base)\s+case\b", re.IGNORECASE),
+    re.compile(r"\bmidpoint\b|\bscenarios?\b|\brange\b", re.IGNORECASE),
+    re.compile(r"\b(low|high)\s+end\b", re.IGNORECASE),
+    re.compile(r"\b(19|20)\d{2}\b"),
+)
+_BANNED_PHRASES = ("说白了", "已不是核心叙事", "已不重要", "体现了", "总而言之", "综上", "简单来说", "本质上市场")
+_BINARY_FLIP_RE = re.compile(r"不是.{1,20}[，,]\s*而是")
+_CLICKBAIT_CTA_RE = re.compile(r"关注[^，,。]{1,8}[，,。].*每天.*学")
+_DATE_WINDOW_RE = re.compile(r"\d{4}-(?:0[1-9]|1[0-2]|Q[1-4]|H[12])")
+
+# slot keys covered by Cards 1-5 contract
+CARD1_5_WORKER_SLOTS = (
+    "intro_sentence", "company_focus_paragraph",  # Card 1
+    "conclusion_block",                            # Card 2
+    "revenue_explainer_points",                    # Card 3
+    "judgement_paragraph",                         # Card 4
+    "brand_statement",                             # Card 5
+)
+# slots that REQUIRE primary_quote (analyst-authority slots)
+AUTHORITY_SLOTS = ("brand_statement", "judgement_paragraph")
+
+
+def validate_card1_5_analytical_content(
+    card_slots: dict,
+    worker_notes: dict | None = None,
+) -> list[str]:
+    """Validate that Card 1-5 slots have the analyst-content substrate.
+
+    Returns a list of human-readable issue strings. Empty list = pass.
+    Checks worker_notes for required hidden fields (data_anchor, variant_view,
+    falsifier|primary_quote|catalyst_with_date) and card_slots for backstop
+    banned phrases. Card 6 slots are not checked here.
+    """
+    issues: list[str] = []
+    if worker_notes is None:
+        issues.append("missing card_slots_worker_notes.json sidecar (required by plan v3)")
+        return issues
+
+    for slot in CARD1_5_WORKER_SLOTS:
+        note = worker_notes.get(slot)
+        if not note or not isinstance(note, dict):
+            issues.append(f"worker_notes.{slot}: missing or not an object")
+            continue
+
+        # data_anchor: number + comp keyword
+        da = (note.get("data_anchor") or "").strip()
+        if len(da) < 10:
+            issues.append(f"worker_notes.{slot}.data_anchor: too short (<10 chars)")
+        elif not _NUMBER_RE.search(da):
+            issues.append(f"worker_notes.{slot}.data_anchor: no parseable number")
+        elif not (
+            any(k in da.lower() for k in _COMP_KEYWORDS)
+            or any(p.search(da) for p in _COMP_PATTERNS)
+        ):
+            issues.append(
+                f"worker_notes.{slot}.data_anchor: no comp anchor "
+                f"(keywords peer/同业/consensus/guide/历史/vs/同比/环比/相比/过去/去年/上一/管理层指引 "
+                f"OR scenario/bull case/bear case/base case/midpoint/range/FY-year/4-digit-year)"
+            )
+
+        # variant_view: ≥15 chars
+        vv = (note.get("variant_view") or "").strip()
+        if len(vv) < 15:
+            issues.append(f"worker_notes.{slot}.variant_view: too short (<15 chars)")
+
+        # at least 1 of: falsifier / primary_quote / catalyst_with_date
+        has_falsifier = isinstance(note.get("falsifier"), str) and len(note["falsifier"].strip()) >= 20
+        pq = note.get("primary_quote")
+        has_quote = (
+            isinstance(pq, dict)
+            and isinstance(pq.get("speaker"), str)
+            and len(pq.get("speaker", "").strip()) > 0
+            and isinstance(pq.get("quote"), str)
+            and len(pq.get("quote", "").strip()) >= 10
+        )
+        cw = note.get("catalyst_with_date")
+        has_catalyst = (
+            isinstance(cw, dict)
+            and isinstance(cw.get("date_window"), str)
+            and bool(_DATE_WINDOW_RE.search(cw.get("date_window", "")))
+        )
+        if not (has_falsifier or has_quote or has_catalyst):
+            issues.append(
+                f"worker_notes.{slot}: missing all of (falsifier ≥20chars, primary_quote with speaker+quote, catalyst_with_date)"
+            )
+
+        # authority slots must have a primary_quote
+        if slot in AUTHORITY_SLOTS and not has_quote:
+            issues.append(
+                f"worker_notes.{slot}: primary_quote required (analyst-authority slot)"
+            )
+
+    # backstop on card_slots prose (Cards 1-5 only — Card 6 is exempt)
+    card1_5_prose_keys = (
+        "intro_sentence", "company_focus_paragraph",
+        "background_bullets", "industry_paragraph", "conclusion_block",
+        "revenue_explainer_points",
+        "current_business_points", "future_watch_points", "judgement_paragraph",
+        "brand_subheading", "brand_statement", "memory_points",
+    )
+    for key in card1_5_prose_keys:
+        value = card_slots.get(key)
+        if value is None:
+            continue
+        if isinstance(value, list):
+            texts = [v for v in value if isinstance(v, str)]
+        elif isinstance(value, str):
+            texts = [value]
+        else:
+            continue
+        for text in texts:
+            if key == "intro_sentence" and text.lstrip().startswith("说白了"):
+                issues.append(f"card_slots.{key}: starts with '说白了' (banned on Cards 1-5)")
+            for phrase in _BANNED_PHRASES:
+                if phrase in text:
+                    issues.append(f"card_slots.{key}: contains banned phrase '{phrase}'")
+                    break
+            if _BINARY_FLIP_RE.search(text):
+                issues.append(f"card_slots.{key}: contains 'X 不是 Y 而是 Z' template (banned on Cards 1-5)")
+
+    # cta_line: ban subscription-bait
+    cta = (card_slots.get("cta_line") or "").strip()
+    if cta and _CLICKBAIT_CTA_RE.search(cta):
+        issues.append("card_slots.cta_line: matches subscription-bait pattern ('关注 X 每天学一个公司' style) — must be 下季验证清单 instead")
+
+    return issues
 
 
 def fit_copy(candidates: list[str], limit: int, *, human: bool = False) -> str:
@@ -1102,6 +1359,10 @@ def flatten_text_values(value: Any) -> list[str]:
 
 
 def prepend_human_opener(text: str, opener: str = "说白了，") -> str:
+    """Card 6 only — do not call for Cards 1-5.
+
+    Cards 1-5 must not emit "说白了，" prefixes (analyst-voice contract, plan v3).
+    """
     text = clean(text)
     if not text:
         return ""
@@ -1451,6 +1712,7 @@ def set_currency_label(data: "ReportData") -> None:
         "人民币": "元",
         "AUD": "澳元",
         "EUR": "欧元",
+        "CHF": "瑞郎",
         "HKD": "港元",
         "JPY": "日元",
         "GBP": "英镑",
@@ -1480,10 +1742,11 @@ def money_text(value: float) -> str:
             return f"{v:.2f} 亿{_CURRENCY_LABEL}"
         return f"{v:.1f} 亿{_CURRENCY_LABEL}"
     y = yi(value)
-    if y < 0.01:
+    ay = abs(y)
+    if ay < 0.01:
         wan = value * 100.0
         return f"{wan:.0f} 万{_CURRENCY_LABEL}"
-    if y < 0.1:
+    if ay < 0.1:
         return f"{y:.2f} 亿{_CURRENCY_LABEL}"
     return f"{y:.1f} 亿{_CURRENCY_LABEL}"
 
@@ -1773,90 +2036,23 @@ def segment_fact_line(data: ReportData) -> str:
 def cover_intro(data: ReportData) -> str:
     if data.card_slots and data.card_slots.intro_sentence:
         return clean(data.card_slots.intro_sentence)
-    theme = company_theme(data)
-    label, value, _ = operational_metric(data)
-    source_candidates = source_copy_candidates(
-        executive_texts(data) + summary_texts(data) + highlight_texts(data),
-        44,
-        opener="说白了，",
-        sentence_options=(1,),
-        human=True,
+    raise RuntimeError(
+        f"Slot 'intro_sentence' missing in card_slots.json for {company_short_cn(data) or data.company_en or data.ticker}. "
+        f"Renderer no longer emits a default fallback for Cards 1-5 — "
+        f"writer must produce all slot content. See plan v3 / "
+        f"references/card_voice_examples/ for the analyst-voice contract."
     )
-    candidates = {
-        "ecom_cloud": [
-            "说白了，市场现在盯的不是亚马逊还能不能卖货，而是 AWS、广告和履约效率能不能一起把利润率继续抬上去",
-            "别看营收盘子已经很大，真正决定估值的，还是云业务、广告和零售效率能不能一起撑住利润弹性",
-        ],
-        "pharma": [
-            "说白了，市场现在盯的不是礼来药卖得好不好，而是减重和糖尿病这条大单品曲线能不能继续往上冲，同时把产能和竞争都扛住",
-            "别看礼来现在增长很猛，真正决定估值的，是爆款药能不能继续放量，产能瓶颈会不会先拖住收入",
-        ],
-        "ads_ai": [
-            f"说白了，市场现在盯的不是广告还赚不赚钱，而是 {label}{value} 这台流量机器能不能一边印钱，一边把 AI 账单扛住",
-            f"别看钱还在进，真正决定估值的，是 AI 投入多久能换回更高广告回报",
-        ],
-        "ev_ai": [
-            "说白了，车还是基本盘，市场真正下注的是软件、储能和自动驾驶能不能兑现",
-            "别看卖车还在卷，真正能抬估值的，是高毛利新业务跑得有多快",
-        ],
-        "software": [
-            "说白了，市场盯的不是功能多不多，而是留存、提价和利润兑现能不能一起走",
-            "别看故事讲得热闹，真正值钱的是客户续费和现金流是不是还在抬",
-        ],
-        "general": [
-            "说白了，市场现在看的不是故事够不够大，而是增长和兑现能不能同时成立",
-            "别看生意还在扩，真正决定估值的，是新投入多久能变成真钱",
-        ],
-    }
-    return fit_copy(source_candidates + candidates.get(theme, candidates["general"]), 44, human=True)
 
 
 def company_focus_paragraph(data: ReportData) -> str:
     if data.card_slots and data.card_slots.company_focus_paragraph:
         return clean(data.card_slots.company_focus_paragraph)
-    theme = company_theme(data)
-    fin = finance(data)
-    label, value, _ = operational_metric(data)
-    focus_texts = executive_texts(data) + summary_texts(data) + highlight_texts(data)
-    source_candidates = source_copy_candidates(
-        focus_texts + combined_source_texts(focus_texts, max_parts=2),
-        LIMIT_CARD1_FOCUS_CHARS,
-        opener="说白了，",
-        sentence_options=(2, 3),
-        human=True,
+    raise RuntimeError(
+        f"Slot 'company_focus_paragraph' missing in card_slots.json for {company_short_cn(data) or data.company_en or data.ticker}. "
+        f"Renderer no longer emits a default fallback for Cards 1-5 — "
+        f"writer must produce all slot content. See plan v3 / "
+        f"references/card_voice_examples/ for the analyst-voice contract."
     )
-    dense_candidate = dense_source_paragraph(focus_texts, LIMIT_CARD1_FOCUS_CHARS, opener="说白了，", max_sentences=3)
-    candidates = {
-        "cn_ecom": [
-            f"说白了，这家公司眼下拼的不是故事大不大，而是拼多多国内低价流量和 Temu 全球扩张两条腿能不能同时走稳。{fiscal_year(data)} 营收 {money_text(fin['revenue'])}，自由现金流超千亿，说明平台变现能力扎实；但盈利重心已从高增速切换成全球化兑现，关税扰动和国内竞争都在压利润率，企稳节奏是市场核心观察点。",
-            f"别只看国内基本盘，市场真正想看的是 Temu 跨境扩张能不能在关税压力下找到可持续的盈利节奏。{fiscal_year(data)} 营收 {money_text(fin['revenue'])}，现金头寸超四千亿，说明主平台现金创造没掉链子；但增长叙事已切换成全球化兑现，补贴和履约成本对利润率的压制能否收窄，是估值修复的关键前提。",
-        ],
-        "ecom_cloud": [
-            f"说白了，这家公司现在拼的不是收入还能不能长，而是高毛利的 AWS、广告和第三方卖家服务，能不能把庞大的零售底盘真正变成更厚的利润池。{fiscal_year(data)} 营收 {money_text(fin['revenue'])}，{label}{value} 说明现金还在往里进，但只要云增速、履约效率或资本开支节奏一变，市场就会立刻重算它的利润弹性和估值。",
-            f"别看亚马逊什么都在做，市场真正盯的还是三件事：AWS 增速能不能继续抬、广告和卖家服务能不能继续放大利润、零售网络是不是还在变得更高效。{fiscal_year(data)} 营收 {money_text(fin['revenue'])} 说明基本盘够大，但估值能不能再往上走，还是要看高利润业务能不能把整个集团带得更轻。",
-        ],
-        "pharma": [
-            f"说白了，这门生意现在拼的不是药卖不卖得动，而是爆款能不能持续放量、产能能不能跟上、下一批管线能不能顺利接棒。{fiscal_year(data)} 营收 {money_text(fin['revenue'])}，{label}{value} 说明现金还在往里流，但只要供应、医保定价或竞争格局一有变化，市场就会立刻重算它的增速和估值。",
-            f"别看礼来现在像在一路狂奔，市场真正盯的还是三件事：减重药供给够不够、糖尿病药渗透还能不能继续抬、后面新适应症能不能接上。{fiscal_year(data)} 营收 {money_text(fin['revenue'])} 说明基本盘已经做大，但高增长能跑多久，才是决定估值能站多高的核心。真要是哪条线先松一下，市场给它的高溢价也会跟着一起回吐。",
-        ],
-        "ads_ai": [
-            f"说白了，这还是一台会印钱的广告机器，但 AI 基建也是真烧钱。{fiscal_year(data)} 营收 {money_text(fin['revenue'])}，{label}{value} 说明流量盘子没塌，广告引擎也没熄火。市场真正在算的，是这笔大投入多久能换回更高变现，别最后收入涨了，利润却先被账单吃掉。",
-            f"别看 Meta 还在赚钱，资本市场现在更关心的是两件事：广告效率能不能继续抬，AI 投入多久能开始回本。{label}{value} 说明底盘还稳，但账单已经越来越大，后面要看的不是能不能投，而是投完之后利润能不能接得上。",
-        ],
-        "ev_ai": [
-            f"说白了，车还是报表基本盘，软件和储能才是估值想象力。{fiscal_year(data)} 营收 {money_text(fin['revenue'])}，{label}{value} 说明新业务已经开始有存在感。市场接下来盯的，不是故事新不新，而是兑现快不快，毕竟高毛利业务一天不接棒，估值就一天站不稳。",
-            "别看车卖得还是最多，真正抬估值的已经不是交付量，而是软件订阅、储能扩张和自动驾驶进展。眼前看现金流，中期看新业务兑现，谁先把新利润池做出来，谁的故事才更值钱。",
-        ],
-        "software": [
-            f"说白了，这门生意现在不缺收入，缺的是让市场相信高增长和高利润能一起跑。{label}{value} 说明底盘还在，提价、续费和费用控制也都得继续兑现，不然收入看着热闹，利润表先发虚，估值也会跟着掉价。真正拉开差距的，不是谁功能更多，而是谁能把生态绑定和现金流一起守住。",
-            f"别看业务线铺得很开，市场真正盯的还是两件事：客户愿不愿继续续费，云和 AI 能不能把更多现金流留在表里。{label}{value} 说明底盘还稳，但要是提价和扩张接不上，故事再大也会被打回现实，市场也不会一直替它买单。真到景气转弱时，先掉的往往不是收入，而是市场给它的溢价。",
-        ],
-        "general": [
-            f"说白了，这家公司眼下不只是拼增长，更是在拼兑现速度。{fiscal_year(data)} 营收 {money_text(fin['revenue'])}，{label}{value} 说明基本盘还稳。市场接下来盯的，是新投入能不能换回更高回报，别最后规模做大了，利润却被摊薄。",
-            "别看表面数据还行，真正让估值有弹性的，是主业守住基本盘的同时，新故事能不能尽快变成真钱。只有增长和兑现能一起跑，市场才会愿意继续给耐心。",
-        ],
-    }
-    return fit_copy([dense_candidate] + source_candidates + candidates.get(theme, candidates["general"]), LIMIT_CARD1_FOCUS_CHARS, human=True)
 
 
 def industry_paragraph(data: ReportData) -> str:
@@ -1959,89 +2155,23 @@ def conclusion_block(data: ReportData) -> str:
 def judgement_paragraph(data: ReportData) -> str:
     if data.card_slots and data.card_slots.judgement_paragraph:
         return clean(data.card_slots.judgement_paragraph)
-    theme = company_theme(data)
-    source_candidates = source_copy_candidates(
-        executive_texts(data) + porter_section_texts(data, "forward"),
-        52,
-        opener="说白了，",
-        sentence_options=(1,),
-        human=True,
+    raise RuntimeError(
+        f"Slot 'judgement_paragraph' missing in card_slots.json for {company_short_cn(data) or data.company_en or data.ticker}. "
+        f"Renderer no longer emits a default fallback for Cards 1-5 — "
+        f"writer must produce all slot content. See plan v3 / "
+        f"references/card_voice_examples/ for the analyst-voice contract."
     )
-    candidates = {
-        "cn_ecom": [
-            "说白了，眼前看主站利润，估值看 Temu 何时兑现；两条腿走稳，故事才值钱",
-            "别看盈利还厚，真正决定估值修复的是 Temu 本地化能不能跑通",
-        ],
-        "ecom_cloud": [
-            "说白了，眼前看 AWS 和零售效率，估值看广告和高毛利服务能不能继续抬",
-            "别看营收盘子够大，真正决定估值的还是利润结构能不能继续变轻",
-        ],
-        "pharma": [
-            "说白了，眼前看爆款药放量，估值看产能和新适应症；供给跟得上，故事才值钱",
-            "别看收入冲得快，真正决定估值的还是产能兑现和管线接棒",
-        ],
-        "ads_ai": [
-            "说白了，广告还在印钱，AI 账单也在飞；收入扛得住，估值就撑得住",
-            "别看利润还厚，市场真正盯的是 AI 投入会不会先把费用顶起来",
-        ],
-        "ev_ai": [
-            "说白了，眼前看卖车，估值看软件和储能；主业稳得住，故事才有人信",
-            "别看车还是主角，真正抬估值的要靠高毛利新业务兑现",
-        ],
-        "software": [
-            "说白了，眼前看续费，估值看提价和利润；留存稳，故事才站得住",
-            "别看增速还在，真正决定估值的还是客户黏性和现金流",
-        ],
-        "general": [
-            "说白了，眼前看利润，估值看新业务多久兑现；基本盘稳，故事才值钱",
-            "别看数据不差，市场真正算的是投入回报而不是口号",
-        ],
-    }
-    return fit_copy(candidates.get(theme, candidates["general"]) + source_candidates, 52, human=True)
 
 
 def brand_statement(data: ReportData) -> str:
     if data.card_slots and data.card_slots.brand_statement:
         return clean(data.card_slots.brand_statement)
-    theme = company_theme(data)
-    source_candidates = source_copy_candidates(
-        executive_texts(data) + summary_texts(data) + highlight_texts(data),
-        34,
-        opener="说白了，",
-        sentence_options=(1,),
-        human=True,
+    raise RuntimeError(
+        f"Slot 'brand_statement' missing in card_slots.json for {company_short_cn(data) or data.company_en or data.ticker}. "
+        f"Renderer no longer emits a default fallback for Cards 1-5 — "
+        f"writer must produce all slot content. See plan v3 / "
+        f"references/card_voice_examples/ for the analyst-voice contract."
     )
-    candidates = {
-        "cn_ecom": [
-            "说白了，拼多多现在卖的不只是低价，而是供给效率、流量分发和 Temu 全球化的组合拳",
-            "别看利润已经很厚，真正值钱的是两个平台能不能在高竞争里守住商家 ROI",
-        ],
-        "ecom_cloud": [
-            "说白了，亚马逊现在卖的不只是货，而是零售底盘、云利润和广告飞轮的叠加",
-            "别看盘子已经很大，真正值钱的是高毛利业务能不能继续把集团带轻",
-        ],
-        "pharma": [
-            "说白了，礼来现在卖的不只是药，而是爆款放量、产能兑现和管线接棒的预期",
-            "别看收入冲得猛，真正值钱的是爆款药还能跑多久、后面还有没有人接班",
-        ],
-        "ads_ai": [
-            "广告机还在印钱，AI 账单已经追上来了",
-            "流量还在变现，AI 投入也在猛踩油门",
-        ],
-        "ev_ai": [
-            "说白了，车还是基本盘，软件和储能才值钱",
-            "别看报表靠卖车，估值还是得靠新业务兑现",
-        ],
-        "software": [
-            "说白了，微软现在卖的不只是软件，而是留存、提价和整套生态的黏性",
-            "别看收入还在长，真正值钱的是客户不走、价格还能往上抬",
-        ],
-        "general": [
-            f"说白了，{company_short_cn(data)}现在最值钱的，还是主业现金流和新投入兑现速度",
-            f"别看故事还在展开，真正决定{company_short_cn(data)}定价的，还是基本盘和回报率",
-        ],
-    }
-    return fit_copy(source_candidates + candidates.get(theme, candidates["general"]), 34, human=True)
 
 
 def background_points(data: ReportData) -> list[str]:
@@ -2069,36 +2199,12 @@ def revenue_explainer_points(data: ReportData) -> list[str]:
     if data.card_slots and data.card_slots.revenue_explainer_points:
         pts = [clean(x) for x in data.card_slots.revenue_explainer_points if clean(x)]
         return dedupe_texts(pts, 3)
-    prof = profitability(data)
-    narratives = get_nested(data.financial_analysis, "trend_narratives", default={}) or {}
-    theme = company_theme(data)
-    points = [
-        fit_copy([f"毛利率 {pct_text(prof.get('gross_margin_pct'))}，营业利润率 {pct_text(prof.get('operating_margin_pct'))}，利润池依旧不小"], 40),
-        fit_copy(
-            [
-                *source_copy_candidates(trend_texts(data), 54, sentence_options=(1,)),
-                narratives.get("fcf", ""),
-                "药卖得快，钱也回得快，但产能和投入一样都不能掉链子。",
-                "现金流还在，但大额投入已经开始抢利润。",
-                "账上的钱还够用，但投入节奏明显比以前猛。",
-            ],
-            LIMIT_CARD3_EXPLAINER_CHARS,
-        ),
-        fit_copy(
-            {
-                "cn_ecom": ["说白了，真正支撑估值的，不只是今天卖出多少货，而是 Temu 能不能跑通盈利模型、主站能不能守住利润率。"],
-                "ecom_cloud": ["说白了，真正支撑估值的，不只是今天卖出多少货，而是 AWS、广告和卖家服务能不能把利润率继续往上抬。"],
-                "pharma": ["说白了，真正支撑估值的，不只是今天卖了多少药，而是爆款能不能持续放量、后面还有没有新药接棒。"],
-                "ads_ai": ["说白了，真正支撑估值的，不是今天赚了多少，而是 AI 投入以后能赚得更多。"],
-                "ev_ai": ["说白了，真正支撑估值的，不是多卖几辆车，而是软件和储能能不能放大利润。"],
-                "software": ["说白了，真正支撑估值的，不是功能多少，而是留存和提价能不能一起兑现。"],
-                "general": ["说白了，真正支撑估值的，不只是今天赚多少钱，而是明天还能不能赚得更快。"],
-            }[theme] + source_copy_candidates(executive_texts(data) + porter_section_texts(data, "forward"), 54, opener="说白了，", sentence_options=(1,), human=True),
-            LIMIT_CARD3_EXPLAINER_CHARS,
-            human=True,
-        ),
-    ]
-    return dedupe_texts(points, 3)
+    raise RuntimeError(
+        f"Slot 'revenue_explainer_points' missing in card_slots.json for {company_short_cn(data) or data.company_en or data.ticker}. "
+        f"Renderer no longer emits a default fallback for Cards 1-5 — "
+        f"writer must produce all slot content. See plan v3 / "
+        f"references/card_voice_examples/ for the analyst-voice contract."
+    )
 
 
 def lead_business_point(data: ReportData) -> str:
@@ -2306,7 +2412,7 @@ def post_content_lines(data: ReportData) -> list[str]:
     watch = clean(watch_sentence(data)).rstrip("。！？!?")
     lines = [
         fit_copy([brand_statement(data)], 42, human=True),
-        fit_copy([f"{fiscal_year(data)} 营收 {money_text(fin['revenue'])}，同比{pct_text(rev_yoy, signed=True)}，钱还在进。"], 44),
+        fit_copy([f"财报里，{fiscal_year(data)} 营收 {money_text(fin['revenue'])}，同比{pct_text(rev_yoy, signed=True)}，先看增长质量。"], 44),
         fit_copy([f"{label} {value}，这就是它眼下最值得盯的经营抓手。"], 44, human=True),
         fit_copy([f"后面真要看的是：{watch}？"], 44, human=True),
     ]
@@ -2801,6 +2907,26 @@ def validate_report(data: ReportData, brand: str, *, allow_no_logo: bool = False
         if has_bad_linebreak(point, 796, f(FONT_BRAND_SUMMARY), draw):
             issues.append(f"Card 5 summary bullet contains a punctuation-led line break: {point}")
 
+    cta = clean(data.card_slots.cta_line) if data.card_slots and data.card_slots.cta_line else "关注金融豹，每天学习一个公司。"
+    cta_font = fit_block_font(
+        draw,
+        cta,
+        CARD5_CTA_WIDTH,
+        CARD5_CTA_MAX_HEIGHT,
+        start_size=FONT_CARD5_CTA,
+        min_size=FONT_CARD5_CTA_MIN,
+        line_gap=10,
+        max_lines=CARD5_CTA_MAX_LINES,
+        bold=True,
+    )
+    cta_lines = wrap(draw, cta, cta_font, CARD5_CTA_WIDTH)
+    if len(cta_lines) > CARD5_CTA_MAX_LINES:
+        issues.append("Card 5 CTA line exceeds its two-line footer budget.")
+    if raster_text_block_height(draw, cta_lines[:CARD5_CTA_MAX_LINES], cta_font, 10) > CARD5_CTA_MAX_HEIGHT:
+        issues.append("Card 5 CTA line exceeds its footer height budget.")
+    if has_bad_linebreak(cta, CARD5_CTA_WIDTH, cta_font, draw):
+        issues.append("Card 5 CTA line contains a punctuation-led line break.")
+
     if len(wrap(draw, clean(title), f(FONT_POST_TITLE, True), 860)) > 2:
         issues.append("Card 6 title exceeds its allowed block.")
     if not clean(title).startswith(POST_TITLE_PREFIX):
@@ -2817,12 +2943,22 @@ def validate_report(data: ReportData, brand: str, *, allow_no_logo: bool = False
     for line in lines:
         if not is_complete_copy(line):
             issues.append(f"Card 6 content line must be a complete sentence without ellipsis: {line}")
+        hype_markers = card6_hype_markers(line)
+        if hype_markers:
+            issues.append(
+                "Card 6 content line uses clickbait/forum hype markers that are no longer allowed "
+                f"({', '.join(hype_markers)}): {line}"
+            )
         if not card6_line_sounds_human(line):
-            issues.append(f"Card 6 content line lacks a human voice: {line}")
+            issues.append(f"Card 6 content line lacks plain-spoken educational voice: {line}")
         if len(wrap(draw, clean(line), f(FONT_POST_LINE), 860)) > 2:
             issues.append(f"Card 6 content line is too long: {line}")
         if has_bad_linebreak(line, 860, f(FONT_POST_LINE), draw):
             issues.append(f"Card 6 content line contains a punctuation-led line break: {line}")
+    if lines and not any(card6_line_has_report_anchor(line) for line in lines):
+        issues.append("Card 6 content must include at least one report-grounded financial or operating anchor.")
+    if lines and not any(card6_line_has_context_anchor(line) for line in lines):
+        issues.append("Card 6 content must include at least one current-event, policy, market, or industry context anchor.")
     if len(wrap(draw, clean(tags), f(FONT_POST_TAG), 860)) > 4:
         issues.append("Card 6 hashtags exceed their section.")
     if has_bad_linebreak(tags, 860, f(FONT_POST_TAG), draw):
@@ -3067,14 +3203,14 @@ def card_2(data: ReportData) -> Image.Image:
     img = background()
     d = ScaledDraw(ImageDraw.Draw(img), LAYOUT_SCALE)
     header(d, 2)
-    draw_text(d, (72, 198), "公司背景 + 行业介绍", f(58, True), TEXT)
+    draw_text(d, (72, 198), "竞争结构 + 波特五力", f(58, True), TEXT)
     panel(d, (72, 314, 598, 1224))
     d.rounded_rectangle((622, 314, 1008, 1224), radius=28, fill=PANEL)
-    draw_text(d, (108, 362), "公司背景", f(34, True), TEXT)
+    draw_text(d, (108, 362), "五力拆解", f(34, True), TEXT)
     left_end_y = bullets(d, background_points(data), 108, 424, 446, 4, 4)
     industry_title_y = max(728, left_end_y + 6)
     industry_body_y = industry_title_y + 58
-    draw_text(d, (108, industry_title_y), "行业层面", f(34, True), TEXT)
+    draw_text(d, (108, industry_title_y), "结构判断", f(34, True), TEXT)
     block(d, industry_paragraph(data), 108, industry_body_y, 446, f(FONT_PANEL_BODY), "#344054", 13, 11)
     draw_text(d, (656, 362), "波特五力", f(34, True), TEXT)
     labels = ["供应商", "买方", "新进入者", "替代品", "竞争强度"]
@@ -3177,7 +3313,18 @@ def card_5(data: ReportData, brand: str) -> Image.Image:
         if data.card_slots and data.card_slots.cta_line
         else "关注金融豹，每天学习一个公司。"
     )
-    draw_text(d, (72, 1098), cta, f(34, True), TEXT)
+    cta_font = fit_block_font(
+        d,
+        cta,
+        CARD5_CTA_WIDTH,
+        CARD5_CTA_MAX_HEIGHT,
+        start_size=FONT_CARD5_CTA,
+        min_size=FONT_CARD5_CTA_MIN,
+        line_gap=10,
+        max_lines=CARD5_CTA_MAX_LINES,
+        bold=True,
+    )
+    block(d, cta, 72, 1092, CARD5_CTA_WIDTH, cta_font, TEXT, 10, CARD5_CTA_MAX_LINES)
     for x, y, s, col in [(900, 218, 88, RED), (980, 360, 64, GREEN), (900, 520, 74, ORANGE)]:
         d.ellipse((x, y, x + s, y + s), outline=col, width=3)
     paste_logo(img, find_logo_asset(data), (840, 240, 1010, 520))

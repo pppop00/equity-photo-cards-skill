@@ -12,9 +12,10 @@ Run this validation pass after card slots have been planned, filled with copy, a
 - `cover_company_name_cn` 必须同时设置——供 Card 1 红色标题使用。
 
 **标准流程**：
-1. Logo production agent 搜索官方 logo → 找不到就停止，等待客户决策（无自动跳过）
-2. 如果客户明确放弃，才可在 Validator 1 和 export 时传入 `--allow-no-logo`
-3. 不得因为脚本支持这个标志就默认跳过——「支持跳过」≠「允许跳过」
+1. 先确认 palette；未确认时不得启动 Validator 1。
+2. Logo production agent 检查 folder/slots 是否已有合规 logo；没有则搜索官方 logo → 找不到就停止，等待客户决策（无自动跳过）。
+3. 如果客户明确放弃，才可在 Validator 1 和 export 时传入 `--allow-no-logo`。
+4. 不得因为脚本支持这个标志就默认跳过——「支持跳过」≠「允许跳过」。
 
 **原则**：缺失或无效 logo 是阻塞缺陷，不是警告。
 
@@ -72,13 +73,13 @@ Do not try to fix an overflow by compressing whitespace alone. Rewrite the copy 
 - Any line that starts with `，。；：、,.!?` or equivalent closing punctuation fails validation
 - Card 1 `公司看点` must use enough copy to avoid large empty yellow-panel space
 - Card 1 `公司看点` must also stay inside its explicit character budget
-- Card 2 `行业层面` must be a complete summarized paragraph, not a clipped fragment
-- Card 2 `行业层面` must stay inside its explicit character budget
+- Card 2 Porter synthesis paragraph must be a complete summarized paragraph, not a clipped fragment
+- Card 2 Porter synthesis paragraph must stay inside its explicit character budget
 - Card 3 explainer bullets must stay inside their per-bullet character budget and the yellow panel's **measured** height budget (validator sums `line_raster_height` per wrapped line, matching `draw_text`, not `font.size` alone; panel bottom y is **1260** with bottom inset reserved)
 - Card 3 title must be `实际收入分析`
 - Card 3 yellow panel title must be `收入分析`
 - Card 3 numeric fields and margin fields must not render as placeholders (`--`, `N/A`, `不适用`); if source data is missing, derive from available report data (e.g., Sankey + income statement) or fail and revise before export
-- Card 2 left card must feel editorially dense: prefer 4 bullets and enough copy to avoid large empty lower-half whitespace
+- Card 2 left card must feel editorially dense: prefer 4 Porter-evidence bullets and enough copy to avoid large empty lower-half whitespace
 - Card 2, Card 4 judgement, Card 5 main statement, and Card 6 content lines must not use ellipses or half-sentences as a layout escape hatch
 - Any paragraph or bullet that is meant to be read as body copy must end as a complete Chinese sentence
 - Card 4 judgement, Card 5 main statement, and Card 6 content must sound like a smart human explaining the company, not like stiff analyst boilerplate
@@ -87,7 +88,8 @@ Do not try to fix an overflow by compressing whitespace alone. Rewrite the copy 
 - Card 4 left and right columns must obey their per-bullet character budgets
 - Card 5 must not include `今天这家公司，特斯拉` or any equivalent preface line
 - Card 6 must include `title`, `content`, and `hashtags`; title must start with `一天吃透一家公司：`
-- Card 6 content must contain exactly 4 bullet lines as **three statements + one question**; each line must pass **`card6_line_sounds_human`** (`HUMAN_MARKERS` or `CARD6_COLLOQUIAL_MARKERS` in `generate_social_cards.py`); **editorial pass:** tone should match [content-production-agent.md](./content-production-agent.md) Card 6 (贴吧 / forum energy, hidden insight, not sell-side recap)
+- Card 6 content must contain exactly 4 bullet lines as **three statements + one question**; each line must pass **`card6_line_sounds_human`** (`HUMAN_MARKERS`, `CARD6_EDUCATIONAL_MARKERS`, or the mechanism/contrast patterns in `generate_social_cards.py`); **editorial pass:** reasoning should match [content-production-agent.md](./content-production-agent.md) Card 6 and [card6-voice.md](../references/card6-voice.md): hard fact → hidden mechanism → useful comparison/context → measurable question, with competitor, past-five-year change, future outlook, and operating/revenue geography analysis considered before writing; not forced surface imitation
+- Card 6 content must include at least one financial / operating anchor from the report and at least one current-event, policy, market, or industry context anchor; `CARD6_FORBIDDEN_HYPE_MARKERS` are hard failures
 - Card 6 hashtags must fit inside the hashtag section, include `#A股` and `#美股`, and the total hashtag count may not exceed 7
 - Text rendering must use high-quality supersampling so exported fonts remain crisp
 

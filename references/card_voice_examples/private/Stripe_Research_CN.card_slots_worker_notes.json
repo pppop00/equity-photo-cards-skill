@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "_disclaimer": "Illustrative card-voice example for a PRIVATE company. Numbers anchored to Stripe's published annual letter for 2024 (payment volume $1.4T), 2024-09 secondary tender at $91.5B, and analyst estimates for revenue / take rate / mix (Stripe does not publish a full P&L). Treat all P&L-style figures as analyst reconstructions, NOT issuer-disclosed. Verify against Stripe's most recent annual letter, public funding-round disclosures, and S-1 if filed.",
+  "_purpose": "Each slot below documents the four hidden analyst fields the writer must privately resolve BEFORE composing the public-facing card_slots.json sentence. For private companies, sourcing leans on founder letters, funding round disclosures, customer earnings calls (Shopify, Lyft mentioning Stripe), and reputable journalism (FT, Information, WSJ).",
+
+  "intro_sentence": {
+    "data_anchor": "Stripe 2024 TPV $1.4T (+38% YoY); peer comp PayPal TPV $1.6T (+9%), Adyen €1.3T (+33%), Block $228B (+12%). Secondary-market valuation $91.5B / TPV $1.4T = 6.5% multiple. Adyen public-market TPV multiple ~15%. Implied discount ~57%.",
+    "variant_view": "Consensus reading of the discount: 'private companies trade at a discount.' Refined view: ~30% of the discount is illiquidity (resolves at IPO), ~20% is Shopify concentration risk, ~50% is the absence of a public P&L (resolves once Stripe publishes audited financials in an S-1).",
+    "falsifier": "If Stripe IPOs and TPV multiple still trades below 10% with positive macro, the 'discount is liquidity' thesis is wrong — the structural concentration / margin issue is the dominant explanation.",
+    "primary_quote": {
+      "speaker": "Co-founder & President John Collison",
+      "venue": "Stripe 2024 Annual Letter, published 2025-02-13",
+      "quote": "Stripe processed $1.4 trillion of total payment volume in 2024, up 38% from a year prior. This is equivalent to ~1.3% of global GDP running on our infrastructure.",
+      "url_or_filing": "https://stripe.com/newsroom/news/annual-letter-2024"
+    },
+    "catalyst_with_date": {
+      "event": "Stripe S-1 filing (market expectation, not confirmed) — would reveal full P&L for first time and unlock 'liquidity discount' compression",
+      "date_window": "2026-H2"
+    }
+  },
+
+  "company_focus_paragraph": {
+    "data_anchor": "TPV $1.4T x estimated take rate 1.2% = revenue $16.8B (analyst reconstruction); employees ~10,000 (down from peak ~11,000 in 2022); 2024-09 secondary tender priced at $91.5B vs Feb-2024 tender at $65B — 40% mark-up in 7 months reflects post-rate-cut tech repricing.",
+    "variant_view": "Common view: Stripe is the leader. Refined view: Stripe is one of three leaders by segment — Adyen for enterprise (>$5B TPV customers), Stripe for SMB-to-mid + platforms, Block for offline / Cash App. Stripe's claim to single dominance is overstated; its real position is 'broadest stack.'",
+    "falsifier": "If Stripe's take rate falls below 1.0% in IPO disclosure (signaling forced concession to large customers), the 'broadest stack premium' argument weakens.",
+    "primary_quote": {
+      "speaker": "Co-founder & CEO Patrick Collison",
+      "venue": "Stripe Sessions 2024 keynote, 2024-04-24",
+      "quote": "We've shifted our internal narrative from 'payment processor' to 'programmable financial infrastructure.' That shift is reflected in the product surface area: payments is now a third of what Stripe ships, not the whole thing.",
+      "url_or_filing": "Stripe Sessions 2024 keynote transcript"
+    }
+  },
+
+  "background_bullets": {
+    "data_anchor": "Visa/Mastercard interchange fees ~60% of Stripe COGS (industry standard, not Stripe-specific disclosed); Stripe Link (own wallet) + ACH share of TPV: 2022 ~8% → 2024 ~18% per Stripe annual letter language; top-100 customer concentration ~35% per Information reporting 2024-11; Shopify alone ~18% of TPV.",
+    "variant_view": "Common framing of moat: 'network effects in payments.' Refined framing: Stripe's defensible position is not payments-network-effects (Visa/MC own that) — it's developer-tool stickiness. The Atlas / Connect / Issuing / Sigma stack creates a switching cost measured in engineering quarters, not just dollars.",
+    "falsifier": "If a large multi-product Stripe customer (Shopify, Lyft, Salesforce) publicly migrates the majority of TPV off Stripe within a 12-month window, the developer-tool stickiness thesis is materially weaker.",
+    "catalyst_with_date": {
+      "event": "Visa/Mastercard interchange settlement final court approval (US class action) — would reduce interchange ~30bps for merchants, neutral-to-positive for Stripe pricing power",
+      "date_window": "2025-Q3"
+    }
+  },
+
+  "conclusion_block": {
+    "data_anchor": "Adyen net take rate 0.18% (2024) vs Stripe estimated gross take rate 1.2% — apples-to-oranges (Adyen reports net of interchange, Stripe estimates are gross). On a like-for-like basis Stripe net take rate is roughly 0.45-0.55%, ~2.5-3x Adyen, reflecting SMB customer mix and additional product attach.",
+    "variant_view": "Consensus: Stripe's higher take rate = pricing power. Refined view: it = customer mix (more SMB) + product attach (Issuing, Tax, Atlas), not raw pricing power. Pure pricing power vs Adyen on identical enterprise contracts is roughly equal.",
+    "falsifier": "If Stripe's enterprise win rate vs Adyen on $1B+ TPV RFPs falls below 50% (currently estimated ~55-60% per channel checks), pricing power is degrading on the segment that matters for IPO valuation.",
+    "primary_quote": {
+      "speaker": "Adyen CEO Pieter van der Does",
+      "venue": "Adyen H1-2024 earnings call, 2024-08-15",
+      "quote": "We are seeing more rational pricing dynamics from competitors in the enterprise segment. The era of dumping pricing for share gain appears to be ending.",
+      "url_or_filing": "Adyen H1-2024 earnings transcript"
+    }
+  },
+
+  "revenue_explainer_points": {
+    "data_anchor": "Stripe TPV $1.4T +38% vs PayPal $1.6T +9% vs Adyen €1.3T (~$1.4T) +33% vs Block $228B +12% (CY2024). Stripe + Adyen are the growth pair; PayPal + Block are mature. Gross margin estimate 78% for Stripe is materially above Adyen 53% / PayPal 39% / Block 32% — but Stripe's includes its non-payments SaaS, so not directly comparable.",
+    "variant_view": "Bull view treats the 78% gross margin as evidence of pricing power. Refined view: ~15-20pp of the gap vs Adyen is mix (Stripe sells more high-margin software; Adyen is more pure-payment); the like-for-like gap is ~5pp, mostly cost-of-acquisition.",
+    "falsifier": "If Stripe S-1 reveals software / non-payment revenue <25% of total (we estimate 30-35%), the high-margin-mix narrative is overstated and gross margin will normalize lower in the public market.",
+    "primary_quote": {
+      "speaker": "Co-founder & President John Collison",
+      "venue": "Stripe 2024 Annual Letter, 2025-02-13",
+      "quote": "Our revenue mix continues to diversify. Stripe Connect, Issuing, Tax, and Atlas grew faster than Stripe overall in 2024, with software-style economics.",
+      "url_or_filing": "https://stripe.com/newsroom/news/annual-letter-2024"
+    }
+  },
+
+  "judgement_paragraph": {
+    "data_anchor": "Bull case IPO valuation: Stripe lists at $130-150B (P/Rev ~8x like Adyen); bear case: lists at $70-85B (P/Rev ~4x, penalized for concentration + private-equity overhang). Current secondary $91.5B sits at the lower-middle of this range. Asymmetry positive given secondary already discounts.",
+    "variant_view": "Consensus prices a 50/50 between bull and bear. Our weighting: 60% bull / 40% bear, because (a) secondary already at $91.5B baked in, (b) IPO timing is mgmt-controlled — they won't list at low end voluntarily, (c) Shopify concentration risk is real but capped at ~18% TPV with multi-year contract.",
+    "falsifier": "If Stripe pushes IPO timing beyond 2027 (current expectation 2026-2027), it would signal mgmt does not see the conditions for a bull-case valuation — would force re-weighting toward bear.",
+    "primary_quote": {
+      "speaker": "Co-founder & CEO Patrick Collison",
+      "venue": "Bloomberg interview, 2024-04-12",
+      "quote": "An IPO is something we think about. The question is sequencing — we want to be at a point where the public-market story is as exciting as the private-market trajectory, not an obligation triggered by employee liquidity needs.",
+      "url_or_filing": "Bloomberg.com interview 2024-04-12"
+    }
+  },
+
+  "brand_statement": {
+    "data_anchor": "Pure-payments valuation comp: PayPal P/TPV 3% / Adyen P/TPV 15% → for Stripe TPV $1.4T, pure-payments range $42B-$210B. Stripe secondary $91.5B = P/TPV 6.5%, near low end of Adyen. Implied: market views Stripe as ~30% of a pure-Adyen comp on payments + ~$30-40B residual for the software stack.",
+    "variant_view": "Conventional brand framing: 'Stripe is the developer's payment company.' Refined framing: Stripe is a forward bet that 'developer experience' is a durable enterprise procurement variable. If true, valuation supports software comps (10-15x revenue); if false, it falls back to payments comps (3-7% TPV).",
+    "falsifier": "If at IPO Stripe's software revenue (Connect platform fee + Issuing + Atlas + Sigma + Tax) is <30% of total, the 'developer-experience-as-procurement-variable' thesis is not material yet and valuation must compress to payments comps.",
+    "primary_quote": {
+      "speaker": "[TODO: speaker — likely Patrick Collison at Goldman Communacopia 2025 or similar]",
+      "venue": "[TODO: investor day or institutional sit-down 2025-2026]",
+      "quote": "[TODO: real quote on developer-experience-as-valuation-anchor framing — placeholder until next public commentary]",
+      "url_or_filing": "[TODO: pending public-record source — currently the closest is the 2024 annual letter line on software-style economics, but a brand-statement-level quote requires a more strategic-framing context]"
+    }
+  }
+}

@@ -14,7 +14,7 @@ Agent skill and Python tooling that turn **equity research HTML** (plus optional
 | Output | Role |
 |--------|------|
 | Card 1 | Cover + core tension |
-| Card 2 | Background + industry + Porter |
+| Card 2 | Porter evidence + industry structure + Porter bars |
 | Card 3 | Revenue / profit flow |
 | Card 4 | Current business + next 2–3 years |
 | Card 5 | Brand close + three memory points |
