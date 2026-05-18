@@ -23,8 +23,7 @@ W = EXPORT_W * LAYOUT_SCALE
 H = EXPORT_H * LAYOUT_SCALE
 # When True, finalize_export() downscales to EXPORT_W×EXPORT_H. Default False = full canvas for zoom-friendly PNGs.
 _EXPORT_DOWN_SAMPLE_TO_LOGICAL: bool = False
-_DEFAULT_PALETTE = "macaron"
-_ACTIVE_PALETTE = _DEFAULT_PALETTE
+_ACTIVE_PALETTE: str | None = None
 
 # Macaron palette: mirrors the updated HTML visual tokens.
 BG = "#FBF6EF"
@@ -1815,6 +1814,90 @@ def money_text(value: float) -> str:
     return f"{y:.1f} 亿{_CURRENCY_LABEL}"
 
 
+AMOUNT_WITH_UNIT_RE = re.compile(
+    r"([+\-]?\d{1,3}(?:,\d{3})+(?:\.\d+)?|[+\-]?\d+(?:\.\d+)?)\s*"
+    r"(万亿元|万亿|千亿元|十亿元|亿美元|亿元|亿|billion|bn|B|million|mn|M)(?![A-Za-z])",
+    re.I,
+)
+
+
+def amount_mentions_yi(text: str, keywords: tuple[str, ...] = (), *, keyword_before_only: bool = False) -> list[float]:
+    """Extract headline money amounts and normalize them to 亿 units.
+
+    This is a scale guard, not a currency converter: 1 billion == 10 亿, and
+    1 million == 0.01 亿 in the report currency.
+    """
+    out: list[float] = []
+    haystack = clean(text)
+    haystack_lower = haystack.lower()
+    lowered_keywords = tuple(k.lower() for k in keywords)
+    for m in AMOUNT_WITH_UNIT_RE.finditer(haystack):
+        start, end = m.span()
+        if lowered_keywords:
+            before = haystack_lower[max(0, start - 16):start]
+            window = haystack_lower[max(0, start - 16):min(len(haystack), end + 16)]
+            check_area = before if keyword_before_only else window
+            if not any(k in check_area for k in lowered_keywords):
+                continue
+        value = float(m.group(1).replace(",", ""))
+        unit = m.group(2).lower()
+        if unit in {"万亿元", "万亿"}:
+            value *= 10000.0
+        elif unit == "千亿元":
+            value *= 1000.0
+        elif unit == "十亿元":
+            value *= 10.0
+        elif unit in {"billion", "bn", "b"}:
+            value *= 10.0
+        elif unit in {"million", "mn", "m"}:
+            value /= 100.0
+        out.append(value)
+    return out
+
+
+def _largest_headline_amount_yi(texts: list[str], keywords: tuple[str, ...]) -> float | None:
+    values: list[float] = []
+    for text in texts:
+        values.extend(amount_mentions_yi(text, keywords, keyword_before_only=True))
+    return max(values, key=abs) if values else None
+
+
+def _rendered_money_yi(value: float) -> float | None:
+    values = amount_mentions_yi(money_text(value))
+    return values[0] if values else None
+
+
+def money_scale_consistency_issues(data: ReportData, fin: dict[str, float], focus: str, bg_points: list[str]) -> list[str]:
+    """Catch unit-scale drift between renderer-generated money and headline copy.
+
+    The card renderer formats Card 1/Card 3 amounts from finance() + money_text().
+    P12 reconciles card_slots.json, but those generated amounts are not in slots.
+    Compare them against top-of-report revenue/profit mentions in slots/HTML so
+    a unit bug like 1720.5亿元 becoming 1.7亿元 fails before export.
+    """
+    headline_texts = [focus, *data.summary[:2], *data.highlights[:3], *bg_points[:2]]
+    checks = [
+        ("revenue", "revenue", fin.get("revenue"), ("营业总收入", "总收入", "营收", "收入", "revenue")),
+        ("net income", "net_income", fin.get("net"), ("归母净利润", "净利润", "net income")),
+    ]
+    issues: list[str] = []
+    for label, field, value, keywords in checks:
+        if value is None:
+            continue
+        rendered = _rendered_money_yi(float(value))
+        stated = _largest_headline_amount_yi(headline_texts, keywords)
+        if rendered is None or stated is None:
+            continue
+        rel = abs(rendered - stated) / max(abs(rendered), abs(stated), 1e-9)
+        if rel > 0.05:
+            issues.append(
+                f"Money scale mismatch for {label}: renderer will show {money_text(float(value))} "
+                f"from financial_data.{field}, but headline copy/HTML implies about {stated:g} 亿元. "
+                "Check financial_data.income_statement.unit and amount scale before rendering cards."
+            )
+    return issues
+
+
 def pct_text(value: Any, signed: bool = False) -> str:
     if value is None or value == "":
         return "--"
@@ -2658,6 +2741,7 @@ def validate_report(data: ReportData, brand: str, *, allow_no_logo: bool = False
     current_income = income_current(data)
     source_revenue = as_float(current_income.get("revenue"))
     source_net = as_float(current_income.get("net_income"))
+    issues.extend(money_scale_consistency_issues(data, fin, focus, bg_points))
 
     # Card 3 hard gate: do not allow empty numeric fields/placeholder output ("--").
     required_fin = [
@@ -3130,9 +3214,10 @@ def cover_metrics(data: ReportData) -> list[tuple[str, str, str]]:
 
 def rate_metrics(data: ReportData) -> list[tuple[str, str, str]]:
     prof = profitability(data)
+    margin_labels = get_nested(data.financial_data, "income_statement", "margin_labels", default={}) or {}
     return [
-        ("毛利率", pct_text(prof.get("gross_margin_pct")), GREEN),
-        ("营业利润率", pct_text(prof.get("operating_margin_pct")), BLUE),
+        (str(margin_labels.get("gross_margin") or "毛利率"), pct_text(prof.get("gross_margin_pct")), GREEN),
+        (str(margin_labels.get("operating_margin") or "营业利润率"), pct_text(prof.get("operating_margin_pct")), BLUE),
         ("净利率", pct_text(prof.get("net_margin_pct")), RED),
     ]
 
@@ -3195,12 +3280,13 @@ def card_3(data: ReportData) -> Image.Image:
     panel(d, (72, 314, 1008, 856))
     draw_text(d, (108, 360), f"{fiscal_year(data)} 收入流", f(34, True), TEXT)
     fin = finance(data)
+    chart_labels = get_nested(data.financial_data, "income_statement", "chart_labels", default={}) or {}
     rows = [
-        ("总收入", chart_value_as_yi(fin["revenue"]), GOLD),
-        ("营业成本", chart_value_as_yi(fin["cogs"]), RED),
-        ("毛利润", chart_value_as_yi(fin["gross"]), GREEN),
-        ("营业利润", chart_value_as_yi(fin["op"]), BLUE),
-        ("净利润", chart_value_as_yi(fin["net"]), TEXT),
+        (str(chart_labels.get("revenue") or "总收入"), chart_value_as_yi(fin["revenue"]), GOLD),
+        (str(chart_labels.get("cogs") or "营业成本"), chart_value_as_yi(fin["cogs"]), RED),
+        (str(chart_labels.get("gross") or "毛利润"), chart_value_as_yi(fin["gross"]), GREEN),
+        (str(chart_labels.get("op") or "营业利润"), chart_value_as_yi(fin["op"]), BLUE),
+        (str(chart_labels.get("net") or "净利润"), chart_value_as_yi(fin["net"]), TEXT),
     ]
     maxv = max(abs(v) for _, v, _ in rows) or 1
     for idx, (label, value, color) in enumerate(rows):
@@ -3395,7 +3481,7 @@ def main() -> None:
         ),
     )
     args = parser.parse_args()
-    apply_palette(resolve_palette(args.palette))
+    apply_palette(args.palette)
     _EXPORT_DOWN_SAMPLE_TO_LOGICAL = args.export_logical_size
 
     src = Path(args.input).expanduser().resolve()

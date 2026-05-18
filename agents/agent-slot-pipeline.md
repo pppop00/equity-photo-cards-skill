@@ -51,9 +51,9 @@ Store **`card_slots.json` alongside** `Company_Research_CN.html` in the report w
 **Order:** Hardcode audit → Validator 1 → **Validator 2** (agent; no CLI) → export.
 
 ```bash
-python3 scripts/validate_cards.py --input “/path/Company_Research_CN.html” --slots “/path/Company_Research_CN.card_slots.json” --brand “金融豹” --palette macaron
+python3 scripts/validate_cards.py --input “/path/Company_Research_CN.html” --slots “/path/Company_Research_CN.card_slots.json” --brand “金融豹” --palette <confirmed_palette>
 # … Validator 2: follow validator-2-agent.md (web search every factual claim) …
-python3 scripts/generate_social_cards.py --input “/path/Company_Research_CN.html” --slots “/path/Company_Research_CN.card_slots.json” --brand “金融豹” --palette macaron
+python3 scripts/generate_social_cards.py --input “/path/Company_Research_CN.html” --slots “/path/Company_Research_CN.card_slots.json” --brand “金融豹” --palette <confirmed_palette>
 ```
 
 HTML still supplies Sankey numbers, tables, and company metadata. The Card 1 logo file and **red-title Chinese short name** are supplied through `card_slots.logo_asset_path` and **`card_slots.cover_company_name_cn`**, both produced by the logo production agent when a logo is used. JSON slots override copy fields and may also set `porter_scores` (five integers).

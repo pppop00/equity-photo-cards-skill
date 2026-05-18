@@ -338,13 +338,13 @@ python3 scripts/validate_cards.py \
   --input "/abs/path/Tesla_Research_CN.html" \
   --slots "/abs/path/Tesla_Research_CN.card_slots.json" \
   --brand "金融豹" \
-  --palette macaron
+  --palette <confirmed_palette>
 
 python3 scripts/generate_social_cards.py \
   --input "/abs/path/Tesla_Research_CN.html" \
   --slots "/abs/path/Tesla_Research_CN.card_slots.json" \
   --brand "金融豹" \
-  --palette macaron
+  --palette <confirmed_palette>
 ```
 
 **配色：** 必须由客户先明确选择 `macaron|default|b|c`，并在 Validator 1 与导出时显式传同一 `--palette`；未指定不得默认。**Logo：** 默认要求 `logo_asset_path`；仅在客户明确放弃时，校验与导出均加 **`--allow-no-logo`**。
@@ -400,7 +400,7 @@ python3 scripts/generate_social_cards.py \
   --input "/path/to/StateGrid_Research_CN.html" \
   --slots "/path/to/StateGrid_Research_CN.card_slots.json" \
   --brand "金融豹" \
-  --palette macaron \
+  --palette <confirmed_palette> \
   --output-root "/Users/user/projects/workspace" \
   --no-copy-slots
 ```
