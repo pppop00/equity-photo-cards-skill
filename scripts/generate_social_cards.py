@@ -465,6 +465,14 @@ LIMIT_CARD4_FUTURE_BULLET_CHARS = 62
 LIMIT_CARD4_JUDGEMENT_CHARS = 52
 CARD4_JUDGEMENT_MAX_LINES = 4
 CARD4_JUDGEMENT_BOX_HEIGHT = 100
+CARD5_TEXT_X = 78
+CARD5_TEXT_W = 760
+CARD5_LOGO_BOX = (840, 240, 1010, 520)
+CARD5_LOGO_SAFE_GAP = 36
+CARD5_LOGO_AVOID_W = CARD5_LOGO_BOX[0] - CARD5_TEXT_X - CARD5_LOGO_SAFE_GAP
+CARD5_CTA_X = 72
+CARD5_CTA_W = 936
+CARD5_CTA_MAX_LINES = 2
 
 FORBIDDEN_TEMPLATE_PHRASES = (
     "盘子和押注分得很清楚",
@@ -1567,6 +1575,23 @@ def dedupe_texts(items: list[str], limit: int | None = None) -> list[str]:
 
 def fiscal_year(data: ReportData) -> str:
     return str(get_nested(data.financial_data, "fiscal_year", default="FY"))
+
+
+def statement_period_label(data: ReportData) -> str:
+    """Label the income-statement period used by the card metrics."""
+    period_candidates = [
+        get_nested(data.financial_data, "income_statement", "current_year", "period"),
+        get_nested(data.financial_data, "fiscal_period"),
+    ]
+    for period in period_candidates:
+        period_text = clean(str(period or ""))
+        match = re.search(r"Q\s*([1-4])|([1-4])\s*Q", period_text, re.IGNORECASE)
+        if match:
+            quarter = match.group(1) or match.group(2)
+            return f"Q{quarter}"
+    if clean(str(get_nested(data.financial_data, "period_type", default=""))).lower() in {"quarter", "quarterly"}:
+        return "Q"
+    return fiscal_year(data)
 
 
 def income_current(data: ReportData) -> dict[str, Any]:
@@ -2876,8 +2901,27 @@ def validate_report(data: ReportData, brand: str, *, allow_no_logo: bool = False
     if has_bad_linebreak(judgement, 316, judgement_font, draw):
         issues.append("Card 4 judgement paragraph contains a punctuation-led line break.")
 
+    brand_subtitle = (
+        clean(data.card_slots.brand_subheading)
+        if data.card_slots and data.card_slots.brand_subheading
+        else f"一句话看{company_short_cn(data)}"
+    )
+    has_logo = bool(find_logo_asset(data))
+    upper_w = CARD5_LOGO_AVOID_W if has_logo else CARD5_TEXT_W
+    subtitle_font = _fit_serif(draw, brand_subtitle, upper_w, 46, 34)
+    if draw.textlength(brand_subtitle, font=subtitle_font) > upper_w * LAYOUT_SCALE:
+        issues.append("Card 5 subtitle collides with the logo reserve area.")
+    if has_logo and CARD5_TEXT_X + upper_w + CARD5_LOGO_SAFE_GAP > CARD5_LOGO_BOX[0]:
+        issues.append("Card 5 subtitle/logo reserve geometry is invalid.")
+    if len(wrap(draw, clean(brand_subtitle), subtitle_font, upper_w)) > 1:
+        issues.append("Card 5 subtitle exceeds its one-line logo-safe area.")
+
     if len(wrap(draw, clean(brand_line), f(52, True), 760)) > 3:
         issues.append("Card 5 main statement exceeds its allowed block.")
+    statement_w = upper_w if has_logo else CARD5_TEXT_W
+    statement_font = _fit_serif(draw, brand_line, statement_w, 52, 38)
+    if len(wrap(draw, clean(brand_line), statement_font, statement_w)) > 3:
+        issues.append("Card 5 main statement exceeds its logo-safe block.")
     if measure_bullets(draw, brand_points, 820, f(FONT_BRAND_SUMMARY), 12, 22, max_lines_per_item=3) > 210:
         issues.append("Card 5 summary bullets exceed the yellow panel.")
     for point in brand_points:
@@ -2885,6 +2929,16 @@ def validate_report(data: ReportData, brand: str, *, allow_no_logo: bool = False
             issues.append(f"Card 5 summary bullet must be a complete sentence: {point}")
         if has_bad_linebreak(point, 796, f(FONT_BRAND_SUMMARY), draw):
             issues.append(f"Card 5 summary bullet contains a punctuation-led line break: {point}")
+    cta = (
+        clean(data.card_slots.cta_line)
+        if data.card_slots and data.card_slots.cta_line
+        else "关注金融豹，每天学习一个公司。"
+    )
+    cta_lines = wrap(draw, cta, f(34, True), CARD5_CTA_W)
+    if len(cta_lines) > CARD5_CTA_MAX_LINES:
+        issues.append("Card 5 CTA exceeds its allowed wrapped block.")
+    if has_bad_linebreak(cta, CARD5_CTA_W, f(34, True), draw):
+        issues.append("Card 5 CTA contains a punctuation-led line break.")
 
     if len(wrap(draw, clean(title), f(FONT_POST_TITLE, True), 860)) > 2:
         issues.append("Card 6 title exceeds its allowed block.")
@@ -3122,7 +3176,7 @@ def cover_metrics(data: ReportData) -> list[tuple[str, str, str]]:
     second_value = money_text(fin["net"] or fin["op"])
     third_label, third_value, _ = operational_metric(data)
     return [
-        (f"{fiscal_year(data)} 总收入", money_text(fin["revenue"]), GOLD),
+        (f"{statement_period_label(data)} 总收入", money_text(fin["revenue"]), GOLD),
         (second_label, second_value, RED),
         (third_label, third_value, GREEN),
     ]
@@ -3193,7 +3247,7 @@ def card_3(data: ReportData) -> Image.Image:
     header(d, 3)
     draw_text(d, (72, 198), "实际收入分析", f(58, True), TEXT)
     panel(d, (72, 314, 1008, 856))
-    draw_text(d, (108, 360), f"{fiscal_year(data)} 收入流", f(34, True), TEXT)
+    draw_text(d, (108, 360), f"{statement_period_label(data)} 收入流", f(34, True), TEXT)
     fin = finance(data)
     rows = [
         ("总收入", chart_value_as_yi(fin["revenue"]), GOLD),
@@ -3253,15 +3307,17 @@ def card_5(data: ReportData, brand: str) -> Image.Image:
     d = ScaledDraw(ImageDraw.Draw(img), LAYOUT_SCALE)
     header(d, 5)
     draw_text(d, (72, 214), brand, fs(110, True), TEXT)
+    logo_path = find_logo_asset(data)
+    upper_w = CARD5_LOGO_AVOID_W if logo_path else CARD5_TEXT_W
     subtitle = (
         clean(data.card_slots.brand_subheading)
         if data.card_slots and data.card_slots.brand_subheading
         else f"一句话看{company_short_cn(data)}"
     )
-    subtitle_font = _fit_serif(d, subtitle, 760, 46, 34)
-    draw_text(d, (78, 346), subtitle, subtitle_font, ORANGE)
-    statement_font = _fit_serif(d, brand_statement(data), 760, 52, 38)
-    block(d, brand_statement(data), 78, 476, 760, statement_font, RED, 14, 3)
+    subtitle_font = _fit_serif(d, subtitle, upper_w, 46, 34)
+    draw_text(d, (CARD5_TEXT_X, 346), subtitle, subtitle_font, ORANGE)
+    statement_font = _fit_serif(d, brand_statement(data), upper_w, 52, 38)
+    block(d, brand_statement(data), CARD5_TEXT_X, 476, upper_w, statement_font, RED, 14, 3)
     d.rounded_rectangle((72, 646, 1008, 1006), radius=28, fill=PANEL_CREAM)
     draw_text(d, (108, 696), "今日总结", f(34, True), TEXT)
     bullets(d, brand_summary_points(data), 108, 758, 820, 3, 3, 22, font_size=FONT_BRAND_SUMMARY, line_gap=12)
@@ -3270,10 +3326,10 @@ def card_5(data: ReportData, brand: str) -> Image.Image:
         if data.card_slots and data.card_slots.cta_line
         else "关注金融豹，每天学习一个公司。"
     )
-    draw_text(d, (72, 1098), cta, f(34, True), TEXT)
+    block(d, cta, CARD5_CTA_X, 1098, CARD5_CTA_W, f(34, True), TEXT, 10, CARD5_CTA_MAX_LINES)
     for x, y, s, col in [(900, 218, 88, RED), (980, 360, 64, GREEN), (900, 520, 74, ORANGE)]:
         d.ellipse((x, y, x + s, y + s), outline=col, width=3)
-    paste_logo(img, find_logo_asset(data), (840, 240, 1010, 520))
+    paste_logo(img, logo_path, CARD5_LOGO_BOX)
     footer(d, data)
     return finalize_export(img)
 
