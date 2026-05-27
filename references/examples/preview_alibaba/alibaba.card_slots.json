@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
 
   "cover_company_name_cn": "阿里巴巴",
 
@@ -49,16 +49,21 @@
   ],
 
   "cfa_lens": {
-    "concept_key": "ddm_multistage",
-    "concept_name_cn": "多阶段股利贴现模型",
-    "concept_intro": "CFA L2 股权估值里把公司分成「高增长期 → 过渡期 → 永续期」三段，对每段单独估增长率和分红率，再折现回今天。",
+    "concept_key": "sustainable_growth_rate",
+    "concept_name_cn": "可持续增长率",
+    "concept_intro": "CFA L2 股权估值里用来反推一家公司在不增发股票、不加杠杆的前提下，能靠留存利润撑住的内生增长率上限。",
+    "formula": "g = ROE × (1 − Payout)",
+    "company_calculation": [
+      "FY2024 ROE 约 8.5%（净利润 870 亿元 / 平均股东权益 10,200 亿元）",
+      "回购+分红 167 亿美元 ≈ 1,210 亿元，Payout ≈ 1210 / 870 ≈ 139%",
+      "g = 8.5% × (1 − 1.39) = −3.3%，可持续内生增长率为负"
+    ],
     "company_application": [
       "阶段 1（FY24-FY26）：电商+8%、云加速到 15%、国际+35%，盈利增速 12-15%，分红率 35%。",
       "阶段 2（FY27-FY30）：电商收敛到 5%、云稳定 20%、国际转正贡献利润，盈利增速 10%，分红率提到 50%。",
       "阶段 3（FY31+）：永续增长率 4%，分红率 65%，terminal value 占今天总估值约 55%。"
     ],
-    "different_angle_insight": "三阶段 DDM 拆出来，PE 11x 隐含「永续增长率 2.5%+分红率 40%」，比 GDP 低 1.5pp。Joe Tsai FY24 业绩会承诺三年回购+分红超 350 亿美元，分红率拉到 55%。",
-    "takeaway": "阿里不是一段故事，是三段——折现的是阶段切换的概率。",
+    "different_angle_insight": "SGR 拆出来后，FY2024 阿里返还股东超过净利润，相当于动用账面现金而非留存利润——这意味着账面增长引擎已经熄火，未来增长必须靠云与国际化业务的资本回报率，而不是淘天的利润留存。",
     "cfa_progress_source": "default"
   }
 }

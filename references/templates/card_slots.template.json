@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
 
   "logo_asset_path": "可选：logo-production-agent 联网查官方来源并重新生成的透明 logo 文件绝对路径（横版字标建议宽≥840px，见 validate_cards）；没有可信官方 logo 时删除本字段。",
   "cover_company_name_cn": "有 logo 时必填：由 logo production agent 写入（核对/翻译 HTML .company-name-cn 后的中文短名，去掉尾缀「公司」）。无 logo 时：若 HTML 已为中文可省略；若 HTML 为英文则由 content agent 填入。",
@@ -50,16 +50,20 @@
   ],
 
   "cfa_lens": {
-    "concept_key": "binomial_tree",
-    "concept_name_cn": "二叉树定价",
-    "concept_intro": "Card 4：1-2 句通俗解释这个 CFA 概念在做什么（不超过 110 字）。",
+    "concept_key": "operating_leverage",
+    "concept_name_cn": "经营杠杆",
+    "concept_intro": "Card 4：1-2 句通俗解释这个 CFA 概念在做什么（不超过 110 字）。必须能配一个含 '=' 的公式。",
+    "formula": "DOL = %ΔEBIT / %ΔRevenue",
+    "company_calculation": [
+      "示例：FY 营收同比+20%、营业利润同比+30%",
+      "DOL ≈ 30 / 20 = 1.5（替换为本公司真实数字；至少 1 行必须含数字）"
+    ],
     "company_application": [
       "用这个概念看这家公司：把哪个业务/估值假设套进二叉树？关键节点是什么？",
       "节点的概率/payoff 怎么估？哪些 KPI 决定上行/下行节点的值？",
       "倒推出来的隐含价值 vs 当前市价，gap 是多少？给一个量级。"
     ],
-    "different_angle_insight": "Card 4 不同角度：用这个 CFA 镜头看，能看到 surface 上看不到的什么？必须含 primary_quote + 数据锚。",
-    "takeaway": "Card 4 一句记忆点 — 类似座右铭（≤48 字）。",
+    "different_angle_insight": "Card 4 不同角度：用这个 CFA 镜头看，能看到 surface 上看不到的什么？authority slot 已移动到 company_calculation —— primary_quote 必须支撑公式数据来源。",
     "cfa_progress_source": "default"
   }
 }

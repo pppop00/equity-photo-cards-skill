@@ -231,7 +231,7 @@ The slot schema is defined in [references/workflow-spec.md](./references/workflo
 ### 5. Copy Generation (standard = materialize `card_slots.json`)
 
 - **Copy writing order:** content production agent (Cards 1–3) → **CFA lens selector** (Card 4) → **hardcode & logic audit** → layout fill agent. `logo_asset_path` must already be set in `card_slots.json` from §2.5 before content production begins; all body copy must be complete before any PNG export. See [content-production-agent.md](./agents/content-production-agent.md), [cfa-lens-selector-agent.md](./agents/cfa-lens-selector-agent.md), [hardcode-audit-agent.md](./agents/hardcode-audit-agent.md), and [layout-fill-agent.md](./agents/layout-fill-agent.md). Running the audit before layout means bad copy is caught while still full-length — layout compression makes the same problem harder to spot and fix.
-- **Card 4 CFA-lens (required):** The CFA lens selector picks ONE concept from the owner's current CFA syllabus (sourced from `--cfa-progress` CLI flag → `CFA_PROGRESS` env var → `USER.md` sticky → agent default) and applies it to this company. The four `cfa_lens` sub-slots are: `concept_intro` (what the CFA concept does), `company_application` (3 bullets — how to map the concept to this company), `different_angle_insight` (the AUTHORITY slot — what the lens reveals that consensus misses; requires `primary_quote`), and `takeaway` (one-line memory aid). See [cfa-lens-selector-agent.md](./agents/cfa-lens-selector-agent.md).
+- **Card 4 CFA-lens (required):** The CFA lens selector picks ONE concept from the owner's current CFA syllabus (sourced from `--cfa-progress` CLI flag → `CFA_PROGRESS` env var → `USER.md` sticky → agent default) and applies it to this company. The concept must be **formula-bearing** — pure qualitative frameworks are excluded. The `cfa_lens` sub-slots in schema v3 are: `concept_intro` (what the concept does), `formula` (Unicode-math, must contain `=` and an operator), `company_calculation` (1–3 lines plugging real company numbers into the formula — this is the AUTHORITY slot; requires `primary_quote`), `company_application` (3 bullets — how to map the concept to this company), and `different_angle_insight` (what the lens reveals that consensus misses). See [cfa-lens-selector-agent.md](./agents/cfa-lens-selector-agent.md).
 - **`card_slots.json` 必须填满** 所有脚本要求的槽位（见 `assert_card_slots_complete`）；不允许依赖内置 `fit_copy` / `company_theme` 自动糊字作为交付物。
 - Write copy slot by slot, not card by card in one pass
 - Use report facts first, thematic framing second
@@ -281,7 +281,7 @@ The fixed output is always:
 | 1 | `01_cover.png` | Cover + 公司定位 + 核心张力 + logo + metrics_row |
 | 2 | `02_porter.png` | Industry structure + 4 background bullets + Porter five forces (per-force evidence) |
 | 3 | `03_five_year_financials.png` | 5-year arc (转型/拐点) + 最近季度财务 bars + revenue explainer |
-| 4 | `04_cfa_lens.png` | CFA 镜头 — 选定概念 + 公司应用 + 不同角度 + takeaway |
+| 4 | `04_cfa_lens.png` | CFA 镜头 — 概念 + 公式 + 公司带数计算 + 应用 + 不同角度（一张合并奶油色面板） |
 
 Do not change the card count or reorder the card roles unless the design spec is explicitly revised.
 
@@ -308,9 +308,10 @@ Examples of placeholders:
 - `recent_financial_highlights`
 - `revenue_explainer_points`
 - `cfa_lens.concept_intro`
+- `cfa_lens.formula`
+- `cfa_lens.company_calculation`
 - `cfa_lens.company_application`
 - `cfa_lens.different_angle_insight`
-- `cfa_lens.takeaway`
 
 These placeholders must always be filled from normalized facts first. Theme or sector logic should only help decide emphasis, ordering, and wording.
 

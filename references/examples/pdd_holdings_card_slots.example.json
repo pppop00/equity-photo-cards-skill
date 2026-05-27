@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
 
   "cover_company_name_cn": "拼多多",
   "logo_asset_path": "assets/logos/pdd.png",
@@ -53,13 +53,18 @@
     "concept_key": "binomial_tree",
     "concept_name_cn": "二叉树定价",
     "concept_intro": "CFA L2 衍生品里用来给「有路径依赖、有 optionality」的资产估值的工具：把未来不确定结果拆成上行/下行节点，倒推出每个节点的现值。",
+    "formula": "V0 = (p × Vu + (1 − p) × Vd) / (1 + r)",
+    "company_calculation": [
+      "上行节点 Vu ≈ ADR $182（FY26 EPS ¥110 × 12x PE），下行节点 Vd ≈ ADR $67",
+      "p = 0.45，1 − p = 0.55，r = 5%",
+      "V0 = (0.45 × 182 + 0.55 × 67) / 1.05 ≈ $113"
+    ],
     "company_application": [
       "把拼多多看成一棵两期二叉树：根节点是当前估值，两个分叉是「de minimis 取消」vs「保留」；再各自分叉成「Temu 单均利润+¥1」vs「-¥1」。",
       "上行节点（de minimis 保留 × Temu+¥1）：FY26 EPS 约¥110 × 12x PE ≈ ADR $182；下行节点（de minimis 取消 × Temu-¥1）：FY26 EPS 约¥70 × 7x PE ≈ ADR $67。",
       "用 45/55 的 risk-neutral 概率（不是市场暗含的 40/60）反推，当前 ADR $125 接近 midpoint，gap 约 30% — 这就是「估值修复空间」的来源。"
     ],
     "different_angle_insight": "CFO 陈磊在 FQ4-24 业绩会原话：「Temu 单均利润转正进度落后管理层指引 1-2 个季度」（来源：投资者关系电话会，2025-03-20）。把这句话喂进二叉树，下行节点权重应该至少调到 45%，那 risk-neutral 公允价已经隐含约 18% 下修；市场目前的 60/40 暗含权重则把下修过头了。",
-    "takeaway": "拼多多不是单点定价，是一棵二叉树——节点概率比单点 EPS 更重要。",
     "cfa_progress_source": "default"
   }
 }

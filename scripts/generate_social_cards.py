@@ -361,7 +361,25 @@ TEXT_COMPOSITE_PAD = 8  # matches draw_text(): 2 * pad where pad=4
 LIMIT_CARD4_CONCEPT_INTRO_CHARS = 110
 LIMIT_CARD4_APPLICATION_CHARS = 95
 LIMIT_CARD4_ANGLE_CHARS = 105
-LIMIT_CARD4_TAKEAWAY_CHARS = 48
+LIMIT_CARD4_FORMULA_CHARS = 80
+LIMIT_CARD4_CALC_LINE_CHARS = 70
+
+# Card 4 merged cream panel geometry. One panel, top-to-bottom blocks:
+# concept title (red) → formula → concept_intro → company_calculation →
+# divider → two-column footer (application bullets | different_angle_insight).
+# Footer line sits at Y=1320; reserve 16 px gap inside the panel.
+CARD4_PANEL_TOP = 198
+CARD4_PANEL_BOTTOM = 1300
+CARD4_PANEL_LEFT = 72
+CARD4_PANEL_RIGHT = 1008
+CARD4_INNER_PAD = 36
+CARD4_DIVIDER_Y = 750
+CARD4_TWO_COL_TOP_Y = 776
+CARD4_COL_GAP = 32
+CARD4_LEFT_COL_W = 408
+CARD4_RIGHT_COL_X = CARD4_PANEL_LEFT + CARD4_INNER_PAD + CARD4_LEFT_COL_W + CARD4_COL_GAP
+CARD4_RIGHT_COL_W = CARD4_PANEL_RIGHT - CARD4_INNER_PAD - CARD4_RIGHT_COL_X
+CARD4_INNER_W = CARD4_PANEL_RIGHT - CARD4_PANEL_LEFT - 2 * CARD4_INNER_PAD
 
 FORBIDDEN_TEMPLATE_PHRASES = (
     "盘子和押注分得很清楚",
@@ -447,7 +465,7 @@ AUDIT_COMMON_EN_TERMS = {
 class CardSlotOverrides:
     """Slot copy from the content + layout agents. The skill requires a complete file for every export (no heuristic-only path)."""
 
-    schema_version: int = 2
+    schema_version: int = 3
     intro_sentence: str | None = None
     company_focus_paragraph: str | None = None
     metrics_row: list[str] | None = None
@@ -502,9 +520,13 @@ CFA_LENS_REQUIRED_STR_KEYS = (
     "concept_key",
     "concept_name_cn",
     "concept_intro",
+    "formula",
     "different_angle_insight",
-    "takeaway",
 )
+
+# Formula must contain '=' AND at least one math operator. Bare textual claims
+# like "公式：经营杠杆" must be rejected — formulas need operators.
+CFA_FORMULA_OPERATORS = ("/", "×", "*", "+", "−", "-", "(", "Δ", "%")
 
 
 def assert_card_slots_complete(slots: CardSlotOverrides) -> None:
@@ -574,9 +596,29 @@ def assert_card_slots_complete(slots: CardSlotOverrides) -> None:
     for key in CFA_LENS_REQUIRED_STR_KEYS:
         if not clean(str(lens.get(key) or "")):
             raise ValueError(f"card_slots.json cfa_lens.{key} must be non-empty text.")
+    formula = clean(str(lens.get("formula") or ""))
+    if "=" not in formula or not any(op in formula for op in CFA_FORMULA_OPERATORS):
+        raise ValueError(
+            "card_slots.json cfa_lens.formula must contain '=' and at least one math operator "
+            f"(one of {CFA_FORMULA_OPERATORS}); got: {formula!r}"
+        )
     application = lens.get("company_application")
     if not isinstance(application, list) or len([x for x in application if clean(str(x))]) < 3:
         raise ValueError("card_slots.json cfa_lens.company_application needs at least 3 non-empty entries.")
+    calc = lens.get("company_calculation")
+    if not isinstance(calc, list):
+        raise ValueError("card_slots.json cfa_lens.company_calculation must be a list of 1-3 strings.")
+    calc_clean = [clean(str(x)) for x in calc if clean(str(x))]
+    if not (1 <= len(calc_clean) <= 3):
+        raise ValueError(
+            "card_slots.json cfa_lens.company_calculation needs 1-3 non-empty entries "
+            f"(got {len(calc_clean)})."
+        )
+    if not any(any(ch.isdigit() for ch in entry) for entry in calc_clean):
+        raise ValueError(
+            "card_slots.json cfa_lens.company_calculation must include at least one entry "
+            "that contains a digit — the whole point is to plug real company numbers into the formula."
+        )
 
 
 def load_card_slots(path: Path) -> CardSlotOverrides:
@@ -1115,7 +1157,7 @@ _STYLE_FIRST_MENTION_RE = re.compile(
 )
 
 # slot keys covered by Cards 1-4 contract
-# Note: five_year_arc.narrative and cfa_lens.different_angle_insight are nested;
+# Note: five_year_arc.narrative and cfa_lens.company_calculation are nested;
 # the worker_notes file uses the bare leaf name as the top-level key.
 CARD1_4_WORKER_SLOTS = (
     "intro_sentence",                # Card 1
@@ -1123,10 +1165,10 @@ CARD1_4_WORKER_SLOTS = (
     "industry_paragraph",            # Card 2
     "five_year_arc.narrative",       # Card 3 (nested)
     "revenue_explainer_points",      # Card 3
-    "cfa_lens.different_angle_insight",  # Card 4 (nested, AUTHORITY)
+    "cfa_lens.company_calculation",  # Card 4 (nested, AUTHORITY)
 )
 # slots that REQUIRE primary_quote (analyst-authority slots)
-AUTHORITY_SLOTS = ("different_angle_insight",)
+AUTHORITY_SLOTS = ("company_calculation",)
 
 # Card 1-4 prose keys that get backstop banned-phrase checks. Includes nested
 # leaves we extract via helper below.
@@ -1181,13 +1223,16 @@ def _collect_card1_4_prose(card_slots: dict) -> list[tuple[str, str]]:
     # cfa_lens nested fields
     lens = card_slots.get("cfa_lens")
     if isinstance(lens, dict):
-        for key in ("concept_intro", "different_angle_insight", "takeaway"):
+        for key in ("concept_intro", "different_angle_insight"):
             value = lens.get(key)
             if isinstance(value, str):
                 out.append((f"cfa_lens.{key}", value))
         for pt in lens.get("company_application") or []:
             if isinstance(pt, str):
                 out.append(("cfa_lens.company_application", pt))
+        for pt in lens.get("company_calculation") or []:
+            if isinstance(pt, str):
+                out.append(("cfa_lens.company_calculation", pt))
     return out
 
 
@@ -2014,6 +2059,21 @@ def recent_financial_highlights(data: ReportData) -> list[str]:
     return dedupe_texts(items, 4)
 
 
+_FORMULA_GLYPH_FALLBACKS = {
+    # The default macOS Hiragino face that backs ARIAL/ARIAL_BOLD lacks
+    # U+2212 (MINUS SIGN); substitute the ASCII hyphen-minus so the formula
+    # renders. JSON keeps U+2212 for semantic correctness; this is a
+    # render-time-only normalization.
+    "−": "-",
+}
+
+
+def _render_safe_math(text: str) -> str:
+    for src, dst in _FORMULA_GLYPH_FALLBACKS.items():
+        text = text.replace(src, dst)
+    return text
+
+
 def cfa_lens_data(data: ReportData) -> dict[str, Any]:
     lens = data.card_slots.cfa_lens if data.card_slots else None
     if not isinstance(lens, dict):
@@ -2021,13 +2081,15 @@ def cfa_lens_data(data: ReportData) -> dict[str, Any]:
             f"Slot 'cfa_lens' missing in card_slots.json for {company_short_cn(data) or data.company_en or data.ticker}."
         )
     application = [clean(str(x)) for x in (lens.get("company_application") or []) if clean(str(x))]
+    calculation = [_render_safe_math(clean(str(x))) for x in (lens.get("company_calculation") or []) if clean(str(x))]
     return {
         "concept_key": clean(str(lens.get("concept_key") or "")),
         "concept_name_cn": clean(str(lens.get("concept_name_cn") or "")),
         "concept_intro": clean(str(lens.get("concept_intro") or "")),
+        "formula": _render_safe_math(clean(str(lens.get("formula") or ""))),
+        "company_calculation": calculation[:3],
         "company_application": dedupe_texts(application, 4),
         "different_angle_insight": clean(str(lens.get("different_angle_insight") or "")),
-        "takeaway": clean(str(lens.get("takeaway") or "")),
         "cfa_progress_source": clean(str(lens.get("cfa_progress_source") or "")),
     }
 
@@ -2149,9 +2211,10 @@ def generated_copy_slots(data: ReportData) -> dict[str, list[str]]:
         "Card 3 recent financial highlights": recent_financial_highlights(data),
         "Card 3 explainer bullets": revenue_explainer_points(data),
         "Card 4 CFA concept intro": [lens["concept_intro"]],
+        "Card 4 CFA formula": [lens["formula"]],
+        "Card 4 CFA company calculation": lens["company_calculation"],
         "Card 4 CFA company application": lens["company_application"],
         "Card 4 CFA different-angle insight": [lens["different_angle_insight"]],
-        "Card 4 CFA takeaway": [lens["takeaway"]],
     }
 
 
@@ -2332,7 +2395,6 @@ def validate_report(data: ReportData, brand: str, *, allow_no_logo: bool = False
         ("Card 3 five-year narrative", five_year_text),
         ("Card 4 CFA concept intro", lens["concept_intro"]),
         ("Card 4 CFA different-angle insight", lens["different_angle_insight"]),
-        ("Card 4 CFA takeaway", lens["takeaway"]),
     ]:
         if not is_complete_copy(text):
             issues.append(f"{label} must be a complete sentence or paragraph without ellipsis.")
@@ -2487,6 +2549,29 @@ def validate_report(data: ReportData, brand: str, *, allow_no_logo: bool = False
     for required_key in CFA_LENS_REQUIRED_STR_KEYS:
         if not lens.get(required_key):
             issues.append(f"Card 4 cfa_lens.{required_key} must be non-empty.")
+    formula = lens.get("formula") or ""
+    if formula:
+        if "=" not in formula:
+            issues.append("Card 4 cfa_lens.formula must contain '=' (a formula needs an equals sign).")
+        if not any(op in formula for op in CFA_FORMULA_OPERATORS):
+            issues.append(
+                f"Card 4 cfa_lens.formula must contain at least one operator "
+                f"({CFA_FORMULA_OPERATORS}); a bare textual claim like '公式：经营杠杆' is not a formula."
+            )
+        if len(formula) > LIMIT_CARD4_FORMULA_CHARS:
+            issues.append("Card 4 cfa_lens.formula exceeds its character budget.")
+    calculation = lens.get("company_calculation") or []
+    if not isinstance(calculation, list) or not (1 <= len(calculation) <= 3):
+        issues.append("Card 4 cfa_lens.company_calculation must be a list of 1-3 entries.")
+    else:
+        if not any(any(ch.isdigit() for ch in entry) for entry in calculation):
+            issues.append(
+                "Card 4 cfa_lens.company_calculation must include at least one entry that contains a digit — "
+                "the whole point is to plug real company numbers into the formula."
+            )
+        for entry in calculation:
+            if len(entry) > LIMIT_CARD4_CALC_LINE_CHARS:
+                issues.append(f"Card 4 cfa_lens.company_calculation exceeds its character budget: {entry}")
     if len(lens.get("concept_intro") or "") > LIMIT_CARD4_CONCEPT_INTRO_CHARS:
         issues.append("Card 4 cfa_lens.concept_intro exceeds its character budget.")
     for point in lens.get("company_application") or []:
@@ -2494,12 +2579,26 @@ def validate_report(data: ReportData, brand: str, *, allow_no_logo: bool = False
             issues.append(f"Card 4 cfa_lens.company_application must use complete sentences: {point}")
         if len(point) > LIMIT_CARD4_APPLICATION_CHARS:
             issues.append(f"Card 4 cfa_lens.company_application exceeds its character budget: {point}")
-        if has_bad_linebreak(point, 820, f(FONT_BULLET_COMPACT), draw):
+        if has_bad_linebreak(point, CARD4_LEFT_COL_W - 24, f(FONT_BULLET_COMPACT), draw):
             issues.append(f"Card 4 cfa_lens.company_application contains a punctuation-led line break: {point}")
     if len(lens.get("different_angle_insight") or "") > LIMIT_CARD4_ANGLE_CHARS:
         issues.append("Card 4 cfa_lens.different_angle_insight exceeds its character budget.")
-    if len(lens.get("takeaway") or "") > LIMIT_CARD4_TAKEAWAY_CHARS:
-        issues.append("Card 4 cfa_lens.takeaway exceeds its character budget.")
+
+    # Merged-panel overflow pre-check: simulate the renderer's vertical advance
+    # for the upper block (concept title → formula → intro → calculation) and
+    # the lower two columns, and fail if either bursts the panel.
+    sim_y = card_4_upper_block_end_y(draw, lens)
+    if sim_y > CARD4_DIVIDER_Y - 12:
+        issues.append(
+            f"Card 4 upper block (title + formula + intro + calculation) "
+            f"overflows above the divider (end_y={sim_y}, divider={CARD4_DIVIDER_Y})."
+        )
+    lower_end = card_4_lower_block_end_y(draw, lens)
+    if lower_end > CARD4_PANEL_BOTTOM - 16:
+        issues.append(
+            f"Card 4 two-column footer (application + insight) overflows "
+            f"the merged cream panel (end_y={lower_end}, panel_bottom={CARD4_PANEL_BOTTOM})."
+        )
 
     if issues:
         raise ValueError("Validation failed:\n- " + "\n- ".join(issues))
@@ -2870,51 +2969,175 @@ def card_3(data: ReportData) -> Image.Image:
     return finalize_export(img)
 
 
+CARD4_CONTENT_X = CARD4_PANEL_LEFT + CARD4_INNER_PAD
+CARD4_CONCEPT_TITLE_Y = CARD4_PANEL_TOP + 28
+CARD4_SUBHEAD_GAP = 8
+CARD4_SECTION_GAP = 22
+CARD4_FORMULA_FONT_SIZE = 30
+
+
+def _card4_layout(
+    draw: ImageDraw.ImageDraw,
+    lens: dict[str, Any],
+) -> dict[str, int]:
+    """Compute Y-coordinates for the merged Card 4 panel based on rendered
+    heights of each block. Used by both the renderer and the validator
+    pre-check so they agree on overflow."""
+    inner_w = CARD4_INNER_W
+    concept_label = lens.get("concept_name_cn") or lens.get("concept_key") or "CFA 概念"
+    title_font = _fit_serif(draw, concept_label, inner_w, 56, 36)
+    title_y = CARD4_CONCEPT_TITLE_Y
+    title_end = title_y + line_raster_height(draw, title_font, concept_label)
+
+    formula_label_y = title_end + CARD4_SECTION_GAP
+    formula_label_h = line_raster_height(draw, f(22, True), "公式")
+    formula_text_y = formula_label_y + formula_label_h + CARD4_SUBHEAD_GAP
+    formula_font = fit_block_font(
+        draw, lens.get("formula") or "—", inner_w, 9999,
+        start_size=CARD4_FORMULA_FONT_SIZE, min_size=20, line_gap=8, max_lines=2, bold=True,
+    )
+    formula_end = block_final_y(
+        draw, lens.get("formula") or "", formula_text_y, inner_w, formula_font, 8, 2,
+    )
+
+    intro_text_y = formula_end + CARD4_SECTION_GAP
+    intro_end = block_final_y(
+        draw, lens.get("concept_intro") or "", intro_text_y, inner_w,
+        f(FONT_CFA_BODY), 10, 4,
+    )
+
+    calc_label_y = intro_end + CARD4_SECTION_GAP
+    calc_label_h = line_raster_height(draw, f(22, True), "在这家公司怎么算")
+    calc_text_y = calc_label_y + calc_label_h + CARD4_SUBHEAD_GAP
+
+    calc_lines = lens.get("company_calculation") or []
+    calc_end = calc_text_y
+    arrow_marker_font = f(FONT_CFA_BODY, True)
+    for entry in calc_lines:
+        calc_end = block_final_y(
+            draw, entry, calc_end, inner_w - 28, arrow_marker_font, 8, 3,
+        )
+        calc_end += 10
+
+    return {
+        "inner_w": inner_w,
+        "title_font": title_font,
+        "title_y": title_y,
+        "title_end": title_end,
+        "formula_label_y": formula_label_y,
+        "formula_text_y": formula_text_y,
+        "formula_font": formula_font,
+        "formula_end": formula_end,
+        "intro_text_y": intro_text_y,
+        "intro_end": intro_end,
+        "calc_label_y": calc_label_y,
+        "calc_text_y": calc_text_y,
+        "calc_end": calc_end,
+    }
+
+
+def card_4_upper_block_end_y(draw: ImageDraw.ImageDraw, lens: dict[str, Any]) -> int:
+    return _card4_layout(draw, lens)["calc_end"]
+
+
+def card_4_lower_block_end_y(draw: ImageDraw.ImageDraw, lens: dict[str, Any]) -> int:
+    """Two-column footer below the divider. Returns the larger of the two
+    columns' rendered end-Y. The left column has bulleted application points;
+    the right column has the insight paragraph."""
+    y_top = CARD4_TWO_COL_TOP_Y
+    sub_h = line_raster_height(draw, f(24, True), "用到这家公司")
+    body_y = y_top + sub_h + 14
+
+    left_y = body_y
+    for item in (lens.get("company_application") or [])[:3]:
+        left_y = block_final_y(
+            draw, item, left_y, CARD4_LEFT_COL_W - 24, f(FONT_BULLET_COMPACT), 8, 3,
+        )
+        left_y += 12
+
+    right_y = block_final_y(
+        draw, lens.get("different_angle_insight") or "",
+        body_y, CARD4_RIGHT_COL_W, f(FONT_CFA_BODY), 10, 10,
+    )
+    return max(left_y, right_y)
+
+
 def card_4_cfa(data: ReportData) -> Image.Image:
-    """Card 4: CFA-concept lens applied to this company. Layout —
-    top: concept name + intro (panel);
-    middle: 3-bullet 应用 panel + different-angle insight panel;
-    bottom: takeaway band (large serif)."""
+    """Card 4: one merged cream panel teaching a CFA L2 concept through the
+    company. Upper block: concept title + formula + concept_intro +
+    company_calculation. Divider. Lower block (two columns): bulleted
+    application | insight paragraph."""
     img = background()
     d = ScaledDraw(ImageDraw.Draw(img), LAYOUT_SCALE)
     header(d, 4)
-    draw_text(d, (72, 198), "CFA 镜头：把概念套在这家公司上", f(46, True), TEXT)
 
     lens = cfa_lens_data(data)
+    geom = _card4_layout(d, lens)
 
-    # Concept intro panel.
-    d.rounded_rectangle((72, 280, 1008, 472), radius=28, fill=PANEL)
-    label_text = lens.get("concept_name_cn") or lens.get("concept_key") or "CFA 概念"
-    label_font = _fit_serif(d, label_text, 880, 56, 36)
-    draw_text(d, (108, 304), label_text, label_font, RED)
-    draw_text(d, (108, 376), "概念在做什么", f(22, True), MUTED)
-    block(d, lens["concept_intro"], 108, 410, 880, f(FONT_CFA_BODY), "#344054", 10, 3)
+    d.rounded_rectangle(
+        (CARD4_PANEL_LEFT, CARD4_PANEL_TOP, CARD4_PANEL_RIGHT, CARD4_PANEL_BOTTOM),
+        radius=28, fill=PANEL_CREAM,
+    )
 
-    # Application panel (left) + different-angle insight panel (right).
-    d.rounded_rectangle((72, 492, 540, 1010), radius=28, fill=PANEL_MINT)
-    draw_text(d, (108, 522), "用到这家公司", f(30, True), TEXT)
+    concept_label = lens.get("concept_name_cn") or lens.get("concept_key") or "CFA 概念"
+    draw_text(d, (CARD4_CONTENT_X, geom["title_y"]), concept_label, geom["title_font"], RED)
+
+    draw_text(d, (CARD4_CONTENT_X, geom["formula_label_y"]), "公式", f(22, True), MUTED)
+    block(
+        d, lens.get("formula") or "—",
+        CARD4_CONTENT_X, geom["formula_text_y"], geom["inner_w"],
+        geom["formula_font"], TEXT, 8, 2,
+    )
+
+    block(
+        d, lens.get("concept_intro") or "",
+        CARD4_CONTENT_X, geom["intro_text_y"], geom["inner_w"],
+        f(FONT_CFA_BODY), "#344054", 10, 4,
+    )
+
+    draw_text(d, (CARD4_CONTENT_X, geom["calc_label_y"]), "在这家公司怎么算", f(22, True), MUTED)
+    calc_y = geom["calc_text_y"]
+    marker_font = f(FONT_CFA_BODY, True)
+    for idx, entry in enumerate(lens.get("company_calculation") or []):
+        marker = f"{idx + 1}. " if idx < len(lens.get("company_calculation") or []) - 1 else "→ "
+        marker_w_px = d.textlength(marker, font=marker_font)
+        marker_w = int(marker_w_px / LAYOUT_SCALE) + 4
+        draw_text(d, (CARD4_CONTENT_X, calc_y), marker, marker_font, RED)
+        calc_y = block(
+            d, entry,
+            CARD4_CONTENT_X + marker_w, calc_y, geom["inner_w"] - marker_w,
+            f(FONT_CFA_BODY), TEXT, 8, 3,
+        )
+        calc_y += 10
+
+    d.line(
+        (CARD4_CONTENT_X, CARD4_DIVIDER_Y, CARD4_PANEL_RIGHT - CARD4_INNER_PAD, CARD4_DIVIDER_Y),
+        fill=LINE, width=2,
+    )
+
+    sub_y = CARD4_TWO_COL_TOP_Y
+    body_y = sub_y + line_raster_height(d, f(24, True), "用到这家公司") + 14
+
+    draw_text(d, (CARD4_CONTENT_X, sub_y), "用到这家公司", f(24, True), TEXT)
     bullets(
         d,
         lens["company_application"],
-        108,
-        582,
-        412,
-        max_items=4,
-        max_lines=4,
-        gap_after=14,
-        font_size=FONT_CFA_BODY,
+        CARD4_CONTENT_X,
+        body_y,
+        CARD4_LEFT_COL_W,
+        max_items=3,
+        max_lines=3,
+        gap_after=12,
+        font_size=FONT_BULLET_COMPACT,
         line_gap=8,
     )
 
-    d.rounded_rectangle((560, 492, 1008, 1010), radius=28, fill=PANEL_PINK)
-    draw_text(d, (596, 522), "不同角度看到了什么", f(30, True), TEXT)
-    block(d, lens["different_angle_insight"], 596, 582, 392, f(FONT_CFA_BODY), "#344054", 10, 12)
-
-    # Takeaway band.
-    d.rounded_rectangle((72, 1030, 1008, 1240), radius=28, fill=PANEL_CREAM)
-    draw_text(d, (108, 1056), "记住这一条", f(26, True), TEXT)
-    takeaway_font = _fit_serif(d, lens["takeaway"], 880, 48, 30)
-    block(d, lens["takeaway"], 108, 1110, 880, takeaway_font, RED, 14, 3)
+    draw_text(d, (CARD4_RIGHT_COL_X, sub_y), "不同角度看到了什么", f(24, True), TEXT)
+    block(
+        d, lens["different_angle_insight"],
+        CARD4_RIGHT_COL_X, body_y, CARD4_RIGHT_COL_W,
+        f(FONT_CFA_BODY), "#344054", 10, 12,
+    )
 
     footer(d, data)
     return finalize_export(img)

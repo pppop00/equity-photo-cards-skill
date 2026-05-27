@@ -33,9 +33,12 @@ Validator 1 不能保证「数字与 SEC/交易所/公司财报一致」——�
 6. **空值与占位符清零**：最终卡片不得出现 `--` / `N/A` / `不适用` 这类占位符作为关键财务字段（收入、成本、毛利、营业利润、净利润、毛利率、营业利润率、净利率）。若原字段缺失，必须通过可验证数据重算或改写为可核实且不越权的表达；无法核实则不得导出。
 7. **收入不为零**：若 `financial_data.income_statement.current_year.revenue` 为 0 或 Sankey 收入汇总为 0，视为数据抽取错误，必须重新从报告包提取后方可导出。不得以「季度未披露」「分部数据不全」等理由放过数值为零的收入字段。
 8. **Card 4 CFA-lens 引用与适用性核查**：
-   - 核对 `cfa_lens.different_angle_insight` 中引用的 CFO/CEO/IR/filing 原话（来源 URL、日期、说话人姓名职位）是否在公开记录中存在。如果是 [TODO] 占位符，必须找到真实引用才能放行。
+   - 核对 `cfa_lens.different_angle_insight` 中引用的市场/管理层说法是否在公开记录中存在。如果是 [TODO] 占位符，必须找到真实引用才能放行。
    - 核对 `cfa_lens.company_application` 中给出的隐含数字（如 NPV / 隐含价值 / probability weights）是否与 `analyst_call.json` 的 base/bull/bear scenarios 一致；显著超出报告区间需要补依据或下调精度。
-   - 核对所选 CFA 概念是否适用于本公司：例如不应该用 DDM 给从未分红的公司估值；不应该用 binomial tree 给单一确定性现金流的公用事业估值。若概念明显不适用，回退到 [cfa-lens-selector-agent.md](./cfa-lens-selector-agent.md) 默认 menu 重新挑。
+   - **新增（authority slot 已移动）**：逐项核对 `cfa_lens.company_calculation` 中出现的每个数值（ROE、ROIC、margin、growth%、payout、book equity、EPS、dividend 等）——优先比对本包内的 `financial_data.json` / `financial_analysis.json`，**不只看 web**。常见错误模式：作者把 ROE 写成 19.0% 而 `financial_data` 计算出 17.5%，差异>50bp 必须在 cards 改回真实值或在 worker_notes 给出明确推导。
+   - 核对 worker_notes 中 `cfa_lens.company_calculation` 的 `primary_quote` —— CFO/CEO/IR/filing 的原话（说话人姓名职位、venue/日期、URL/filing）是否真实存在；这是 authority slot，stub 不可放行。
+   - 核对 `cfa_lens.formula` 是否对得上 `concept_key`：例如 `concept_key: operating_leverage` 不能写 `g = ROE × (1 − Payout)`（那是 SGR）。如果 formula 与 concept_key 不一致，回退到 cfa-lens-selector-agent 重写。
+   - 核对所选 CFA 概念是否适用于本公司：例如不应该用 DDM 给从未分红的公司估值；不应该用 binomial tree 给单一确定性现金流的公用事业估值。若概念明显不适用，回退到 [cfa-lens-selector-agent.md](./cfa-lens-selector-agent.md) formula-bearing menu 重新挑。
 
 **不要求**把每一条市场观点（例如「定价锚是××」）证成学术论文；但若观点 **隐含可证伪数字或事实**（例如「份额第一」），则必须能落地到来源或改写为弱化表述。
 

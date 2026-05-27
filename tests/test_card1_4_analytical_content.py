@@ -8,11 +8,12 @@ Contract (locked):
 - Returns [] on pass; non-empty list of human-readable issue strings on fail.
 - Checks Card 1-4 worker_notes for required hidden fields
   (data_anchor, variant_view, falsifier|primary_quote|catalyst_with_date).
-- Authority slot (different_angle_insight, nested under cfa_lens)
-  additionally requires primary_quote.
+- Authority slot (company_calculation, nested under cfa_lens)
+  additionally requires primary_quote — the formula application must be
+  backed by a citation of the actual financial source (10-K / earnings / IR).
 - Nested worker_notes keys 'five_year_arc.narrative' and
-  'cfa_lens.different_angle_insight' may be addressed either by the full
-  dotted key or by the leaf name (e.g. 'narrative' / 'different_angle_insight').
+  'cfa_lens.company_calculation' may be addressed either by the full
+  dotted key or by the leaf name (e.g. 'narrative' / 'company_calculation').
 """
 
 from __future__ import annotations
@@ -28,6 +29,8 @@ if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
 from scripts.generate_social_cards import (  # noqa: E402
+    CardSlotOverrides,
+    assert_card_slots_complete,
     validate_card1_4_analytical_content,
 )
 
@@ -37,7 +40,7 @@ from scripts.generate_social_cards import (  # noqa: E402
 # ---------------------------------------------------------------------------
 
 POSITIVE_WORKER: dict = {
-    "schema_version": 2,
+    "schema_version": 3,
     "intro_sentence": {
         "data_anchor": "datacenter revenue $30.8B Q3 vs peer AMD $3.5B",
         "variant_view": "Street under-models H200 mix shift through Q2 of next fiscal year",
@@ -75,21 +78,21 @@ POSITIVE_WORKER: dict = {
         "falsifier": "datacenter mix drops below 80% for two consecutive quarters",
     },
     # AUTHORITY slot — requires primary_quote.
-    "cfa_lens.different_angle_insight": {
-        "data_anchor": "real-options decomposition implies FY26E ebit margin 60% vs management guide midpoint 58%",
-        "variant_view": "guide under-models pricing power into FY26 H2 on Blackwell scarcity",
+    "cfa_lens.company_calculation": {
+        "data_anchor": "FY26 Q3 datacenter revenue +112% YoY vs total revenue +94% YoY (DOL ≈ 1.19) vs peer AMD DOL ~0.8",
+        "variant_view": "Street is modeling DOL closer to 1.0; the 1.19 reading implies operating leverage will keep amplifying FY27 datacenter mix shift",
         "primary_quote": {
-            "speaker": "CFO",
-            "venue": "Q4 earnings call",
-            "quote": "price discipline holding through CY26",
-            "url_or_filing": "https://investor.nvidia.com/q4-call",
+            "speaker": "CFO Colette Kress",
+            "venue": "FY26 Q3 earnings call, 2025-11-19",
+            "quote": "operating margin expansion tracking the platform mix shift",
+            "url_or_filing": "https://investor.nvidia.com/q3-fy26-call",
         },
-        "falsifier": "price compression visible in any hyperscaler renegotiation",
+        "falsifier": "DOL compresses below 1.0 for two consecutive quarters as Blackwell ramp dilutes margins",
     },
 }
 
 POSITIVE_CARDS: dict = {
-    "schema_version": 2,
+    "schema_version": 3,
     "intro_sentence": (
         "Datacenter revenue $30.8B Q3 — vs peer AMD $3.5B and $13.5B Q3 last year — "
         "driven by H200 mix entering production."
@@ -141,22 +144,26 @@ POSITIVE_CARDS: dict = {
         "Operating margin gap to peers reflects scale plus mix.",
     ],
     "cfa_lens": {
-        "concept_key": "real_options",
-        "concept_name_cn": "实物期权",
+        "concept_key": "operating_leverage",
+        "concept_name_cn": "经营杠杆",
         "concept_intro": (
-            "Real options frame strategic flexibility (expand / delay / abandon) as "
-            "option-like value layered on top of base-case NPV."
+            "DOL measures how a percentage change in revenue amplifies into "
+            "operating profit when the fixed-cost base is large."
         ),
+        "formula": "DOL = %ΔEBIT / %ΔRevenue",
+        "company_calculation": [
+            "FY26 Q3 营收同比+94%，营业利润同比+112%",
+            "DOL ≈ 112 / 94 = 1.19",
+        ],
         "company_application": [
-            "NVDA is three nested options: CUDA training (exercised), inference expansion (pending), automotive (far OTM).",
-            "Training option NPV is the largest piece; inference carries the bulk of remaining time value.",
+            "Datacenter mix at 87% means fixed datacenter R&D amortizes across a wider revenue base.",
+            "Each ten point increase in datacenter mix adds roughly 2pp to operating margin at constant cost base.",
             "Total option premium roughly a quarter of enterprise value versus peer median in single digits.",
         ],
         "different_angle_insight": (
-            "Using real-options decomposition, the market cap implies a meaningful slice of "
-            "time value from unexercised options that DCF alone would price too low."
+            "Holding DOL at 1.19 implies FY27 operating margin reaches 64% under base-case "
+            "revenue growth — meaningfully above the Street's 60% consensus."
         ),
-        "takeaway": "Optionality premium is the floor, not the bubble.",
         "cfa_progress_source": "default",
     },
 }
@@ -189,7 +196,7 @@ class PositiveFixtureTest(unittest.TestCase):
         the worker_notes JSON. Both must resolve to the same slot."""
         cards, worker = _fresh_fixture()
         worker["narrative"] = worker.pop("five_year_arc.narrative")
-        worker["different_angle_insight"] = worker.pop("cfa_lens.different_angle_insight")
+        worker["company_calculation"] = worker.pop("cfa_lens.company_calculation")
         issues = validate_card1_4_analytical_content(cards, worker)
         self.assertEqual(
             issues, [], msg=f"Leaf-name addressing should pass; got: {issues}"
@@ -246,9 +253,9 @@ class NegativeFixtureTests(unittest.TestCase):
 
     def test_authority_slot_missing_primary_quote(self) -> None:
         cards, worker = _fresh_fixture()
-        worker["cfa_lens.different_angle_insight"].pop("primary_quote", None)
-        worker["cfa_lens.different_angle_insight"]["falsifier"] = (
-            "Real-options premium collapses if FY27 inference share drops below seventy percent"
+        worker["cfa_lens.company_calculation"].pop("primary_quote", None)
+        worker["cfa_lens.company_calculation"]["falsifier"] = (
+            "DOL drops below 1.0 for two consecutive quarters as Blackwell ramp dilutes margins"
         )
         issues = validate_card1_4_analytical_content(cards, worker)
         self._assert_any(issues, "primary_quote", "authority")
@@ -291,7 +298,7 @@ _REGRESSION_VALID_WORKER: dict = copy.deepcopy(POSITIVE_WORKER)
 
 
 REGRESSION_BAD_CARDS: dict = {
-    "schema_version": 2,
+    "schema_version": 3,
     "intro_sentence": (
         "西部数据现在最值钱的，不是硬盘这个老词，而是AI数据长期存储的供给瓶颈。"
     ),
@@ -337,6 +344,11 @@ REGRESSION_BAD_CARDS: dict = {
         "concept_key": "rim",
         "concept_name_cn": "剩余收益模型",
         "concept_intro": "剩余收益模型把企业价值拆成账面净资产 + 未来超额收益的现值。",
+        "formula": "RI = (ROE − k) × B",
+        "company_calculation": [
+            "WDC 账面净资产 $5B，ROE 估算 18%，k 估算 10%",
+            "RI = (18% − 10%) × $5B = $0.4B / 年",
+        ],
         "company_application": [
             "WDC 账面净资产估算 $5B，ROE 估算 18%。",
             "WACC 估算 10%，超额收益率约 8pp。",
@@ -345,7 +357,6 @@ REGRESSION_BAD_CARDS: dict = {
         "different_angle_insight": (
             "说白了，它现在像 AI 基础设施；供给一松，又会被当周期股。"
         ),
-        "takeaway": "记住这一条：超额 ROE 是估值锚。",
         "cfa_progress_source": "default",
     },
 }
@@ -450,6 +461,137 @@ class TestWritingStyleBackstop(unittest.TestCase):
             any("'CC'" in i for i in issues),
             f"first-mention 恒定汇率（CC） should whitelist later CC uses, got {issues}",
         )
+
+
+_FULL_CARDS_BASE: dict = {
+    "schema_version": 3,
+    "logo_asset_path": "assets/logos/nvda.png",
+    "cover_company_name_cn": "英伟达",
+    "intro_sentence": (
+        "FY26 Q3 datacenter revenue $30.8B vs peer AMD $3.5B (8.8x); "
+        "total revenue $35.1B 同比+94%, vs FY25 Q3 $18.1B."
+    ),
+    "company_focus_paragraph": (
+        "FY26 Q3 总营收 $35.1B、同比+94%，数据中心 $30.8B 占 87.7%。"
+        "GAAP 毛利率 74.6%，营业利润率 62%；经营现金流 $17.6B。"
+        "投资主线：Blackwell 出货节奏 vs 客户消化期，NVL72 配件供应能否及时到位。"
+    ),
+    "metrics_row": [
+        "FY26 Q3 总营收|$35.1B",
+        "数据中心|$30.8B",
+        "GAAP 毛利率|74.6%",
+    ],
+    "industry_paragraph": (
+        "AI 算力当前处于「系统集成 > 单芯片」阶段：客户单元从 H100 单卡升级为 NVL72 整柜。"
+    ),
+    "background_bullets": [
+        "供应商：台积电 CoWoS 月产能 2026 升至 70k 片，NVDA 占 60%。",
+        "买方：前四大云厂占 46%，CUDA 锁定提高切换成本。",
+        "竞争强度：AMD MI300X 全年 $5B 指引 vs NVDA 数据中心单季 $30.8B。",
+        "护城河：CUDA + NVLink + InfiniBand 三层栈。",
+    ],
+    "porter_evidence": [
+        {"force": "rivalry",         "score": 2, "evidence": "训练市场 NVDA 份额>90%，AMD MI300X 全年仅 $5B。"},
+        {"force": "new_entrants",    "score": 3, "evidence": "Google TPU / AWS Trainium 都是自用。"},
+        {"force": "supplier_power",  "score": 4, "evidence": "TSMC CoWoS 月产 70k 中 NVDA 占 60%。"},
+        {"force": "buyer_power",     "score": 3, "evidence": "前四大云厂占 46%，CUDA 锁定提高切换成本。"},
+        {"force": "substitutes",     "score": 2, "evidence": "推理 ASIC 2026 替代率<25%。"},
+    ],
+    "five_year_arc": {
+        "narrative": (
+            "过去 5 年从游戏卡公司转向 AI 算力承包商：数据中心占比从 27% 到 87%，"
+            "毛利率从 62% 到 74.6%。"
+        ),
+        "inflection_points": [
+            "2020: A100 发布，云厂训练芯片第一次集中采购。",
+            "2022: ChatGPT 出圈，FY23 数据中心收入翻倍。",
+            "2024: Blackwell NVL72 出货，单笔订单价值放大 100 倍。",
+        ],
+    },
+    "recent_financial_highlights": [
+        "FY26 Q3 营收 $35.1B，同比+94%（vs 指引 $32.5B 上修 8%）。",
+        "数据中心 $30.8B 占 87.7%，GAAP 毛利率 74.6%。",
+        "运营利润率 62.0% vs AMD 11%、Intel-3%。",
+    ],
+    "revenue_explainer_points": [
+        "数据中心 $30.8B vs AMD $3.5B、Intel $3.3B，占总营收 87.7%。",
+        "游戏 $3.3B 同比+15%，汽车 $0.45B 同比+72%，合计 12%。",
+        "运营利润率 62% vs AMD 11%、Intel-3%，规模效应在 OPEX 端兑现。",
+    ],
+}
+
+
+def _full_positive_overrides() -> CardSlotOverrides:
+    raw = copy.deepcopy(_FULL_CARDS_BASE)
+    raw["cfa_lens"] = copy.deepcopy(POSITIVE_CARDS["cfa_lens"])
+    return CardSlotOverrides.from_json_dict(raw)
+
+
+class Card4SchemaTests(unittest.TestCase):
+    """Schema v3: formula required + must have operators, company_calculation
+    required + must have digits, takeaway removed."""
+
+    def test_card4_formula_required_in_validator(self) -> None:
+        slots = _full_positive_overrides()
+        slots.cfa_lens = dict(slots.cfa_lens or {})
+        slots.cfa_lens["formula"] = ""
+        with self.assertRaises(ValueError) as ctx:
+            assert_card_slots_complete(slots)
+        self.assertIn("formula", str(ctx.exception))
+
+    def test_card4_formula_must_have_operators(self) -> None:
+        slots = _full_positive_overrides()
+        slots.cfa_lens = dict(slots.cfa_lens or {})
+        slots.cfa_lens["formula"] = "公式: 经营杠杆"
+        with self.assertRaises(ValueError) as ctx:
+            assert_card_slots_complete(slots)
+        self.assertIn("formula", str(ctx.exception))
+        self.assertIn("operator", str(ctx.exception).lower())
+
+    def test_card4_formula_passes_with_equals_and_operator(self) -> None:
+        slots = _full_positive_overrides()
+        slots.cfa_lens = dict(slots.cfa_lens or {})
+        slots.cfa_lens["formula"] = "DOL = %ΔEBIT / %ΔRevenue"
+        try:
+            assert_card_slots_complete(slots)
+        except ValueError as exc:
+            self.fail(f"Formula with '=' and operator should pass; got {exc}")
+
+    def test_card4_company_calculation_must_have_digits(self) -> None:
+        slots = _full_positive_overrides()
+        slots.cfa_lens = dict(slots.cfa_lens or {})
+        slots.cfa_lens["company_calculation"] = [
+            "DOL = %ΔEBIT 比上 %ΔRevenue",
+            "营业利润同比扩张超过收入同比",
+        ]
+        with self.assertRaises(ValueError) as ctx:
+            assert_card_slots_complete(slots)
+        self.assertIn("company_calculation", str(ctx.exception))
+        self.assertIn("digit", str(ctx.exception).lower())
+
+    def test_card4_company_calculation_required(self) -> None:
+        slots = _full_positive_overrides()
+        slots.cfa_lens = dict(slots.cfa_lens or {})
+        slots.cfa_lens["company_calculation"] = []
+        with self.assertRaises(ValueError) as ctx:
+            assert_card_slots_complete(slots)
+        self.assertIn("company_calculation", str(ctx.exception))
+
+    def test_card4_takeaway_removed_from_schema(self) -> None:
+        """The takeaway slot is gone in v3 — it must not appear in the
+        dataclass-derived lens dict and assert_card_slots_complete must not
+        require it."""
+        slots = _full_positive_overrides()
+        lens = slots.cfa_lens or {}
+        self.assertNotIn("takeaway", lens)
+        try:
+            assert_card_slots_complete(slots)
+        except ValueError as exc:
+            self.fail(f"Positive v3 fixture should validate clean; got {exc}")
+
+    def test_schema_version_is_three(self) -> None:
+        slots = _full_positive_overrides()
+        self.assertEqual(slots.schema_version, 3)
 
 
 if __name__ == "__main__":

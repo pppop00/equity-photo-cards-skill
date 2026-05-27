@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "_disclaimer": "Illustrative card-voice example for a PRIVATE company. Numbers anchored to Stripe's 2024 annual letter (payment volume $1.4T), 2024-09 secondary tender at $91.5B, and analyst estimates for revenue/take rate/mix. P&L-style figures are analyst reconstructions, not issuer-disclosed.",
   "_purpose": "Hidden analyst fields the writer must resolve BEFORE composing card_slots.json prose. Updated for 4-card v2 layout.",
 
@@ -60,8 +60,8 @@
     }
   },
 
-  "cfa_lens.different_angle_insight": {
-    "data_anchor": "Residual income model: book equity ~$8B; ROE estimate 30% (gross margin 78% × asset turnover); WACC 12% (private + growth-stage premium); excess return spread = 18pp → 10-year PV of residual income $70-80B; total RI fair value $78-88B vs current $91.5B (premium 5-15%).",
+  "cfa_lens.company_calculation": {
+    "data_anchor": "Residual income model: book equity B ~$8B; ROE estimate 30% (gross margin 78% × asset turnover); WACC k = 12% (private + growth-stage premium); excess return spread = 18pp → annual residual income $1.44B; 10-year PV of residual income ≈ $75B; total RI fair value $83B vs current $91.5B (premium ~10%).",
     "variant_view": "Standard DCF gives ~$85B fair value; RI decomposition gives $78-88B; current $91.5B sits at top of RI range. The 5-15% premium represents 'IPO liquidity option' + 'AI merchant tooling option' that DCF underweights.",
     "falsifier": "If FY2025 Stripe ROE compresses below 22% (vs current ~30%) AND IPO is delayed past 2027, the optionality premium collapses by ~$15-20B (RI fair value drops to $65-75B).",
     "primary_quote": {

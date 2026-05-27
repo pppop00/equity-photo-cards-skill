@@ -57,6 +57,23 @@ At minimum, check for:
 
 Add new logic checks whenever a recurring factual contradiction is discovered.
 
+## Card 4 formula sanity check
+
+Card 4 ships a CFA L2 formula plus a worked numeric calculation. Reject these failure modes:
+
+- **Textual claim posing as a formula.** `cfa_lens.formula` must contain `=` AND at least one math operator (`/`, `×`, `+`, `−`, `-`, `(`, `Δ`, `%`). Examples to reject:
+  - `公式：经营杠杆` (no operator, just a label)
+  - `就是 ROE` (no `=`)
+  - `DOL > 1 意味着有杠杆` (`>` is not on the operator list; rewrite as `DOL = %ΔEBIT / %ΔRevenue`)
+- **Unknown-variable formula.** Variables in the formula must come from the CFA-known whitelist:
+  `ROE`, `ROA`, `ROIC`, `EBIT`, `EBITDA`, `EPS`, `FCFE`, `FCFF`, `WACC`, `D/E`, `P/E`, `P/B`, `ΔRevenue`, `ΔEBIT`, `ΔSales`, `Payout`, `Retention`, `g`, `k`, `r`, `β`, `σ`, `COGS`, `NI`, `CFO`, `CapEx`, `NOPAT`, `Equity`, `Debt`, `Sales`, `B` (book equity), `D` (dividend), `V` / `V₀` / `Vu` / `Vd`, `KRD`, `OAS`, `Z-spread`, `DOL`, `DFL`, `DTL`, `SGR`, `TV` (terminal value), `p` (risk-neutral probability), `Δy` / `Δyᵢ`.
+  Extend the whitelist when a legitimate L2 concept introduces a new symbol; do not allow ad-hoc variables that aren't on a CFA L2 syllabus. This audit is heuristic — a few false positives are OK if the writer can override with a clear justification line in worker_notes.
+- **Symbol-only `company_calculation`.** Reject entries that contain ONLY letters / symbols and no digits — the whole point is to plug REAL company numbers into the formula. The validator already enforces "at least one entry contains a digit"; this audit goes further and flags individual entries that are clearly variable-only restatements (e.g. `g = ROE × (1 − Payout)` repeated without numbers).
+- **Formula / calculation mismatch.** If the formula is `DOL = %ΔEBIT / %ΔRevenue`, the calculation must visibly divide an EBIT-style growth number by a revenue-style growth number. Calculations that name unrelated quantities (e.g. "FY2024 revenue was 8000 亿") fail.
+- **Concept / company mismatch.** Do not let the writer use DDM on a company that has never paid a dividend, or a binomial tree on a single-deterministic-cash-flow utility. If concept_key is wrong for the company shape, send the writer back to `cfa-lens-selector-agent.md` § "Formula-bearing concept menu" to re-pick.
+
+Acceptable override: if the writer writes a clear `formula_justification` line in `<stem>.card_slots_worker_notes.json` under `cfa_lens.company_calculation`, the auditor may pass a borderline formula. The override is on the writer, not the auditor.
+
 ## Failure Policy
 
 - Do not export if the audit fails

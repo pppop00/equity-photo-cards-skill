@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "_disclaimer": "Illustrative card-voice example. Numbers anchored to PDD FY2024 20-F (period ended 2024-12-31) and FQ4-24 earnings release; competitor and de minimis policy references are analyst snapshots circa Q1 2025. Verify against the latest filing before any live deliverable.",
   "_purpose": "Each slot below documents the four hidden analyst fields the writer must privately resolve BEFORE composing the public-facing card_slots.json sentence. Updated for 4-card v2 layout.",
 
@@ -66,10 +66,10 @@
     }
   },
 
-  "cfa_lens.different_angle_insight": {
-    "data_anchor": "Two-period binomial: branches = de-minimis outcome (P=0.45 preserved, 0.55 repealed) × Temu unit economics (P=0.55 +¥1, 0.45 -¥1). Upper node ADR $182; lower node ADR $67; risk-neutral fair value ≈ $113 vs current $125.",
-    "variant_view": "Street prices a 60% bear probability via a single-point DCF; our binomial decomposition gets 55% bear weight, but the asymmetric payoff (range $115) means option-value matters more than the point estimate — DCF systematically under-prices vol.",
-    "falsifier": "Two consecutive quarters of Temu per-order contribution margin worse than -¥0.5 (vs current estimate ~-¥0.3) would force the lower-node probability above 60% and collapse the binomial fair value to ~$95.",
+  "cfa_lens.company_calculation": {
+    "data_anchor": "Two-period binomial: Vu = ADR $182 (de minimis preserved × Temu+¥1, FY26 EPS ¥110 × 12x PE); Vd = ADR $67 (repealed × Temu-¥1, FY26 EPS ¥70 × 7x PE); p=0.45, r=5% → V0 = (0.45×182 + 0.55×67)/1.05 ≈ $113 vs current ADR $125.",
+    "variant_view": "Street prices a 60/40 bear/bull split via a single-point DCF; binomial decomposition with 45/55 risk-neutral weights gets fair value $113 — but the asymmetric payoff (range $115) means option-value matters more than the point estimate.",
+    "falsifier": "Two consecutive quarters of Temu per-order contribution margin worse than -¥0.5 (vs current estimate ~-¥0.3) would force lower-node probability above 60% and collapse binomial fair value to ~$95.",
     "primary_quote": {
       "speaker": "Co-CEO Lei Chen (陈磊)",
       "venue": "FQ4-24 earnings call, 2025-03-20",

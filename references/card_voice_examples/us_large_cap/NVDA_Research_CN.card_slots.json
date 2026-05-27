@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
 
   "cover_company_name_cn": "英伟达",
   "logo_asset_path": "assets/logos/nvidia.png",
@@ -50,16 +50,21 @@
   ],
 
   "cfa_lens": {
-    "concept_key": "real_options",
-    "concept_name_cn": "实物期权",
-    "concept_intro": "CFA L2 公司金融里把战略投资当成「延期/扩张/放弃」期权来定价：除了 NPV，还把未来扩张的弹性写进价值。适合估值「平台型 + 高不确定性」公司。",
+    "concept_key": "operating_leverage",
+    "concept_name_cn": "经营杠杆",
+    "concept_intro": "CFA L2 公司金融里衡量「收入变化在营业利润上被放大多少倍」的指标。固定成本越重、规模效应越强，DOL 越大；适合解释 NVDA 这种 R&D 重、数据中心规模高度集中的公司。",
+    "formula": "DOL = %ΔEBIT / %ΔRevenue",
+    "company_calculation": [
+      "FY26 Q3 营收同比+94%（$35.1B vs $18.1B），营业利润同比+112%（约 $21.8B vs $10.3B）",
+      "DOL ≈ 112 / 94 = 1.19",
+      "FY27 若营收+25%，营业利润弹性约+30%，对应运营利润率从 62% 推到约 64%"
+    ],
     "company_application": [
       "把英伟达当成三个嵌套实物期权：（1）训练侧 CUDA 锁定 = 已行权的扩张期权；（2）推理侧 ASIC vs GPU = 待定的延期期权；（3）汽车/Robotics = 未行权的扩张期权。",
       "训练侧期权已 in-the-money（NPV 正），市场已 price-in 到 FY26 的兑现；推理侧期权 strike price 是「2026H2 ASIC 性价比交叉点」，当前 vol 高、time value 大。",
       "用 Black-Scholes 风格估算：推理期权占总企业价值约 18%，汽车/Robotics 期权占 8%——加起来 25% 的「optionality 溢价」，这是为什么 forward PE 35x 仍不夸张。"
     ],
-    "different_angle_insight": "CFO Colette Kress 在 FY26 Q3 业绩会原话：「Blackwell 的 sell-through visibility 已延伸至 FY27 上半年，但我们对 customer mix shift 保持透明度」（来源：英伟达投资者关系电话会，2025-11-19）。把这条 quote 喂进期权模型，意味着「延期期权」的 strike date 应该往后推 2 个季度——市场目前在 12 个月窗口估值，应该用 18 个月。",
-    "takeaway": "英伟达不是周期股，是嵌套期权——optionality 溢价不是泡沫。",
+    "different_angle_insight": "CFO Colette Kress 在 FY26 Q3 业绩会原话：「Blackwell 的 sell-through visibility 已延伸至 FY27 上半年，但我们对 customer mix shift 保持透明度」（来源：英伟达投资者关系电话会，2025-11-19）。把 1.19 的 DOL 喂进 FY27 共识收入+25% 假设，营业利润弹性高于 Street 的 60% 利润率假设——市场仍在低估规模效应的放大。",
     "cfa_progress_source": "default"
   }
 }

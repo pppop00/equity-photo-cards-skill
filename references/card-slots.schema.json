@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/pppop00/equity-photo-cards-skill/card-slots.schema.json",
-  "title": "Equity photo card slot overrides (4-card layout, v2)",
+  "title": "Equity photo card slot overrides (4-card layout, v3)",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -18,7 +18,7 @@
     "cfa_lens"
   ],
   "properties": {
-    "schema_version": { "type": "integer", "const": 2 },
+    "schema_version": { "type": "integer", "const": 3 },
 
     "logo_asset_path": { "type": "string" },
     "cover_company_name_cn": { "type": "string" },
@@ -98,14 +98,22 @@
         "concept_key",
         "concept_name_cn",
         "concept_intro",
+        "formula",
+        "company_calculation",
         "company_application",
-        "different_angle_insight",
-        "takeaway"
+        "different_angle_insight"
       ],
       "properties": {
         "concept_key": { "type": "string" },
         "concept_name_cn": { "type": "string" },
         "concept_intro": { "type": "string" },
+        "formula": { "type": "string" },
+        "company_calculation": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1,
+          "maxItems": 3
+        },
         "company_application": {
           "type": "array",
           "items": { "type": "string" },
@@ -113,7 +121,6 @@
           "maxItems": 4
         },
         "different_angle_insight": { "type": "string" },
-        "takeaway": { "type": "string" },
         "cfa_progress_source": {
           "type": "string",
           "enum": ["USER.md", "CLI", "env", "default"]

@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
 
   "cover_company_name_cn": "Stripe",
   "logo_asset_path": "assets/logos/stripe.png",
@@ -52,14 +52,19 @@
   "cfa_lens": {
     "concept_key": "residual_income_model",
     "concept_name_cn": "剩余收益模型",
-    "concept_intro": "CFA L2 股权估值里把企业价值拆成「账面净资产+未来超额收益的现值」——超额收益 = ROE × 净资产-WACC × 净资产。适合估值「资本轻+ROE 高」的平台公司。",
+    "concept_intro": "CFA L2 股权估值里把企业价值拆成「账面净资产+未来超额收益的现值」——超额收益 = (ROE − k) × 账面净资产。适合估值「资本轻+ROE 高」的平台公司。",
+    "formula": "V = B + Σ (ROE − k) × B / (1 + k)^t",
+    "company_calculation": [
+      "账面净资产 B ≈ $8B（私营估算），ROE ≈ 30%，k ≈ 12%",
+      "年超额收益 = (30% − 12%) × $8B = $1.44B/年",
+      "10 年超额收益现值 ≈ $75B，加账面 $8B → V ≈ $83B vs 二级市场 $91.5B"
+    ],
     "company_application": [
       "Stripe 的账面净资产估算~$8B（私营，未披露），ROE 估算约 30%（毛利率 78% × 营收/净资产周转）；WACC 约 12%（私营+成长股溢价）。",
       "超额收益率= 30%-12% = 18pp，对应未来 10 年的超额收益现值大约$70-80B；加上账面$8B = 剩余收益模型估值$78-88B。",
       "当前二级市场$91.5B 比 RI 模型估算高约 5-15%——这部分是「IPO optionality」（流动性折扣消失的预期价值）+「AI 商家通道」期权价值。"
     ],
     "different_angle_insight": "Stripe 联合创始人 Patrick Collison 在 2024-02 secondary tender 公告原话：「未来三年我们的核心增长来自 Connect 和 Issuing，而非 core payments」（来源：Stripe 官方公开信，2024-02-15）。把这条 quote 喂进 RI 模型：Connect+Issuing 的 ROE 比 core payments 高约 8pp（开发者工具毛利率>85% vs 支付处理 78%），意味着真实超额收益率应该是 22pp 而非 18pp——RI 估值上限应该到$110B 一档。",
-    "takeaway": "Stripe 估的不是支付费，是超额 ROE 的现值——take rate 是结果不是因。",
     "cfa_progress_source": "default"
   }
 }
