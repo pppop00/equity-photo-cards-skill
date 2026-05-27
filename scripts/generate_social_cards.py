@@ -340,12 +340,21 @@ LIMIT_CARD2_INDUSTRY_CHARS = 113
 LIMIT_CARD2_BG_BULLET_CHARS = 60
 LIMIT_CARD2_PORTER_EVIDENCE_CHARS = 70
 LIMIT_CARD3_EXPLAINER_CHARS = 58
-LIMIT_CARD3_FIVE_YEAR_NARRATIVE_CHARS = 200
+LIMIT_CARD3_FIVE_YEAR_NARRATIVE_CHARS = 140
 LIMIT_CARD3_INFLECTION_CHARS = 56
-# Yellow explainer panel: rounded rect ends at CARD3_EXPLAINER_PANEL_BOTTOM; bullets start at 1002.
+# Five-year arc panel (72,270..1008,630) holds narrative + 3 inflection
+# bullets directly below it (no 拐点 sublabel — the RED ellipse markers in
+# bullets() already distinguish them). At FONT_PANEL_BODY (25) the narrative
+# can wrap to 3 lines (~120 px) leaving ~240 px below for the bullet block
+# (3 × ~39 px = 117 px) plus a 22 px separator and a 16 px bottom inset.
+CARD3_NARRATIVE_MAX_LINES = 3
+CARD3_FIVE_YEAR_PANEL_BOTTOM = 630
+CARD3_FIVE_YEAR_PANEL_BOTTOM_INSET = 16
+CARD3_NARRATIVE_START_Y = 346
+# Yellow explainer panel: rounded rect ends at CARD3_EXPLAINER_PANEL_BOTTOM; bullets start at CARD3_EXPLAINER_START_Y.
 # CARD3_EXPLAINER_BOTTOM_INSET reserves space inside the panel so the last line does not sit on the bottom edge.
-CARD3_EXPLAINER_PANEL_BOTTOM = 1260
-CARD3_EXPLAINER_START_Y = 1002
+CARD3_EXPLAINER_PANEL_BOTTOM = 1300
+CARD3_EXPLAINER_START_Y = 1024
 CARD3_EXPLAINER_BOTTOM_INSET = 16
 LIMIT_CARD3_EXPLAINER_TOTAL_HEIGHT = CARD3_EXPLAINER_PANEL_BOTTOM - CARD3_EXPLAINER_START_Y - CARD3_EXPLAINER_BOTTOM_INSET
 TEXT_COMPOSITE_PAD = 8  # matches draw_text(): 2 * pad where pad=4
@@ -2345,6 +2354,47 @@ def validate_report(data: ReportData, brand: str, *, allow_no_logo: bool = False
     if has_bad_linebreak(focus, 860, f(FONT_PANEL_BODY), draw):
         issues.append("Card 1 company-focus paragraph contains a punctuation-led line break.")
 
+    # Card 1 metric tile overflow gate. Tiles are sized at runtime as
+    # (total_w - gap*(n-1)) // n with total_w=936 and gap=16, so a 3-tile row
+    # is ~301px wide and a 4-tile row is ~225px wide. The drawable interior is
+    # tile_w - 42 (left accent + padding). fit_font silently returns the min
+    # font even when the text still overflows, so we re-measure at min size
+    # here and fail loudly. Authors must shorten the label/value or drop the
+    # metric — Cards 1 cannot ship text running off the tile.
+    raw_metrics_row = (
+        [m for m in (data.card_slots.metrics_row or []) if clean(str(m))]
+        if data.card_slots and data.card_slots.metrics_row else []
+    )
+    if raw_metrics_row:
+        slot_count = min(len(raw_metrics_row), 4)
+        metric_tile_w = max(180, (936 - 16 * (slot_count - 1)) // slot_count)
+        metric_text_w = metric_tile_w - 42
+        label_min_font = f(FONT_METRIC_LABEL_MIN, True)
+        value_min_font = f(FONT_METRIC_VALUE_MIN, True)
+        for entry in raw_metrics_row[:slot_count]:
+            entry_clean = clean(str(entry))
+            if "|" not in entry_clean:
+                issues.append(
+                    f"Card 1 metrics_row entry must use 'Label|Value' format: {entry_clean!r}"
+                )
+                continue
+            label_part, value_part = entry_clean.split("|", 1)
+            label_part = clean(label_part)
+            value_part = clean(value_part)
+            if not label_part or not value_part:
+                issues.append(
+                    f"Card 1 metrics_row entry needs non-empty label and value: {entry_clean!r}"
+                )
+                continue
+            if draw.textlength(label_part, font=label_min_font) > metric_text_w * LAYOUT_SCALE:
+                issues.append(
+                    f"Card 1 metrics_row label too long for tile width at min font: {label_part!r}"
+                )
+            if draw.textlength(value_part, font=value_min_font) > metric_text_w * LAYOUT_SCALE:
+                issues.append(
+                    f"Card 1 metrics_row value too long for tile width at min font: {value_part!r}"
+                )
+
     # ---- Card 2 ----
     if len(bg_points) != 4:
         issues.append("Card 2 must contain exactly 4 background bullets.")
@@ -2383,6 +2433,28 @@ def validate_report(data: ReportData, brand: str, *, allow_no_logo: bool = False
     # ---- Card 3 ----
     if len(five_year_text) > LIMIT_CARD3_FIVE_YEAR_NARRATIVE_CHARS:
         issues.append("Card 3 five-year narrative exceeds its character budget.")
+    # Five-year-arc panel overflow: the narrative + 3 inflection bullets must
+    # fit inside the cream panel that ends at CARD3_FIVE_YEAR_PANEL_BOTTOM.
+    # Pre-compute the rendered end-Y the way card_3() does it so the validator
+    # catches collisions (like the narrative running into the bullets) before
+    # render. Mirrors the bullets() call in card_3 with no intervening 拐点
+    # sublabel — the RED ellipse markers in bullets() distinguish them.
+    narrative_end_y = block_final_y(
+        draw, five_year_text, CARD3_NARRATIVE_START_Y, 880, f(FONT_PANEL_BODY), 12,
+        CARD3_NARRATIVE_MAX_LINES,
+    )
+    inflection_bullets_y = narrative_end_y + 22
+    inflection_block_height = measure_bullets(
+        draw, inflection_points[:3], 856, f(FONT_BULLET_COMPACT), 8, 8,
+        max_lines_per_item=1,
+    )
+    inflection_end_y = inflection_bullets_y + inflection_block_height
+    if inflection_end_y > CARD3_FIVE_YEAR_PANEL_BOTTOM - CARD3_FIVE_YEAR_PANEL_BOTTOM_INSET:
+        issues.append(
+            "Card 3 five-year arc panel overflow: narrative + inflection bullets do not fit "
+            f"inside the panel (end Y={inflection_end_y}, panel bottom={CARD3_FIVE_YEAR_PANEL_BOTTOM}). "
+            "Shorten the narrative or the inflection bullets."
+        )
     if len(inflection_points) < 3:
         issues.append("Card 3 five_year_arc.inflection_points must contain at least 3 entries.")
     for pt in inflection_points:
@@ -2585,7 +2657,7 @@ def header(draw: ImageDraw.ImageDraw, card_no: int) -> None:
 
 
 def footer(draw: ImageDraw.ImageDraw, data: ReportData) -> None:
-    draw_text(draw, (72, 1288), f"{company_short_cn(data)} | {export_date_cn()}", f(FONT_FOOTER), MUTED)
+    draw_text(draw, (72, 1320), f"{company_short_cn(data)} | {export_date_cn()}", f(FONT_FOOTER), MUTED)
 
 
 def metric(draw: ImageDraw.ImageDraw, x: int, y: int, w: int, label: str, value: str, accent: str) -> None:
@@ -2631,10 +2703,14 @@ def cover_metrics(data: ReportData) -> list[tuple[str, str, str]]:
             label, value = entry.split("|", 1)
             label, value = clean(label), clean(value)
         else:
+            # No pipe → validator should have caught this; fall back to first
+            # whitespace split, and leave value empty if there is no whitespace
+            # (no silent label→value mirror, which previously rendered the same
+            # overflowing string in both tile lines).
             parts = entry.split(maxsplit=1)
             label = parts[0]
             value = parts[1] if len(parts) > 1 else ""
-        items.append((label or "指标", value or label, accents[idx % len(accents)]))
+        items.append((label or "指标", value, accents[idx % len(accents)]))
     return items
 
 
@@ -2729,18 +2805,23 @@ def card_3(data: ReportData) -> Image.Image:
     header(d, 3)
     draw_text(d, (72, 198), "五年故事 + 最近季度财务", f(58, True), TEXT)
 
-    # 1) Five-year arc panel (top).
-    d.rounded_rectangle((72, 290, 1008, 552), radius=28, fill=PANEL)
-    draw_text(d, (108, 318), "过去 5 年的故事", f(30, True), TEXT)
-    block(d, five_year_narrative(data), 108, 366, 880, f(FONT_PANEL_BODY), "#344054", 12, 5)
-
-    inflection_y = 466
-    draw_text(d, (108, inflection_y - 10), "拐点", f(24, True), MUTED)
+    # 1) Five-year arc panel (top). The panel spans Y=270..630; narrative
+    # starts at CARD3_NARRATIVE_START_Y and the inflection bullets follow 22 px
+    # below the narrative's rendered end-Y. Narrative is capped at 3 lines so
+    # the panel can hold both without overlap; the inflection-bullet Y is
+    # derived from block()'s actual end-Y rather than a fixed offset so any
+    # narrative shorter than the cap still places bullets cleanly underneath.
+    d.rounded_rectangle((72, 270, 1008, CARD3_FIVE_YEAR_PANEL_BOTTOM), radius=28, fill=PANEL)
+    draw_text(d, (108, 298), "过去 5 年的故事", f(30, True), TEXT)
+    narrative_end_y = block(
+        d, five_year_narrative(data), 108, CARD3_NARRATIVE_START_Y, 880,
+        f(FONT_PANEL_BODY), "#344054", 12, CARD3_NARRATIVE_MAX_LINES,
+    )
     bullets(
         d,
         five_year_inflection_points(data),
         108,
-        inflection_y + 24,
+        narrative_end_y + 22,
         880,
         max_items=3,
         max_lines=1,
@@ -2750,8 +2831,8 @@ def card_3(data: ReportData) -> Image.Image:
     )
 
     # 2) Recent-quarter financial bars (middle).
-    panel(d, (72, 572, 1008, 894))
-    draw_text(d, (108, 602), f"{fiscal_year(data)} 最近季度收入流", f(30, True), TEXT)
+    panel(d, (72, 648, 1008, 922))
+    draw_text(d, (108, 676), f"{fiscal_year(data)} 最近季度收入流", f(30, True), TEXT)
     fin = finance(data)
     chart_labels = get_nested(data.financial_data, "income_statement", "chart_labels", default={}) or {}
     rows = [
@@ -2763,7 +2844,7 @@ def card_3(data: ReportData) -> Image.Image:
     ]
     maxv = max(abs(v) for _, v, _ in rows) or 1
     for idx, (label, value, color) in enumerate(rows):
-        y = 654 + idx * 44
+        y = 724 + idx * 38
         draw_text(d, (108, y), label, f(FONT_CHART_LABEL), "#475467")
         d.rounded_rectangle((244, y + 6, 744, y + 24), radius=9, fill=TRACK)
         bar_color = RED if value < 0 else color
@@ -2771,13 +2852,13 @@ def card_3(data: ReportData) -> Image.Image:
         draw_text(d, (782, y - 4), f"{value:.1f} 亿{_CURRENCY_LABEL}", f(FONT_CHART_VALUE, True), TEXT)
 
     # 3) Revenue explainer panel (bottom).
-    d.rounded_rectangle((72, 914, 1008, 1240), radius=28, fill=PANEL_CREAM)
-    draw_text(d, (108, 942), "收入分析", f(30, True), TEXT)
+    d.rounded_rectangle((72, 940, 1008, CARD3_EXPLAINER_PANEL_BOTTOM), radius=28, fill=PANEL_CREAM)
+    draw_text(d, (108, 968), "收入分析", f(30, True), TEXT)
     bullets(
         d,
         revenue_explainer_points(data),
         108,
-        998,
+        CARD3_EXPLAINER_START_Y,
         880,
         max_items=3,
         max_lines=3,
