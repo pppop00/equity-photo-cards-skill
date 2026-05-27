@@ -1,8 +1,8 @@
 # Equity Photo Cards Skill
 
-Agent skill and Python tooling that turn **equity research HTML** (plus optional sibling JSON) into **six fixed-layout social images** (e.g. Xiaohongshu / Douyin), with slot-based copy and **layout validation** before export.
+Agent skill and Python tooling that turn **equity research HTML** (plus optional sibling JSON) into **four fixed-layout social images** (e.g. Xiaohongshu / Douyin), with slot-based copy and **layout validation** before export.
 
-**中文简介：** 将权益类研报 HTML 规范化为固定 **6 张卡片** 的图文素材。**唯一支持路径：** 多 Agent 生成 **完整** `html_stem.card_slots.json` → **`validate_cards.py`（Validator 1）** → **Validator 2 联网事实核查** → `generate_social_cards.py`；后两者 **必须带 `--slots`**；脚本在加载时会拒绝缺字段的 JSON，**不存在**「不写 slots、只靠 Python 模板糊字」的出口。
+**中文简介：** 将权益类研报 HTML 规范化为固定 **4 张卡片** 的图文素材。**唯一支持路径：** 多 Agent 生成 **完整** `html_stem.card_slots.json` → **`validate_cards.py`（Validator 1）** → **Validator 2 联网事实核查** → `generate_social_cards.py`；后两者 **必须带 `--slots`**；脚本在加载时会拒绝缺字段的 JSON，**不存在**「不写 slots、只靠 Python 模板糊字」的出口。
 
 **Pipeline:** HTML in → logo agent → content agent → layout agent → hardcode/logic audit → **`validate_cards.py` (Validator 1)** → **Validator 2 (web fact-check; [agents/validator-2-agent.md](agents/validator-2-agent.md))** → `generate_social_cards.py` (CLIs require `--slots`; slots map copy into fixed card frames).
 
@@ -11,14 +11,12 @@ Agent skill and Python tooling that turn **equity research HTML** (plus optional
 
 ## What you get
 
-| Output | Role |
-|--------|------|
-| Card 1 | Cover + core tension |
-| Card 2 | Porter evidence + industry structure + Porter bars |
-| Card 3 | Revenue / profit flow |
-| Card 4 | Current business + next 2–3 years |
-| Card 5 | Brand close + three memory points |
-| Card 6 | Social post copy image (title, body, hashtags) |
+| Output | File | Role |
+|--------|------|------|
+| Card 1 | `01_cover.png` | Cover + intro + company-focus paragraph + metrics row |
+| Card 2 | `02_porter.png` | Industry paragraph + 4 background bullets + Porter five forces with per-force evidence |
+| Card 3 | `03_five_year_financials.png` | 5-year arc + inflection points + most-recent-quarter financial bars + revenue explainer |
+| Card 4 | `04_cfa_lens.png` | CFA concept applied to this company (concept intro + 3-bullet application + different-angle insight + takeaway) |
 
 Layout coordinates: **1080 × 1350** (logical). Default PNG export: **2160 × 2700** (full render resolution; use `generate_social_cards.py --export-logical-size` for 1080×1350). Details: [references/design-spec.md](references/design-spec.md).
 
@@ -38,7 +36,8 @@ Follows **skill-creator** bundle layout: **`SKILL.md`** (entry) → **`reference
 | [references/examples/pdd_holdings_card_slots.example.json](references/examples/pdd_holdings_card_slots.example.json) | Example slot file (PDD-shaped) |
 | [agents/agent-slot-pipeline.md](agents/agent-slot-pipeline.md) | Agent handoff → `card_slots.json` → render |
 | [agents/logo-production-agent.md](agents/logo-production-agent.md) | Web official logo → regenerated clean logo asset |
-| [agents/content-production-agent.md](agents/content-production-agent.md) | HTML → slot copy |
+| [agents/content-production-agent.md](agents/content-production-agent.md) | HTML → Card 1–3 slot copy |
+| [agents/cfa-lens-selector-agent.md](agents/cfa-lens-selector-agent.md) | Pick the Card 4 CFA concept + apply it to this company |
 | [agents/layout-fill-agent.md](agents/layout-fill-agent.md) | Fit copy to layout rules |
 | [agents/hardcode-audit-agent.md](agents/hardcode-audit-agent.md) | Hardcode / logic audit before validation |
 | [agents/validation-agent.md](agents/validation-agent.md) | Validator 1 — what `validate_cards.py` enforces |

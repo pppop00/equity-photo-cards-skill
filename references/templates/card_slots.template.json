@@ -1,50 +1,65 @@
 {
-  "schema_version": 1,
-  "intro_sentence": "请根据本报告投资摘要与核心矛盾，写一句点出市场当下定价锚的完整句子。",
-  "company_focus_paragraph": "请根据 HTML 摘要与 KPI 写 150-165 字：营收利润增速、分部或区域亮点、现金与杠杆；需含报告内可核对数字，并与摘要段落语气一致，避免空泛行业套话。",
+  "schema_version": 2,
+
+  "logo_asset_path": "可选：logo-production-agent 联网查官方来源并重新生成的透明 logo 文件绝对路径（横版字标建议宽≥840px，见 validate_cards）；没有可信官方 logo 时删除本字段。",
+  "cover_company_name_cn": "有 logo 时必填：由 logo production agent 写入（核对/翻译 HTML .company-name-cn 后的中文短名，去掉尾缀「公司」）。无 logo 时：若 HTML 已为中文可省略；若 HTML 为英文则由 content agent 填入。",
+
+  "intro_sentence": "Card 1：一句话点出市场当下的定价锚与本次报告核心张力，含一个可核对数字与一个comp（peer/历史/guidance/consensus）。",
+  "company_focus_paragraph": "Card 1 黄色看点框，150-165 字。consensus_view + key_number（含 metric / our_estimate / consensus）+ 一条 comp，再保留一条经营驱动作为锚。",
+  "metrics_row": [
+    "FY/季度 总收入|XXX 亿XXX",
+    "净利润|XXX 亿XXX",
+    "毛利率|XX.X%",
+    "经营现金流|XXX 亿XXX"
+  ],
+
+  "industry_paragraph": "Card 2 行业结构段落，≤113 字。先点最强压力，再写 consensus vs variant view，给出会改变力量平衡的二阶变量。",
   "background_bullets": [
-    "供应商：请替换为波特五力中供应商力量的具体判断与原因，说明对成本、交付或毛利的影响。",
-    "买方：请替换为客户议价能力的具体判断与原因，说明对定价、份额或回款的影响。",
-    "竞争强度：请替换为现有竞争或价格战的具体判断与原因，说明对增长或利润率的影响。",
-    "护城河：请从新进入者、替代品或技术/监管壁垒中选最有价值的一点，说明为什么会改变风险或估值。"
+    "供应商：一条具体证据 + 数字 + comp，说明对成本/交付/毛利的影响。",
+    "买方：一条具体证据 + 数字 + comp，说明对定价/份额/回款的影响。",
+    "竞争强度：一条具体证据 + 数字 + comp，说明对增长或利润率的影响。",
+    "护城河/替代/进入者：一条具体证据 + 数字 + comp，说明为什么会改变风险或估值。"
   ],
-  "industry_paragraph": "请写一段波特五力综合判断：指出最大压力来自哪一股力量、公司最重要的防守点是什么、什么条件会改变行业力量对比；需来自报告波特段落，不写空泛行业介绍。",
   "porter_scores": [3, 3, 3, 3, 3],
-  "conclusion_block": "请写一句波特五力卡片右侧「一句结论」，与报告立场一致。",
+  "porter_evidence": [
+    {"force": "rivalry",         "score": 3, "evidence": "竞争强度 — 一句话证据（份额/价格战/补贴节奏 + 数字 + comp）。"},
+    {"force": "new_entrants",    "score": 3, "evidence": "新进入者 — 一句话证据（资金/监管/技术门槛 + 数字 + comp）。"},
+    {"force": "supplier_power",  "score": 3, "evidence": "供应商 — 一句话证据（集中度/产能/合同期 + 数字 + comp）。"},
+    {"force": "buyer_power",     "score": 3, "evidence": "买方 — 一句话证据（议价/迁移成本/集中度 + 数字 + comp）。"},
+    {"force": "substitutes",     "score": 3, "evidence": "替代品 — 一句话证据（同等功能/价格比/技术路线 + 数字 + comp）。"}
+  ],
+
+  "five_year_arc": {
+    "narrative": "Card 3 上半：过去 5 年这家公司的商业模式或 margin 结构变迁，2-3 句长文，描述真实转型路径。",
+    "inflection_points": [
+      "年份/事件 + 一条 KPI 变化（如：2022 新业务线占比从 5% 提到 22%）",
+      "年份/事件 + 一条结构变化（如：海外收入从 12% 提到 38%）",
+      "年份/事件 + 一条利润结构变化（如：毛利率从 32% 修复到 48%）"
+    ]
+  },
+  "recent_financial_highlights": [
+    "最新季度收入 XXX 亿XXX，同比+XX%（vs guide XX%）",
+    "最新季度净利润 XXX 亿XXX，同比+XX%（vs consensus XX 亿）",
+    "毛利率 XX.X%，环比+X.X 个百分点",
+    "自由现金流 XXX 亿XXX，过去四季合计 XXX 亿XXX"
+  ],
   "revenue_explainer_points": [
-    "请结合桑基或利润表路径，解释毛利与费用如何挤占营业利润。",
-    "请写一句净利润率或盈利质量，含报告内数字。",
-    "请用口语收束：云与零售或主业与成本中市场最该盯的变量。"
+    "Card 3 收入分析 bullet 1：key_number metric + our_estimate vs consensus，解释收入流为什么是这样的形状。",
+    "Card 3 bullet 2：一条 comp_anchor（peer/历史/guidance）+ 数字。",
+    "Card 3 bullet 3：bridge to consensus — 把 gap 用业务语言翻译出来。"
   ],
-  "current_business_points": [
-    "现在靠什么赚钱：请写分部或产品线事实句一。",
-    "现在靠什么赚钱：请写分部或产品线事实句二。",
-    "现在靠什么赚钱：请写区域或渠道事实句。",
-    "现在靠什么赚钱：请写货币化、费率或运营抓手事实句。"
-  ],
-  "future_watch_points": [
-    "未来两到三年风险或跟踪点一：来自报告风险箱或宏观。",
-    "未来两到三年风险或跟踪点二：竞争或监管。",
-    "未来两到三年风险或跟踪点三：成本或供应链。",
-    "未来两到三年风险或跟踪点四：资本开支或现金流。"
-  ],
-  "judgement_paragraph": "请写一句判断，需含口语标记如说白了，并与报告逻辑一致，控制字数。",
-  "brand_subheading": "一句话看公司简称",
-  "brand_statement": "请写品牌收尾金句，需含说白了类口语，与业务事实挂钩。",
-  "memory_points": [
-    "记忆点一：请写一句可传播的核心事实。",
-    "记忆点二：请写一句风险或机会。",
-    "记忆点三：请写一句估值或叙事锚。"
-  ],
-  "cta_line": "关注金融豹，每天学习一个公司。",
-  "cover_company_name_cn": "有 logo 时必填：由 logo production agent 写入（核对/翻译 HTML .company-name-cn 后的中文简称）。无 logo 时：若 HTML 已为中文可省略；若 HTML 为英文则由 content agent 填入。",
-  "logo_asset_path": "可选：logo-production-agent 联网查官方来源并重新生成的透明 logo 文件路径（横版字标建议宽≥840px，见 validate_cards）；没有可信官方 logo 时删除本字段。",
-  "post_title": "一天吃透一家公司：请替换为公司简称",
-  "post_content_lines": [
-    "请写第一句：公司身份加最硬的财报或经营事实，必要时带上收入地区/运营地区，点出表面数字下的核心矛盾。",
-    "请写第二句：解释过去五年的结构变化或真实商业机制，必要时用一个自然的对比或比喻帮读者看懂。",
-    "请写第三句：结合主要竞争对手、近期新闻、政策、宏观或行业变化，说明市场为什么重新定价这家公司。",
-    "请写第四句疑问：未来一两年最该验证的可量化变量是什么？"
-  ],
-  "hashtags": ["公司简称", "Ticker", "行业标签", "金融豹", "A股", "美股"]
+
+  "cfa_lens": {
+    "concept_key": "binomial_tree",
+    "concept_name_cn": "二叉树定价",
+    "concept_intro": "Card 4：1-2 句通俗解释这个 CFA 概念在做什么（不超过 110 字）。",
+    "company_application": [
+      "用这个概念看这家公司：把哪个业务/估值假设套进二叉树？关键节点是什么？",
+      "节点的概率/payoff 怎么估？哪些 KPI 决定上行/下行节点的值？",
+      "倒推出来的隐含价值 vs 当前市价，gap 是多少？给一个量级。"
+    ],
+    "different_angle_insight": "Card 4 不同角度：用这个 CFA 镜头看，能看到 surface 上看不到的什么？必须含 primary_quote + 数据锚。",
+    "takeaway": "Card 4 一句记忆点 — 类似座右铭（≤48 字）。",
+    "cfa_progress_source": "default"
+  }
 }

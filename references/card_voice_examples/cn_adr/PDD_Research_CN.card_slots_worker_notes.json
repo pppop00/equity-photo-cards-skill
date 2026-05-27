@@ -1,50 +1,40 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "_disclaimer": "Illustrative card-voice example. Numbers anchored to PDD FY2024 20-F (period ended 2024-12-31) and FQ4-24 earnings release; competitor and de minimis policy references are analyst snapshots circa Q1 2025. Verify against the latest filing before any live deliverable.",
-  "_purpose": "Each slot below documents the four hidden analyst fields the writer must privately resolve BEFORE composing the public-facing card_slots.json sentence. The card prose itself is the visible compression; these notes are the audit trail.",
+  "_purpose": "Each slot below documents the four hidden analyst fields the writer must privately resolve BEFORE composing the public-facing card_slots.json sentence. Updated for 4-card v2 layout.",
 
   "intro_sentence": {
-    "data_anchor": "PDD forward PE 8.5x vs peer Alibaba 11x / JD 9x / Amazon 40x; PDD FY24 operating margin 28.5% vs Alibaba 14% / JD 3% — paying 25-30% PE discount for a company with 2x peer margin.",
-    "variant_view": "Consensus: discount is permanent because Temu margin will compress structurally. Our view: ~70% of the discount is policy-uncertainty-driven (de minimis), not structural — if Temu semi-managed model hits 70% penetration before policy change, the discount narrows to ~10%.",
-    "falsifier": "If FY25 Q3 Temu per-order contribution margin stays negative AND de minimis is preserved unchanged, the bear thesis (structural margin compression) is confirmed and the 30% upside path closes.",
+    "data_anchor": "PDD forward PE 8.5x vs peer Alibaba 11x / JD 9x / Amazon 40x; PDD FY24 operating margin 28.5% vs Alibaba 14% / JD 3%.",
+    "variant_view": "Consensus: discount is permanent because Temu margin will compress structurally. Our view: ~70% of the discount is policy-uncertainty-driven, not structural — narrows to ~10% if Temu semi-managed hits 70% before policy change.",
+    "falsifier": "If FY25 Q3 Temu per-order contribution margin stays negative AND de minimis is preserved unchanged, the bear thesis (structural margin compression) is confirmed.",
     "primary_quote": {
       "speaker": "Co-CEO Lei Chen (陈磊)",
       "venue": "FQ4-24 earnings call, 2025-03-20",
-      "quote": "Our profitability normalization has begun. We have invested heavily and expect that the operating margins seen in 2024 may not be sustainable as we continue to invest in supply chain, merchant ecosystem, and global expansion.",
-      "url_or_filing": "https://investor.pddholdings.com/news-releases — Q4 2024 earnings transcript"
+      "quote": "Our profitability normalization has begun. We have invested heavily and expect that the operating margins seen in 2024 may not be sustainable.",
+      "url_or_filing": "https://investor.pddholdings.com/news-releases — Q4 2024 transcript"
     },
     "catalyst_with_date": {
-      "event": "US de minimis legislation — House Ways and Means Committee mark-up window",
+      "event": "US de minimis legislation — House Ways and Means mark-up window",
       "date_window": "2026-Q1"
     }
   },
 
   "company_focus_paragraph": {
-    "data_anchor": "Transaction services 1959亿元 +108% YoY (Temu-driven); online marketing 1979亿元 +29% YoY (domestic-driven); revenue mix flipped from 1:3.5 in FY2022 to ~1:1 in FY2024 — Temu has structurally restructured the P&L.",
-    "variant_view": "Bulls say Temu is the growth engine. Refined view: Temu is the revenue engine but not yet the profit engine — per-order contribution margin still negative in 2024. The domestic main app generates ~85% of cash profit on ~50% of revenue.",
-    "falsifier": "Domestic take rate falling below 4.5% in any quarter (vs current 4.8%) signals Alibaba's 88VIP counterattack is biting — invalidates the domestic-cash-cow assumption.",
+    "data_anchor": "Transaction services 1959亿元 +108% YoY (Temu-driven); online marketing 1979亿元 +29% YoY; revenue mix flipped from 1:3.5 in FY2022 to ~1:1 in FY2024 — Temu structurally restructured the P&L.",
+    "variant_view": "Bulls say Temu is the growth engine. Refined view: Temu is the revenue engine but not yet the profit engine — per-order contribution margin still negative in 2024; domestic main app generates ~85% of cash profit on ~50% of revenue.",
+    "falsifier": "Domestic take rate falling below 4.5% in any quarter (vs current 4.8%) signals Alibaba's 88VIP counterattack is biting and invalidates the domestic-cash-cow assumption.",
     "primary_quote": {
       "speaker": "VP of Finance Liu Jun (刘珺)",
       "venue": "FQ4-24 earnings call, 2025-03-20",
-      "quote": "We are in a phase of intentional investment. Margin trends in coming quarters will not be linear; investors should focus on long-term ecosystem health rather than quarter-to-quarter operating margin moves.",
+      "quote": "We are in a phase of intentional investment. Margin trends in coming quarters will not be linear; investors should focus on long-term ecosystem health.",
       "url_or_filing": "Q4 2024 prepared remarks"
     }
   },
 
-  "background_bullets": {
-    "data_anchor": "Domestic white-label SKU share >70%; merchant count ~13M (vs Alibaba TMall ~250k branded merchants); Temu semi-managed penetration 40% end-2024, mgmt target 70% end-2025; US de minimis threshold $800 currently — covers ~80% of Temu US parcels.",
-    "variant_view": "The conventional moat narrative is 'low price mindshare.' Refined view: the actual moat is algorithm-driven discovery + white-label supply — these are operationally hard to replicate, but the low-price mindshare itself is easy to attack (Alibaba 88VIP doing exactly that).",
-    "falsifier": "Alibaba 88VIP user count crossing 60M (vs current ~42M) with successful penetration into PDD's tier-3/4 city user base — measurable via QuestMobile data — would directly contradict the 'mindshare moat' framing.",
-    "catalyst_with_date": {
-      "event": "Q2-25 results print — first full quarter showing Alibaba take-rate cut impact on PDD response",
-      "date_window": "2025-08"
-    }
-  },
-
-  "conclusion_block": {
-    "data_anchor": "Four-platform combined GMV share >85% (PDD 25-28% / Alibaba 38% / JD 16% / Douyin 18% per Analysys Q4 2024); domestic e-commerce growth slowed to 8% YoY (vs 18% three years ago); operating margin spread: PDD 28.5% vs Alibaba 14% vs JD 3% — widest in three years.",
-    "variant_view": "Bears: this margin spread is unsustainable and will mean-revert. Bulls: it reflects structural cost advantage. Our view: ~10pp of the spread is structural (white-label / algorithm), ~5pp is cyclical (under-investment relative to peers) — fair-value spread is ~10pp, not 14pp.",
-    "falsifier": "Operating margin spread to Alibaba narrowing to <8pp by end-2025 with constant accounting treatment signals our 'fair-value spread is 10pp' view is wrong — could be either PDD compressing faster or Alibaba leveraging up faster.",
+  "industry_paragraph": {
+    "data_anchor": "Four-platform combined GMV share >85% (PDD 25-28% / Alibaba 38% / JD 16% / Douyin 18%); domestic e-commerce growth 8% YoY vs 18% three years ago; operating margin spread PDD 28.5% vs Alibaba 14% vs JD 3%.",
+    "variant_view": "Bears: this margin spread is unsustainable and will mean-revert. Our view: ~10pp of the spread is structural (white-label / algorithm), ~5pp is cyclical (under-investment relative to peers) — fair-value spread is ~10pp, not 14pp.",
+    "falsifier": "Operating margin spread to Alibaba narrowing to <8pp by end-2025 with constant accounting treatment signals our 10pp spread view is wrong.",
     "primary_quote": {
       "speaker": "Co-CEO Jiazhen Zhao (赵佳臻)",
       "venue": "FQ3-24 earnings call, 2024-11-21",
@@ -53,39 +43,38 @@
     }
   },
 
+  "five_year_arc.narrative": {
+    "data_anchor": "Operating margin trajectory: FY2019 -9% → FY2021 +14% (百亿补贴 closed loop) → FY2024 28.5%; revenue mix transaction:advertising FY2022 1:3.5 → FY2024 1:1; cash position FY2019 ~$10B → FY2024 ~$51B vs PDD 5-year forward consensus revenue CAGR 20%.",
+    "variant_view": "Consensus reads the 5-year arc as 'low-price platform that got profitable.' Refined view: it's three distinct phases — basic-shop unit economics fix (2020-21), Temu structural revenue shift (2022-23), then capital-allocation discipline (2024). Each phase has different valuation multiples implied.",
+    "falsifier": "If FY25 operating margin compresses below 22% (vs FY24 28.5%) without offsetting Temu unit-economics improvement, the 'three-phase maturation' framing breaks; market would re-rate to single-phase cyclical commodity.",
+    "catalyst_with_date": {
+      "event": "FY2025 Q1 earnings — first full quarter of Temu semi-managed at >40% penetration",
+      "date_window": "2025-Q2",
+      "implication": "Will validate or break the 'phase 3 = capital discipline' narrative"
+    }
+  },
+
   "revenue_explainer_points": {
-    "data_anchor": "Transaction services 1959亿 vs online marketing 1979亿 (FY2024); ratio FY2022 was 1:3.5 → FY2024 is 1:1. Gross margin FY23 63% → FY24 60% (-300bps); selling expenses FY23 821亿 → FY24 1112亿 (+35%); operating margin still 28.5% — so the lever is 'volume grew faster than spend.'",
+    "data_anchor": "Transaction services 1959亿 vs online marketing 1979亿 (FY2024); ratio FY2022 was 1:3.5 → FY2024 is 1:1. Gross margin FY23 63% → FY24 60%; selling expenses FY23 821亿 → FY24 1112亿 (+35%); operating margin still 28.5%.",
     "variant_view": "Consensus treats the revenue mix flip as 'Temu growing fast.' Refined view: it's a structural change to the P&L's sensitivity — transaction-service revenue carries CoGS (fulfillment / refund risk) that ad revenue doesn't, so headline gross margin should keep compressing 200-300bps/year until Temu mix stabilizes.",
     "falsifier": "Gross margin stabilizing at 60% in FY25 (rather than compressing further) would signal Temu has hit unit-economics equilibrium earlier than expected — bullish.",
     "primary_quote": {
       "speaker": "CFO Jun Liu (刘珺)",
       "venue": "FQ2-24 earnings call, 2024-08-26",
-      "quote": "Revenue mix shift is structural and we expect cost of revenues to grow faster than total revenues for the foreseeable future. This is the cost of building global infrastructure.",
+      "quote": "Revenue mix shift is structural and we expect cost of revenues to grow faster than total revenues for the foreseeable future.",
       "url_or_filing": "Q2 2024 prepared remarks"
     }
   },
 
-  "judgement_paragraph": {
-    "data_anchor": "Bull case FY26 EPS ~¥110, 12x PE → target ~¥1320 / ADR ~$182; Bear case FY26 EPS ~¥70 (de minimis hit + take rate cut), 7x PE → target ~¥490 / ADR ~$67. Current ~$125 ≈ midpoint. Asymmetry slightly positive given $51B cash and zero LT debt.",
-    "variant_view": "Street prices a 60% probability of bear outcome and 40% bull. We weight 45/55 because: (a) Temu semi-managed penetration already at 40% (vs market estimate 25%); (b) de minimis legislative path requires bipartisan agreement that is unlikely to pass cleanly in 2026 election year.",
-    "falsifier": "Two consecutive quarters of Temu per-order contribution margin <-¥0.5 (vs current estimate ~-¥0.3) signals semi-managed transition is not delivering — would force re-weighting to 60/40 bear.",
+  "cfa_lens.different_angle_insight": {
+    "data_anchor": "Two-period binomial: branches = de-minimis outcome (P=0.45 preserved, 0.55 repealed) × Temu unit economics (P=0.55 +¥1, 0.45 -¥1). Upper node ADR $182; lower node ADR $67; risk-neutral fair value ≈ $113 vs current $125.",
+    "variant_view": "Street prices a 60% bear probability via a single-point DCF; our binomial decomposition gets 55% bear weight, but the asymmetric payoff (range $115) means option-value matters more than the point estimate — DCF systematically under-prices vol.",
+    "falsifier": "Two consecutive quarters of Temu per-order contribution margin worse than -¥0.5 (vs current estimate ~-¥0.3) would force the lower-node probability above 60% and collapse the binomial fair value to ~$95.",
     "primary_quote": {
       "speaker": "Co-CEO Lei Chen (陈磊)",
-      "venue": "FQ3-24 earnings call, 2024-11-21",
-      "quote": "Profitability decline in coming quarters is inevitable. The question is not if, but the depth and duration. Our $51B cash position gives us flexibility most competitors lack.",
-      "url_or_filing": "Q3 2024 prepared remarks"
-    }
-  },
-
-  "brand_statement": {
-    "data_anchor": "Three scenarios for Temu unit economics: (a) +¥1 contribution margin → FY26 EPS ¥110, ADR ~$182; (b) ¥0 → ~$125 (current); (c) -¥1 → ~$94. Same company, ~95% range in valuation across the three policy/operating states.",
-    "variant_view": "Brand framing is usually 'low-price platform.' Refined framing: PDD is a binary policy bet wrapped around a domestically profitable core — the policy bet (Temu) determines 30% of valuation, the domestic core (~70% of cash profit) sets the floor.",
-    "falsifier": "Either (a) Temu shutdown / forced wind-down in US (extreme tail) — collapses scenario c by 40%, or (b) Temu semi-managed reaching 80% penetration with positive unit margin — collapses scenario a upward by 25%.",
-    "primary_quote": {
-      "speaker": "[TODO: speaker — likely Co-CEO Lei Chen or VP IR Chen Lei]",
-      "venue": "2025 Goldman Sachs APAC Conference (private session)",
-      "quote": "[TODO: real quote on Temu unit economics framing — placeholder until next public commentary]",
-      "url_or_filing": "[TODO: pending public-record source]"
+      "venue": "FQ4-24 earnings call, 2025-03-20",
+      "quote": "Temu unit economics progress has been slower than guided by 1-2 quarters; we expect convergence in H2 2025 but acknowledge the policy overhang complicates the picture.",
+      "url_or_filing": "Q4 2024 transcript"
     }
   }
 }

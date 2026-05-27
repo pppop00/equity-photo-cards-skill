@@ -34,7 +34,8 @@ flowchart TB
     end
 
     subgraph EXTRACT["内容起草（Stage B）"]
-        C["Content Agent\n依据 HTML/JSON 写满\nstem.card_slots.json"]
+        C["Content Agent (Cards 1–3)\n依据 HTML/JSON 写\nstem.card_slots.json"]
+        CFA["CFA Lens Selector (Card 4)\n根据 CFA 进度挑概念套这家公司"]
     end
 
     subgraph AUDIT["硬编码审计（Stage B.5）"]
@@ -55,11 +56,11 @@ flowchart TB
     end
 
     subgraph RENDER["渲染"]
-        G["generate_social_cards.py\nHTML + slots + --palette → 6×PNG"]
+        G["generate_social_cards.py\nHTML + slots + --palette → 4×PNG"]
     end
 
     subgraph OUT["输出"]
-        PNG["output/&lt;stem&gt;/\n01–06.png + logo_official.png\n+ card_slots.json 副本"]
+        PNG["output/&lt;stem&gt;/\n01_cover · 02_porter · 03_five_year_financials · 04_cfa_lens (4 PNG)\n+ logo_official.png\n+ card_slots.json 副本"]
     end
 
     TPL -.->|新报告可复制| C
@@ -67,7 +68,8 @@ flowchart TB
     HTML --> C
     JSON --> C
     LG --> C
-    C --> H
+    C --> CFA
+    CFA --> H
     H -->|有问题| C
     H -->|通过| L
     L --> A

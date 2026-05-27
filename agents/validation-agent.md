@@ -31,20 +31,20 @@ Validation belongs inside the generation loop:
 
 ## What Validator 1 does **not** check
 
-- **Runtime `--palette` consistency:** The same report’s six PNGs must all be rendered with the **same** P0-confirmed `--palette` (`macaron` | `default` | `b` | `c`). Validator 1 requires that palette to be passed explicitly; use the same palette for validation and export. The slot file does not store palette, so if someone re-renders only `01_cover.png` with a different palette than cards 2–6, the **top header colors** will mismatch.
+- **Runtime `--palette` consistency:** The same report's four PNGs must all be rendered with the **same** P0-confirmed `--palette` (`macaron` | `default` | `b` | `c`). Validator 1 requires that palette to be passed explicitly; use the same palette for validation and export. The slot file does not store palette, so if someone re-renders only `01_cover.png` with a different palette than cards 2–4, the **top header colors** will mismatch.
 
 ## Three categories of Validator 1 checks
 
 ### 1. Language fluency (语句通顺)
 Every body slot must be grammatically coherent Chinese — not just punctuation-terminated. The script enforces:
 - `is_complete_copy()`: no ellipsis, ends with `。！？`, non-empty text.
-- `is_human_copy()` / `card6_line_sounds_human()`: must contain a human-voice marker (Card 4 judgement, Card 5 brand statement, all Card 6 lines).
+- `validate_card1_4_analytical_content()`: backstop banned-phrase + writing-style checks (Cards 1–4 prose); fails on `说白了`, the `X 不是 Y 而是 Z` template, bare `+N%` without comparator, and raw English ratio/time-frame abbreviations (CC, YoY, QoQ, FX, CAGR) without first-mention parens.
 
-The **agent-level** check for semantic coherence sits in the hardcode-audit-agent and layout-fill-agent: a sentence that ends with `。` but is semantically empty ("说白了，这家公司很好。") is a layout-agent failure, not a script-level pass. If the validator passes but the copy sounds hollow, rewrite before export anyway.
+The **agent-level** check for semantic coherence sits in the hardcode-audit-agent and layout-fill-agent: a sentence that ends with `。` but is semantically empty is a layout-agent failure, not a script-level pass. If the validator passes but the copy sounds hollow, rewrite before export anyway.
 
 ### 2. Layout overflow (排版不超框)
 The script measures real pixel heights using the same font/wrapping engine as the renderer. Every slot has both a character budget (static) and a rendered-height budget (dynamic). Both must pass:
-- **Character budgets** are constants (`LIMIT_CARD1_FOCUS_CHARS`, `LIMIT_CARD2_INDUSTRY_CHARS`, `LIMIT_CARD3_EXPLAINER_CHARS`, etc.) — quick first-pass check.
+- **Character budgets** are constants (`LIMIT_CARD1_FOCUS_CHARS`, `LIMIT_CARD2_INDUSTRY_CHARS`, `LIMIT_CARD2_BG_BULLET_CHARS`, `LIMIT_CARD2_PORTER_EVIDENCE_CHARS`, `LIMIT_CARD3_FIVE_YEAR_NARRATIVE_CHARS`, `LIMIT_CARD3_INFLECTION_CHARS`, `LIMIT_CARD3_EXPLAINER_CHARS`, `LIMIT_CARD4_CONCEPT_INTRO_CHARS`, `LIMIT_CARD4_APPLICATION_CHARS`, `LIMIT_CARD4_ANGLE_CHARS`, `LIMIT_CARD4_TAKEAWAY_CHARS`) — quick first-pass check.
 - **Pixel-height budgets** use `measure_bullets()` / `block_final_y()` on the actual glyph bounding boxes — these can reject copy that is under the character limit but wraps too wide.
 
 Do not try to fix an overflow by compressing whitespace alone. Rewrite the copy to be shorter.
@@ -71,26 +71,17 @@ Do not try to fix an overflow by compressing whitespace alone. Rewrite the copy 
 - Approved English proper nouns such as `FSD`, `Robotaxi`, and `Optimus` are allowed, but they still may not be split across lines
 - Commas, periods, semicolons, colons, enumeration commas, and equivalent punctuation must remain attached to the previous line
 - Any line that starts with `，。；：、,.!?` or equivalent closing punctuation fails validation
-- Card 1 `公司看点` must use enough copy to avoid large empty yellow-panel space
-- Card 1 `公司看点` must also stay inside its explicit character budget
-- Card 2 Porter synthesis paragraph must be a complete summarized paragraph, not a clipped fragment
-- Card 2 Porter synthesis paragraph must stay inside its explicit character budget
-- Card 3 explainer bullets must stay inside their per-bullet character budget and the yellow panel's **measured** height budget (validator sums `line_raster_height` per wrapped line, matching `draw_text`, not `font.size` alone; panel bottom y is **1260** with bottom inset reserved)
-- Card 3 title must be `实际收入分析`
-- Card 3 yellow panel title must be `收入分析`
-- Card 3 numeric fields and margin fields must not render as placeholders (`--`, `N/A`, `不适用`); if source data is missing, derive from available report data (e.g., Sankey + income statement) or fail and revise before export
-- Card 2 left card must feel editorially dense: prefer 4 Porter-evidence bullets and enough copy to avoid large empty lower-half whitespace
-- Card 2, Card 4 judgement, Card 5 main statement, and Card 6 content lines must not use ellipses or half-sentences as a layout escape hatch
+- Card 1 `公司看点` must use enough copy to avoid large empty yellow-panel space and stay inside its 150–165 char budget
+- Card 1 `metrics_row` must contain 3–4 entries; each entry parses as `"Label|Value"` (or label/value split on first whitespace)
+- Card 2 industry-structure paragraph must be a complete summarized paragraph (≤113 chars), not a clipped fragment
+- Card 2 background bullets: exactly 4 entries, each ≤60 chars, complete sentences
+- Card 2 porter_evidence: exactly 5 entries — one per force (`rivalry`, `new_entrants`, `supplier_power`, `buyer_power`, `substitutes`); each `evidence` ≤70 chars complete sentence
+- Card 3 five-year arc narrative ≤200 chars; ≥3 inflection_points, each ≤56 chars and a complete sentence
+- Card 3 recent_financial_highlights ≥3 entries
+- Card 3 explainer bullets must stay inside their per-bullet character budget (≤58) and the yellow panel's **measured** height budget
+- Card 3 numeric fields and margin fields must not render as placeholders (`--`, `N/A`, `不适用`); if source data is missing, derive from available report data or fail and revise before export
+- Card 4 cfa_lens: every required string field non-empty; `company_application` ≥3 bullets ≤95 chars; `concept_intro` ≤110; `different_angle_insight` ≤105 and AUTHORITY (requires `primary_quote` in worker_notes); `takeaway` ≤48
 - Any paragraph or bullet that is meant to be read as body copy must end as a complete Chinese sentence
-- Card 4 judgement, Card 5 main statement, and Card 6 content must sound like a smart human explaining the company, not like stiff analyst boilerplate
-- Card 4 left and right columns should be filled as much as possible without overflow
-- Card 4 left and right columns must hit a minimum occupied height; obvious dead air is a validation failure
-- Card 4 left and right columns must obey their per-bullet character budgets
-- Card 5 must not include `今天这家公司，特斯拉` or any equivalent preface line
-- Card 6 must include `title`, `content`, and `hashtags`; title must start with `一天吃透一家公司：`
-- Card 6 content must contain exactly 4 bullet lines as **three statements + one question**; each line must pass **`card6_line_sounds_human`** (`HUMAN_MARKERS`, `CARD6_EDUCATIONAL_MARKERS`, or the mechanism/contrast patterns in `generate_social_cards.py`); **editorial pass:** reasoning should match [content-production-agent.md](./content-production-agent.md) Card 6 and [card6-voice.md](../references/card6-voice.md): hard fact → hidden mechanism → useful comparison/context → measurable question, with competitor, past-five-year change, future outlook, and operating/revenue geography analysis considered before writing; not forced surface imitation
-- Card 6 content must include at least one financial / operating anchor from the report and at least one current-event, policy, market, or industry context anchor; `CARD6_FORBIDDEN_HYPE_MARKERS` are hard failures
-- Card 6 hashtags must fit inside the hashtag section, include `#A股` and `#美股`, and the total hashtag count may not exceed 7
 - Text rendering must use high-quality supersampling so exported fonts remain crisp
 
 ## Execution

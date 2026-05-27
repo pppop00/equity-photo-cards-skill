@@ -41,13 +41,13 @@ Later agents (**content production**, layout) must **not overwrite or clear** `c
 
 **Order matters — follow this sequence exactly:**
 
-1. **Create the output folder first** — determine where the final 6 PNGs will land (the folder passed as `--output-root/<stem>/`, or the default `output/<html_stem>/` inside the EP skill repo). Create it now if it does not exist.
+1. **Create the output folder first** — determine where the final 4 PNGs will land (the folder passed as `--output-root/<stem>/`, or the default `output/<html_stem>/` inside the EP skill repo). Create it now if it does not exist.
 2. **Use or save the logo in that same output folder** — if a valid logo already exists elsewhere in the report folder, copy it into the output folder as `<output_folder>/logo_official.png` (or `.webp`) unless it is already there. If web search was needed, save the regenerated logo there. Never leave the final referenced logo in a temp path.
 3. **Set `logo_asset_path`** in `card_slots.json` to the absolute path of the output-folder logo file.
 4. **Set `cover_company_name_cn`** in the same `card_slots.json` to the verified Chinese short name (see § Chinese display name above). Required whenever `logo_asset_path` is set.
 5. **Then** hand off to content production (which fills the rest of the slots without removing these two keys).
 
-This order guarantees the logo and the 6 PNGs are always co-located in the same folder, so nothing needs to be moved manually after export.
+This order guarantees the logo and the 4 PNGs are always co-located in the same folder, so nothing needs to be moved manually after export.
 
 - Record the source URL in working notes when available.
 - After PNG export, keep only the file referenced by `logo_asset_path`. Delete downloaded source logos, rejected variants, and temporary folders such as `logo_sources/`.

@@ -55,6 +55,14 @@ PORTER_COLORS = ["#F6B48A", "#F4A5AE", "#9FB9E2", "#8FCF9F", "#B9A2D9"]
 import os as _os
 
 
+CARD_FILENAMES = (
+    "01_cover.png",
+    "02_porter.png",
+    "03_five_year_financials.png",
+    "04_cfa_lens.png",
+)
+
+
 def apply_palette(name: str) -> None:
     """Switch global colors for preview / alternate looks. Call before rendering."""
     global _ACTIVE_PALETTE
@@ -291,122 +299,6 @@ STIFF_OPENERS = (
     "一句判断：",
     "一句判断:",
 )
-# Card 6 only — colloquial / 贴吧-style tone markers used by card6_line_sounds_human().
-# Do NOT use this list as a positive signal for Cards 1-5 (analyst voice, plan v3).
-CARD6_TONE_MARKERS = ("说白了", "别看", "账单", "印钱", "印钞", "踩油门", "真要看", "本质上", "先别", "盯着", "这就是", "眼下")
-# Card 6 should be plain-spoken and educational, not clickbait / forum rage bait.
-CARD6_EDUCATIONAL_MARKERS = (
-    "说白了",
-    "真要看",
-    "别只看",
-    "本质上",
-    "换句话说",
-    "这说明",
-    "关键是",
-    "背后",
-    "真正要学",
-    "财报里",
-    "财报上",
-    "结合最近",
-    "放到现在",
-    "眼下",
-)
-CARD6_LOGIC_MARKERS = (
-    "表面",
-    "本质",
-    "不是",
-    "而是",
-    "对比",
-    "更像",
-    "剥开",
-    "真正",
-    "背后",
-    "靠",
-    "撑起",
-    "意味着",
-    "护城河",
-    "收费站",
-    "印钞机",
-    "黑洞",
-    "底盘",
-    "防线",
-    "基石",
-    "定价权",
-    "造血",
-    "利润地基",
-    "估值逻辑",
-)
-CARD6_FORBIDDEN_HYPE_MARKERS = (
-    "这波",
-    "离谱",
-    "吃瓜",
-    "吐槽",
-    "笑死",
-    "绷不住",
-    "好家伙",
-    "上头",
-    "麻了",
-    "急了",
-    "整活",
-    "阴阳",
-    "蚌埠住了",
-    "破防",
-    "下头",
-    "夺笋",
-    "狠狠",
-    "怼",
-    "杠",
-    "扎心",
-    "翻车",
-    "背刺",
-    "破圈",
-    "爆款",
-    "火出圈",
-    "杀疯了",
-    "真的会谢",
-    "绷",
-)
-CARD6_FINANCIAL_ANCHORS = (
-    "财报",
-    "营收",
-    "收入",
-    "利润",
-    "净利",
-    "EPS",
-    "毛利",
-    "毛利率",
-    "利润率",
-    "现金流",
-    "费用",
-    "成本",
-    "负债",
-    "库存",
-    "会员",
-    "订单",
-    "分部",
-    "指引",
-)
-CARD6_CONTEXT_ANCHORS = (
-    "最近",
-    "这次",
-    "公告",
-    "新闻",
-    "监管",
-    "政策",
-    "利率",
-    "降息",
-    "关税",
-    "汇率",
-    "价格战",
-    "AI",
-    "行业",
-    "宏观",
-    "市场",
-    "时事",
-)
-POST_TITLE_PREFIX = "一天吃透一家公司："
-REQUIRED_POST_TAGS = ("#A股", "#美股")
-MAX_POST_TAGS = 7
 SOURCE_DISCLAIMER_MARKERS = (
     "不构成买入价位建议",
     "情景预测不构成",
@@ -430,18 +322,13 @@ FONT_INTRO = 29
 FONT_PANEL_BODY = 25
 FONT_BULLET = 25
 FONT_BULLET_COMPACT = 23
-FONT_BRAND_SUMMARY = 24
-FONT_CONCLUSION = 23
 FONT_PORTER_LABEL = 21
 FONT_PORTER_SCORE = 25
+FONT_PORTER_EVIDENCE = 19
 FONT_CHART_LABEL = 23
 FONT_CHART_VALUE = 28
-FONT_JUDGEMENT = 21
-FONT_JUDGEMENT_MIN = 18
-FONT_POST_TITLE = 42
-FONT_POST_LINE = 29
-FONT_POST_TAG = 23
-FONT_POST_FOOTER = 17
+FONT_CFA_BODY = 22
+FONT_CFA_TAKEAWAY = 24
 FONT_METRIC_LABEL_START = 20
 FONT_METRIC_LABEL_MIN = 16
 FONT_METRIC_VALUE_START = 29
@@ -451,7 +338,10 @@ MIN_CARD1_FOCUS_CHARS = 150
 LIMIT_CARD1_FOCUS_CHARS = 165
 LIMIT_CARD2_INDUSTRY_CHARS = 113
 LIMIT_CARD2_BG_BULLET_CHARS = 60
+LIMIT_CARD2_PORTER_EVIDENCE_CHARS = 70
 LIMIT_CARD3_EXPLAINER_CHARS = 58
+LIMIT_CARD3_FIVE_YEAR_NARRATIVE_CHARS = 200
+LIMIT_CARD3_INFLECTION_CHARS = 56
 # Yellow explainer panel: rounded rect ends at CARD3_EXPLAINER_PANEL_BOTTOM; bullets start at 1002.
 # CARD3_EXPLAINER_BOTTOM_INSET reserves space inside the panel so the last line does not sit on the bottom edge.
 CARD3_EXPLAINER_PANEL_BOTTOM = 1260
@@ -459,11 +349,10 @@ CARD3_EXPLAINER_START_Y = 1002
 CARD3_EXPLAINER_BOTTOM_INSET = 16
 LIMIT_CARD3_EXPLAINER_TOTAL_HEIGHT = CARD3_EXPLAINER_PANEL_BOTTOM - CARD3_EXPLAINER_START_Y - CARD3_EXPLAINER_BOTTOM_INSET
 TEXT_COMPOSITE_PAD = 8  # matches draw_text(): 2 * pad where pad=4
-LIMIT_CARD4_NOW_BULLET_CHARS = 72
-LIMIT_CARD4_FUTURE_BULLET_CHARS = 62
-LIMIT_CARD4_JUDGEMENT_CHARS = 52
-CARD4_JUDGEMENT_MAX_LINES = 4
-CARD4_JUDGEMENT_BOX_HEIGHT = 100
+LIMIT_CARD4_CONCEPT_INTRO_CHARS = 110
+LIMIT_CARD4_APPLICATION_CHARS = 95
+LIMIT_CARD4_ANGLE_CHARS = 105
+LIMIT_CARD4_TAKEAWAY_CHARS = 48
 
 FORBIDDEN_TEMPLATE_PHRASES = (
     "盘子和押注分得很清楚",
@@ -549,26 +438,20 @@ AUDIT_COMMON_EN_TERMS = {
 class CardSlotOverrides:
     """Slot copy from the content + layout agents. The skill requires a complete file for every export (no heuristic-only path)."""
 
-    schema_version: int = 1
+    schema_version: int = 2
     intro_sentence: str | None = None
     company_focus_paragraph: str | None = None
+    metrics_row: list[str] | None = None
     background_bullets: list[str] | None = None
     industry_paragraph: str | None = None
     porter_scores: list[int] | None = None
-    conclusion_block: str | None = None
+    porter_evidence: list[dict[str, Any]] | None = None
+    five_year_arc: dict[str, Any] | None = None
+    recent_financial_highlights: list[str] | None = None
     revenue_explainer_points: list[str] | None = None
-    current_business_points: list[str] | None = None
-    future_watch_points: list[str] | None = None
-    judgement_paragraph: str | None = None
-    brand_subheading: str | None = None
-    brand_statement: str | None = None
-    memory_points: list[str] | None = None
-    cta_line: str | None = None
+    cfa_lens: dict[str, Any] | None = None
     logo_asset_path: str | None = None
     cover_company_name_cn: str | None = None
-    post_title: str | None = None
-    post_content_lines: list[str] | None = None
-    hashtags: list[str] | None = None
 
     @staticmethod
     def from_json_dict(raw: dict[str, Any]) -> CardSlotOverrides:
@@ -576,23 +459,17 @@ class CardSlotOverrides:
             "schema_version",
             "intro_sentence",
             "company_focus_paragraph",
+            "metrics_row",
             "background_bullets",
             "industry_paragraph",
             "porter_scores",
-            "conclusion_block",
+            "porter_evidence",
+            "five_year_arc",
+            "recent_financial_highlights",
             "revenue_explainer_points",
-            "current_business_points",
-            "future_watch_points",
-            "judgement_paragraph",
-            "brand_subheading",
-            "brand_statement",
-            "memory_points",
-            "cta_line",
+            "cfa_lens",
             "logo_asset_path",
             "cover_company_name_cn",
-            "post_title",
-            "post_content_lines",
-            "hashtags",
         }
         kwargs: dict[str, Any] = {}
         for key in fields:
@@ -601,6 +478,24 @@ class CardSlotOverrides:
             val = raw[key]
             kwargs[key] = int(val) if key == "schema_version" and val is not None else val
         return CardSlotOverrides(**kwargs)
+
+
+PORTER_FORCE_KEYS = ("rivalry", "new_entrants", "supplier_power", "buyer_power", "substitutes")
+PORTER_FORCE_LABEL_CN = {
+    "rivalry": "竞争强度",
+    "new_entrants": "新进入者",
+    "supplier_power": "供应商",
+    "buyer_power": "买方",
+    "substitutes": "替代品",
+}
+
+CFA_LENS_REQUIRED_STR_KEYS = (
+    "concept_key",
+    "concept_name_cn",
+    "concept_intro",
+    "different_angle_insight",
+    "takeaway",
+)
 
 
 def assert_card_slots_complete(slots: CardSlotOverrides) -> None:
@@ -617,20 +512,62 @@ def assert_card_slots_complete(slots: CardSlotOverrides) -> None:
         if n < min_n:
             raise ValueError(f"card_slots.json {label} needs at least {min_n} non-empty entries (got {n}).")
 
+    # Card 1
     need_str("intro_sentence", slots.intro_sentence)
     need_str("company_focus_paragraph", slots.company_focus_paragraph)
-    need_list("background_bullets", slots.background_bullets, 4)
+    need_list("metrics_row", slots.metrics_row, 3)
+
+    # Card 2
     need_str("industry_paragraph", slots.industry_paragraph)
-    need_str("conclusion_block", slots.conclusion_block)
+    need_list("background_bullets", slots.background_bullets, 4)
+    if not slots.porter_evidence or not isinstance(slots.porter_evidence, list):
+        raise ValueError("card_slots.json missing required list: porter_evidence (need 5 entries).")
+    if len(slots.porter_evidence) != 5:
+        raise ValueError(
+            f"card_slots.json porter_evidence must contain exactly 5 entries (got {len(slots.porter_evidence)})."
+        )
+    seen_forces: set[str] = set()
+    for idx, entry in enumerate(slots.porter_evidence):
+        if not isinstance(entry, dict):
+            raise ValueError(f"card_slots.json porter_evidence[{idx}] must be an object.")
+        force = entry.get("force")
+        if force not in PORTER_FORCE_KEYS:
+            raise ValueError(
+                f"card_slots.json porter_evidence[{idx}].force must be one of {PORTER_FORCE_KEYS} (got {force!r})."
+            )
+        if force in seen_forces:
+            raise ValueError(f"card_slots.json porter_evidence has duplicate force: {force!r}.")
+        seen_forces.add(force)
+        score = entry.get("score")
+        if not isinstance(score, int) or score < 1 or score > 5:
+            raise ValueError(
+                f"card_slots.json porter_evidence[{idx}].score must be integer 1..5 (got {score!r})."
+            )
+        if not clean(str(entry.get("evidence") or "")):
+            raise ValueError(f"card_slots.json porter_evidence[{idx}].evidence must be non-empty text.")
+
+    # Card 3
+    arc = slots.five_year_arc
+    if not isinstance(arc, dict):
+        raise ValueError("card_slots.json missing required object: five_year_arc.")
+    if not clean(str(arc.get("narrative") or "")):
+        raise ValueError("card_slots.json five_year_arc.narrative must be non-empty text.")
+    arc_points = arc.get("inflection_points")
+    if not isinstance(arc_points, list) or len([x for x in arc_points if clean(str(x))]) < 3:
+        raise ValueError("card_slots.json five_year_arc.inflection_points needs at least 3 non-empty entries.")
+    need_list("recent_financial_highlights", slots.recent_financial_highlights, 3)
     need_list("revenue_explainer_points", slots.revenue_explainer_points, 3)
-    need_list("current_business_points", slots.current_business_points, 4)
-    need_list("future_watch_points", slots.future_watch_points, 4)
-    need_str("judgement_paragraph", slots.judgement_paragraph)
-    need_str("brand_statement", slots.brand_statement)
-    need_list("memory_points", slots.memory_points, 3)
-    need_str("post_title", slots.post_title)
-    need_list("post_content_lines", slots.post_content_lines, 4)
-    need_list("hashtags", slots.hashtags, 3)
+
+    # Card 4 (CFA lens)
+    lens = slots.cfa_lens
+    if not isinstance(lens, dict):
+        raise ValueError("card_slots.json missing required object: cfa_lens.")
+    for key in CFA_LENS_REQUIRED_STR_KEYS:
+        if not clean(str(lens.get(key) or "")):
+            raise ValueError(f"card_slots.json cfa_lens.{key} must be non-empty text.")
+    application = lens.get("company_application")
+    if not isinstance(application, list) or len([x for x in application if clean(str(x))]) < 3:
+        raise ValueError("card_slots.json cfa_lens.company_application needs at least 3 non-empty entries.")
 
 
 def load_card_slots(path: Path) -> CardSlotOverrides:
@@ -832,8 +769,24 @@ def parse_html(path: Path) -> ReportData:
 
 
 def porter_scores_for_card(data: ReportData) -> list[int]:
+    """Five Porter scores in display order: 供应商、买方、新进入者、替代品、竞争强度.
+    Prefer explicit `card_slots.porter_scores`; otherwise derive from
+    `card_slots.porter_evidence` (keyed by force); else fall back to HTML."""
     if data.card_slots and data.card_slots.porter_scores is not None:
         return data.card_slots.porter_scores
+    if data.card_slots and data.card_slots.porter_evidence:
+        order = ("supplier_power", "buyer_power", "new_entrants", "substitutes", "rivalry")
+        by_force = {
+            entry.get("force"): entry.get("score")
+            for entry in data.card_slots.porter_evidence
+            if isinstance(entry, dict)
+        }
+        out: list[int] = []
+        for force in order:
+            score = by_force.get(force)
+            out.append(int(score) if isinstance(score, int) else 3)
+        if len(out) == 5:
+            return out
     return data.porter_scores_industry
 
 
@@ -1103,51 +1056,8 @@ def is_complete_copy(text: str) -> bool:
     return bool(text) and not contains_ellipsis(text) and text.endswith(tuple(SENTENCE_END))
 
 
-def is_human_copy(text: str) -> bool:
-    """Card 6 only — checks for 贴吧/colloquial tone markers.
-
-    NOT to be used as a positive test for Cards 1-5 (analyst voice, plan v3).
-    """
-    return any(marker in text for marker in CARD6_TONE_MARKERS)
-
-
-def card6_hype_markers(text: str) -> list[str]:
-    return [marker for marker in CARD6_FORBIDDEN_HYPE_MARKERS if marker in clean(text)]
-
-
-def card6_line_has_report_anchor(text: str) -> bool:
-    normalized = clean(text)
-    return bool(re.search(r"\d|%|％", normalized)) or any(marker in normalized for marker in CARD6_FINANCIAL_ANCHORS)
-
-
-def card6_line_has_context_anchor(text: str) -> bool:
-    normalized = clean(text)
-    return any(marker in normalized for marker in CARD6_CONTEXT_ANCHORS)
-
-
-def card6_line_sounds_human(text: str) -> bool:
-    """Card 6 only — checks for 贴吧/colloquial tone markers.
-
-    NOT to be used as a positive test for Cards 1-5. Cards 1-5 follow the
-    plan-v3 analyst-voice contract (numeric anchors + variant view + falsifier
-    or primary_quote or dated catalyst); see validate_card1_5_analytical_content().
-    """
-    if card6_hype_markers(text):
-        return False
-    if is_human_copy(text) or "真要看" in text or "钱还在进" in text:
-        return True
-    if any(marker in text for marker in CARD6_EDUCATIONAL_MARKERS + CARD6_LOGIC_MARKERS):
-        return True
-    return bool(
-        re.search(r"不是.+而是", text)
-        or re.search(r"表面.+本质", text)
-        or re.search(r"对比.+更像", text)
-        or re.search(r"靠.+撑", text)
-    )
-
-
 # ---------------------------------------------------------------------------
-# Cards 1-5 analyst-voice gate (plan v3)
+# Cards 1-4 analyst-voice gate
 # ---------------------------------------------------------------------------
 _NUMBER_RE = re.compile(r"\d+(?:\.\d+)?(?:%|亿|万|TB|EB|bps|x|倍|个|人|百万|亿元|\$|B|M|K)")
 _COMP_KEYWORDS = ("peer", "同业", "consensus", "guide", "历史", "vs", "同比", "环比", "相比", "过去", "去年", "上一", "管理层指引")
@@ -1195,36 +1105,106 @@ _STYLE_FIRST_MENTION_RE = re.compile(
     r"[（(][^（()）]{0,40}\b(CC|YoY|Y/Y|QoQ|Q/Q|FX|CAGR)\b[^（()）]{0,40}[)）]"
 )
 
-# slot keys covered by Cards 1-5 contract
-CARD1_5_WORKER_SLOTS = (
-    "intro_sentence", "company_focus_paragraph",  # Card 1
-    "conclusion_block",                            # Card 2
-    "revenue_explainer_points",                    # Card 3
-    "judgement_paragraph",                         # Card 4
-    "brand_statement",                             # Card 5
+# slot keys covered by Cards 1-4 contract
+# Note: five_year_arc.narrative and cfa_lens.different_angle_insight are nested;
+# the worker_notes file uses the bare leaf name as the top-level key.
+CARD1_4_WORKER_SLOTS = (
+    "intro_sentence",                # Card 1
+    "company_focus_paragraph",       # Card 1
+    "industry_paragraph",            # Card 2
+    "five_year_arc.narrative",       # Card 3 (nested)
+    "revenue_explainer_points",      # Card 3
+    "cfa_lens.different_angle_insight",  # Card 4 (nested, AUTHORITY)
 )
 # slots that REQUIRE primary_quote (analyst-authority slots)
-AUTHORITY_SLOTS = ("brand_statement", "judgement_paragraph")
+AUTHORITY_SLOTS = ("different_angle_insight",)
+
+# Card 1-4 prose keys that get backstop banned-phrase checks. Includes nested
+# leaves we extract via helper below.
+CARD1_4_PROSE_TOP_LEVEL_KEYS = (
+    "intro_sentence",
+    "company_focus_paragraph",
+    "background_bullets",
+    "industry_paragraph",
+    "recent_financial_highlights",
+    "revenue_explainer_points",
+)
 
 
-def validate_card1_5_analytical_content(
+def _worker_note_leaf_key(slot: str) -> str:
+    """Map 'five_year_arc.narrative' → 'narrative' for worker_notes lookup keys
+    and for AUTHORITY_SLOTS membership checks."""
+    return slot.rsplit(".", 1)[-1]
+
+
+def _collect_card1_4_prose(card_slots: dict) -> list[tuple[str, str]]:
+    """Return (display_key, text) pairs for every prose chunk on Cards 1-4
+    that should be subject to banned-phrase / writing-style backstops."""
+    out: list[tuple[str, str]] = []
+    for key in CARD1_4_PROSE_TOP_LEVEL_KEYS:
+        value = card_slots.get(key)
+        if isinstance(value, list):
+            for v in value:
+                if isinstance(v, str):
+                    out.append((key, v))
+        elif isinstance(value, str):
+            out.append((key, value))
+
+    # porter_evidence: each entry's evidence string
+    pe = card_slots.get("porter_evidence")
+    if isinstance(pe, list):
+        for entry in pe:
+            if isinstance(entry, dict):
+                ev = entry.get("evidence")
+                if isinstance(ev, str):
+                    out.append(("porter_evidence.evidence", ev))
+
+    # five_year_arc nested fields
+    arc = card_slots.get("five_year_arc")
+    if isinstance(arc, dict):
+        narrative = arc.get("narrative")
+        if isinstance(narrative, str):
+            out.append(("five_year_arc.narrative", narrative))
+        for pt in arc.get("inflection_points") or []:
+            if isinstance(pt, str):
+                out.append(("five_year_arc.inflection_points", pt))
+
+    # cfa_lens nested fields
+    lens = card_slots.get("cfa_lens")
+    if isinstance(lens, dict):
+        for key in ("concept_intro", "different_angle_insight", "takeaway"):
+            value = lens.get(key)
+            if isinstance(value, str):
+                out.append((f"cfa_lens.{key}", value))
+        for pt in lens.get("company_application") or []:
+            if isinstance(pt, str):
+                out.append(("cfa_lens.company_application", pt))
+    return out
+
+
+def validate_card1_4_analytical_content(
     card_slots: dict,
     worker_notes: dict | None = None,
 ) -> list[str]:
-    """Validate that Card 1-5 slots have the analyst-content substrate.
+    """Validate that Card 1-4 slots have the analyst-content substrate.
 
     Returns a list of human-readable issue strings. Empty list = pass.
     Checks worker_notes for required hidden fields (data_anchor, variant_view,
     falsifier|primary_quote|catalyst_with_date) and card_slots for backstop
-    banned phrases. Card 6 slots are not checked here.
+    banned phrases.
     """
     issues: list[str] = []
     if worker_notes is None:
-        issues.append("missing card_slots_worker_notes.json sidecar (required by plan v3)")
+        issues.append("missing card_slots_worker_notes.json sidecar")
         return issues
 
-    for slot in CARD1_5_WORKER_SLOTS:
+    for slot in CARD1_4_WORKER_SLOTS:
+        leaf = _worker_note_leaf_key(slot)
         note = worker_notes.get(slot)
+        if note is None:
+            # Fall back to the leaf key so writers may either use the full
+            # 'five_year_arc.narrative' or just 'narrative' in worker_notes.
+            note = worker_notes.get(leaf)
         if not note or not isinstance(note, dict):
             issues.append(f"worker_notes.{slot}: missing or not an object")
             continue
@@ -1272,96 +1252,64 @@ def validate_card1_5_analytical_content(
             )
 
         # authority slots must have a primary_quote
-        if slot in AUTHORITY_SLOTS and not has_quote:
+        if leaf in AUTHORITY_SLOTS and not has_quote:
             issues.append(
                 f"worker_notes.{slot}: primary_quote required (analyst-authority slot)"
             )
 
-    # backstop on card_slots prose (Cards 1-5 only — Card 6 is exempt)
-    card1_5_prose_keys = (
-        "intro_sentence", "company_focus_paragraph",
-        "background_bullets", "industry_paragraph", "conclusion_block",
-        "revenue_explainer_points",
-        "current_business_points", "future_watch_points", "judgement_paragraph",
-        "brand_subheading", "brand_statement", "memory_points",
-    )
+    prose_chunks = _collect_card1_4_prose(card_slots)
 
     # Pre-scan the entire card_slots prose for first-mention parens that
     # whitelist later bare-abbrev uses. "恒定汇率（CC）" once → later "CC" OK.
-    all_card1_5_text_parts: list[str] = []
-    for key in card1_5_prose_keys:
-        value = card_slots.get(key)
-        if isinstance(value, list):
-            all_card1_5_text_parts.extend(v for v in value if isinstance(v, str))
-        elif isinstance(value, str):
-            all_card1_5_text_parts.append(value)
-    all_card1_5_text = " ".join(all_card1_5_text_parts)
+    all_text = " ".join(text for _, text in prose_chunks)
     style_first_mention_abbrevs: set[str] = set()
-    for m in _STYLE_FIRST_MENTION_RE.finditer(all_card1_5_text):
+    for m in _STYLE_FIRST_MENTION_RE.finditer(all_text):
         style_first_mention_abbrevs.add(m.group(1))
 
-    for key in card1_5_prose_keys:
-        value = card_slots.get(key)
-        if value is None:
-            continue
-        if isinstance(value, list):
-            texts = [v for v in value if isinstance(v, str)]
-        elif isinstance(value, str):
-            texts = [value]
-        else:
-            continue
-        for text in texts:
-            if key == "intro_sentence" and text.lstrip().startswith("说白了"):
-                issues.append(f"card_slots.{key}: starts with '说白了' (banned on Cards 1-5)")
-            for phrase in _BANNED_PHRASES:
-                if phrase in text:
-                    issues.append(f"card_slots.{key}: contains banned phrase '{phrase}'")
-                    break
-            if _BINARY_FLIP_RE.search(text):
-                issues.append(f"card_slots.{key}: contains 'X 不是 Y 而是 Z' template (banned on Cards 1-5)")
+    for key, text in prose_chunks:
+        if key == "intro_sentence" and text.lstrip().startswith("说白了"):
+            issues.append(f"card_slots.{key}: starts with '说白了' (banned on Cards 1-4)")
+        for phrase in _BANNED_PHRASES:
+            if phrase in text:
+                issues.append(f"card_slots.{key}: contains banned phrase '{phrase}'")
+                break
+        if _BINARY_FLIP_RE.search(text):
+            issues.append(f"card_slots.{key}: contains 'X 不是 Y 而是 Z' template (banned on Cards 1-4)")
 
-            # Writing-style rule (1)+(2): bare "+" without comparator base
-            for m in _BARE_PLUS_RE.finditer(text):
-                window_before = text[max(0, m.start() - 15):m.start()]
-                if _COMPARATOR_BEFORE_PLUS_RE.search(window_before):
-                    continue
-                snippet = text[max(0, m.start() - 15):min(len(text), m.end() + 10)]
-                issues.append(
-                    f"card_slots.{key}: writing-style — bare '+' without comparator base "
-                    f"(同比/环比/年化/较/相比 must precede +N within 15 chars): "
-                    f"...{snippet}..."
-                )
+        # Writing-style rule (1)+(2): bare "+" without comparator base
+        for m in _BARE_PLUS_RE.finditer(text):
+            window_before = text[max(0, m.start() - 15):m.start()]
+            if _COMPARATOR_BEFORE_PLUS_RE.search(window_before):
+                continue
+            snippet = text[max(0, m.start() - 15):min(len(text), m.end() + 10)]
+            issues.append(
+                f"card_slots.{key}: writing-style — bare '+' without comparator base "
+                f"(同比/环比/年化/较/相比 must precede +N within 15 chars): "
+                f"...{snippet}..."
+            )
 
-            # Writing-style rule (3): banned English abbreviation
-            for m in _STYLE_BANNED_ABBREV_RE.finditer(text):
-                abbrev = m.group(1)
-                if abbrev in style_first_mention_abbrevs:
-                    continue
-                snippet = text[max(0, m.start() - 10):min(len(text), m.end() + 10)]
-                issues.append(
-                    f"card_slots.{key}: writing-style — English abbreviation '{abbrev}' "
-                    f"in body prose (CC→恒定汇率, YoY→同比, QoQ→环比, FX→汇率, "
-                    f"CAGR→复合年化增长率; first-mention '恒定汇率（CC）' would "
-                    f"whitelist later uses): ...{snippet}..."
-                )
-
-    # cta_line: ban subscription-bait
-    cta = (card_slots.get("cta_line") or "").strip()
-    if cta and _CLICKBAIT_CTA_RE.search(cta):
-        issues.append("card_slots.cta_line: matches subscription-bait pattern ('关注 X 每天学一个公司' style) — must be 下季验证清单 instead")
+        # Writing-style rule (3): banned English abbreviation
+        for m in _STYLE_BANNED_ABBREV_RE.finditer(text):
+            abbrev = m.group(1)
+            if abbrev in style_first_mention_abbrevs:
+                continue
+            snippet = text[max(0, m.start() - 10):min(len(text), m.end() + 10)]
+            issues.append(
+                f"card_slots.{key}: writing-style — English abbreviation '{abbrev}' "
+                f"in body prose (CC→恒定汇率, YoY→同比, QoQ→环比, FX→汇率, "
+                f"CAGR→复合年化增长率; first-mention '恒定汇率（CC）' would "
+                f"whitelist later uses): ...{snippet}..."
+            )
 
     return issues
 
 
-def fit_copy(candidates: list[str], limit: int, *, human: bool = False) -> str:
+def fit_copy(candidates: list[str], limit: int) -> str:
     normalized: list[str] = []
     for raw in candidates:
         text = ensure_terminal_punct(strip_stiff_opener(raw))
         if text:
             normalized.append(text)
-    for text in normalized:
-        if len(text) <= limit and (not human or is_human_copy(text)):
-            return text
     for text in normalized:
         if len(text) <= limit:
             return text
@@ -1373,12 +1321,9 @@ def fit_copy(candidates: list[str], limit: int, *, human: bool = False) -> str:
             trial = clause if not rebuilt else f"{rebuilt}，{clause}"
             if len(ensure_terminal_punct(trial)) <= limit:
                 rebuilt = trial
-        if rebuilt and len(clean(strip_voice_shell(rebuilt))) >= 4:
+        if rebuilt and len(clean(rebuilt)) >= 4:
             return ensure_terminal_punct(rebuilt)
-        clip_base = strip_voice_shell(shortest)
-        if not clip_base or len(clean(clip_base)) < 4:
-            clip_base = clean(shortest)
-        clipped = clean(clip_base)[: max(0, limit - 1)].rstrip("，；：,;: ")
+        clipped = clean(shortest)[: max(0, limit - 1)].rstrip("，；：,;: ")
         return ensure_terminal_punct(clipped)
     return ""
 
@@ -1421,26 +1366,11 @@ def flatten_text_values(value: Any) -> list[str]:
     return out
 
 
-def prepend_human_opener(text: str, opener: str = "说白了，") -> str:
-    """Card 6 only — do not call for Cards 1-5.
-
-    Cards 1-5 must not emit "说白了，" prefixes (analyst-voice contract, plan v3).
-    """
-    text = clean(text)
-    if not text:
-        return ""
-    if text.startswith(("说白了", "别看", "本质上", "眼下", "先别", "盯着")):
-        return ensure_terminal_punct(text)
-    return ensure_terminal_punct(opener + text)
-
-
 def source_copy_candidates(
     texts: list[str],
     limit: int,
     *,
-    opener: str | None = None,
     sentence_options: tuple[int, ...] = (1, 2),
-    human: bool = False,
 ) -> list[str]:
     candidates: list[str] = []
     for raw in dedupe_texts(texts):
@@ -1449,43 +1379,24 @@ def source_copy_candidates(
             continue
         base = ensure_terminal_punct(strip_stiff_opener(raw))
         if base:
-            candidates.append(prepend_human_opener(base, opener) if opener else base)
+            candidates.append(base)
         for count in sentence_options:
-            budget = limit - len(opener or "")
-            compressed = paragraph_from_sentences(raw, budget, sentences=count)
+            compressed = paragraph_from_sentences(raw, limit, sentences=count)
             if compressed:
-                candidates.append(prepend_human_opener(compressed, opener) if opener else compressed)
+                candidates.append(compressed)
         for part in sentence_chunks(raw, 4):
             normalized = ensure_terminal_punct(strip_stiff_opener(part))
             if normalized:
-                candidates.append(prepend_human_opener(normalized, opener) if opener else normalized)
-    out = dedupe_texts(candidates)
-    if human:
-        human_first = [text for text in out if is_human_copy(text)]
-        return human_first + [text for text in out if text not in human_first]
-    return out
-
-
-def combined_source_texts(texts: list[str], max_parts: int = 2) -> list[str]:
-    items = dedupe_texts([sanitize_source_text(text) for text in texts])
-    combined: list[str] = []
-    for i in range(len(items)):
-        acc = ""
-        for j in range(i, min(len(items), i + max_parts)):
-            acc += ensure_terminal_punct(items[j])
-        if acc:
-            combined.append(acc)
-    return dedupe_texts(combined)
+                candidates.append(normalized)
+    return dedupe_texts(candidates)
 
 
 def dense_source_paragraph(
     texts: list[str],
     limit: int,
     *,
-    opener: str | None = None,
     max_sentences: int = 3,
 ) -> str:
-    budget = limit - len(opener or "")
     picked: list[str] = []
     for text in dedupe_texts([sanitize_source_text(text) for text in texts]):
         for sentence in sentence_chunks(text, 4):
@@ -1493,16 +1404,13 @@ def dense_source_paragraph(
             if not normalized or normalized in picked:
                 continue
             trial = "".join(picked) + normalized
-            if len(trial) <= budget:
+            if len(trial) <= limit:
                 picked.append(normalized)
             if len(picked) >= max_sentences:
                 break
         if len(picked) >= max_sentences:
             break
-    out = "".join(picked)
-    if opener and out:
-        return prepend_human_opener(out, opener)
-    return out
+    return "".join(picked)
 
 
 def porter_section_texts(data: ReportData, section: str) -> list[str]:
@@ -2014,96 +1922,12 @@ def has_source_anchor(text: str, data: ReportData, source_terms: list[str] | Non
     return False
 
 
-def operational_metric(data: ReportData) -> tuple[str, str, str]:
-    kpis = operational_kpis(data)
-    if "dap_billion" in kpis:
-        return ("DAP", bn_to_yi(float(kpis["dap_billion"])), GREEN)
-    if "mau_billion" in kpis:
-        return ("MAU", bn_to_yi(float(kpis["mau_billion"])), GREEN)
-    if "dau_million" in kpis:
-        return ("DAU", f"{float(kpis['dau_million']):.0f} 百万", GREEN)
-    if "subscribers_million" in kpis:
-        return ("订阅用户", f"{float(kpis['subscribers_million']):.0f} 百万", GREEN)
-    ocf = cash_flow(data).get("operating_cash_flow")
-    if ocf:
-        return ("经营现金流", money_text(float(ocf)), GREEN)
-    net_margin = profitability(data).get("net_margin_pct")
-    return ("净利率", pct_text(net_margin), GREEN)
-
-
-def company_theme(data: ReportData) -> str:
-    text = all_text(data).lower()
-    sector = str(get_nested(data.financial_data, "sector", default="")).lower()
-    currency = str(get_nested(data.financial_data, "currency", default="USD")).upper()
-    if any(token in text for token in ("制药", "药企", "药物", "肥胖", "糖尿病", "临床", "管线", "mounjaro", "zepbound", "verzenio")) or "healthcare" in sector:
-        return "pharma"
-    # Chinese domestic + cross-border e-commerce (PDD/Temu model): RMB-reporting, no AWS
-    if currency in ("RMB", "CNY") and any(token in text for token in ("拼多多", "temu", "跨境", "低价", "拼团")) and "aws" not in text:
-        return "cn_ecom"
-    if any(token in text for token in ("aws", "电商", "零售", "第三方卖家", "履约", "物流", "综合零售", "云服务", "prime", "亚马逊")) or any(
-        token in sector for token in ("综合零售", "云服务", "非必需消费")
-    ):
-        return "ecom_cloud"
-    if any(token in text for token in ("广告", "reels", "family of apps", "社交", "互动媒体")):
-        return "ads_ai"
-    if any(token in text for token in ("电动车", "robotaxi", "fsd", "储能", "汽车")):
-        return "ev_ai"
-    if any(token in text for token in ("订阅", "saas", "软件", "云", "license")):
-        return "software"
-    return "general"
-
-
-def segment_sentence(data: ReportData) -> str:
-    segments = segment_data(data)
-    if len(segments) >= 2:
-        seg1, seg2 = segments[0], segments[1]
-        theme = company_theme(data)
-        seg1_name = clean_segment_name(seg1.get("name", "主业务"))
-        seg2_name = clean_segment_name(seg2.get("name", "次业务"))
-        follow_up = {
-            "ecom_cloud": f"{seg1_name}还是最大收入底盘，{seg2_name}体现了集团利润结构的分层",
-            "cn_ecom": f"{seg1_name}和{seg2_name}双轮驱动，平台货币化结构比以前更均衡",
-            "pharma": f"{seg1_name}和{seg2_name}说明增长不只靠单一大单品",
-            "software": f"{seg1_name}和{seg2_name}说明收入结构并不单一",
-            "ads_ai": f"{seg1_name}和{seg2_name}说明主平台之外还有新的增长抓手",
-            "ev_ai": f"{seg1_name}和{seg2_name}说明报表已经不只靠单一业务在扛",
-            "general": f"{seg1_name}和{seg2_name}说明收入重心与投入方向已经拉开",
-        }[theme]
-        return ensure_terminal_punct(
-            f"{seg1_name} {segment_revenue_bn(seg1) * 10:.1f} 亿{_CURRENCY_LABEL}，"
-            f"{seg2_name} {segment_revenue_bn(seg2) * 10:.1f} 亿{_CURRENCY_LABEL}，{follow_up}"
-        )
-    label, value, _ = operational_metric(data)
-    return ensure_terminal_punct(f"{label}{value}，说明这门生意的底盘还在")
-
-
-def segment_fact_line(data: ReportData) -> str:
-    segments = segment_data(data)
-    if len(segments) >= 2:
-        seg1, seg2 = segments[0], segments[1]
-        seg1_name = clean_segment_name(seg1.get("name", "主业务"))
-        seg2_name = clean_segment_name(seg2.get("name", "次业务"))
-        return ensure_terminal_punct(
-            f"{seg1_name} {segment_revenue_bn(seg1) * 10:.1f} 亿{_CURRENCY_LABEL}，"
-            f"{seg2_name} {segment_revenue_bn(seg2) * 10:.1f} 亿{_CURRENCY_LABEL}"
-        )
-    if len(segments) == 1:
-        seg = segments[0]
-        seg_name = clean_segment_name(seg.get("name", "主业务"))
-        pct = seg.get("pct_of_total")
-        pct_part = f"，收入占比约{float(pct):.1f}%" if pct is not None else ""
-        return ensure_terminal_punct(f"{seg_name} {segment_revenue_bn(seg) * 10:.1f} 亿{_CURRENCY_LABEL}{pct_part}")
-    return ""
-
-
 def cover_intro(data: ReportData) -> str:
     if data.card_slots and data.card_slots.intro_sentence:
         return clean(data.card_slots.intro_sentence)
     raise RuntimeError(
         f"Slot 'intro_sentence' missing in card_slots.json for {company_short_cn(data) or data.company_en or data.ticker}. "
-        f"Renderer no longer emits a default fallback for Cards 1-5 — "
-        f"writer must produce all slot content. See plan v3 / "
-        f"references/card_voice_examples/ for the analyst-voice contract."
+        f"Renderer no longer emits a default fallback — writer must produce all slot content."
     )
 
 
@@ -2112,422 +1936,91 @@ def company_focus_paragraph(data: ReportData) -> str:
         return clean(data.card_slots.company_focus_paragraph)
     raise RuntimeError(
         f"Slot 'company_focus_paragraph' missing in card_slots.json for {company_short_cn(data) or data.company_en or data.ticker}. "
-        f"Renderer no longer emits a default fallback for Cards 1-5 — "
-        f"writer must produce all slot content. See plan v3 / "
-        f"references/card_voice_examples/ for the analyst-voice contract."
+        f"Renderer no longer emits a default fallback — writer must produce all slot content."
     )
 
 
 def industry_paragraph(data: ReportData) -> str:
     if data.card_slots and data.card_slots.industry_paragraph:
         return clean(data.card_slots.industry_paragraph)
-    theme = company_theme(data)
-    industry_texts = porter_section_texts(data, "industry") + porter_section_texts(data, "company") + porter_section_texts(data, "forward")
-    source_candidates = source_copy_candidates(
-        industry_texts + combined_source_texts(industry_texts, max_parts=2),
-        LIMIT_CARD2_INDUSTRY_CHARS,
-        sentence_options=(2, 3),
-    )
-    dense_candidate = dense_source_paragraph(industry_texts, LIMIT_CARD2_INDUSTRY_CHARS, max_sentences=4)
-    candidates = {
-        "cn_ecom": [
-            "中国综合电商与全球低价跨境平台的核心竞争，从来不只是谁价格更低，而是谁能把价格低的同时还守住商家 ROI 和平台自身利润。流量入口分散、消费者比价成本趋近于零，决定了平台必须持续用效率换留存。谁能把供给质量、履约速度和广告变现串成飞轮，谁就更难被替代。",
-            "低价电商赛道表面上打的是价格战，骨子里拼的是供给稳定性、算法分发效率和跨境履约能力。中国市场用户高频、价格敏感，海外市场法规风险高、供应链长，两套逻辑都要跑顺，才能真正把平台规模变成持续盈利能力。",
-        ],
-        "ecom_cloud": [
-            "这个行业表面上是零售，骨子里拼的是履约网络、卖家生态、广告变现和云基础设施。规模做大只是门槛，真正拉开差距的是谁能把低毛利交易流量导向更高毛利的云、广告和服务。谁只是卖货不控效率，利润率就很难抬起来。",
-            "平台零售和云服务放在一起看，核心不是谁业务多，而是谁能把流量、商家、物流和算力串成一个飞轮。只要云和广告继续抬利润，零售就不只是包袱；反过来一旦履约和 capex 压力上来，估值也会很快被重估。",
-        ],
-        "pharma": [
-            "这个行业表面上卖的是药，骨子里比的是临床数据、产能、渠道和专利壁垒。减重赛道把天花板抬得很高，也把竞争、供给和定价压力一起推了上来。谁能把爆款持续放量、把新适应症做宽，谁就更容易把高估值守住。",
-            "创新药赛道不怕需求大，怕的是供给跟不上、专利和竞争提前松动。只要疗效、可及性和产能都在线，市场就愿意给高溢价；反过来一旦放量节奏掉下来，估值回撤通常也会来得很快。",
-        ],
-        "ads_ai": [
-            "这个行业说到底就是抢注意力、拼算法，再把时长换成广告钱。AI 让投放更自动，也把算力和能源成本一起抬上去。头部平台吃肉，后排玩家找缝，真正的分水岭不在有没有流量，而在能不能把流量变成更高 ROI。",
-            "互动媒体和在线广告这门生意，表面上看是卖流量，骨子里比的是算法、分发和转化。AI 把效率天花板抬高了，也把成本曲线一起顶上去了。谁能把广告主的钱花得更准，谁就更能在景气波动里守住利润。",
-        ],
-        "ev_ai": [
-            "这个行业表面上在卷价格，骨子里在卷效率、软件和供应链。车企都想抢份额，但真正能把估值拉开的，还是自动驾驶、储能和制造效率。硬件是底座，软件和能源生态才是利润上限，谁只能靠降价，谁就更难守住利润。",
-            "新能源车行业现在不是谁更会讲故事，而是谁能把规模、毛利和软件收入一起做出来。硬件越来越像底座，软件越来越像上限，谁能先把高毛利业务做厚，谁就更容易穿越价格战，也更容易让估值站稳。",
-        ],
-        "software": [
-            "这个行业看起来是卖软件，实际上比的是续费、集成深度和提价权。AI 能拉高效率，也会加速同质化，所以最后拼的还是客户黏性、生态位和现金流。谁只是功能堆得多、迁移成本又不够高，谁就会被更便宜的新工具往后挤。",
-            "企业软件赛道不怕故事多，怕的是替代成本不够高。只要留存稳、扩张率高、生态绑定深，市场就愿意给耐心；反过来估值掉得也会很快，因为客户一旦松动，利润通常会比收入更早塌下来。",
-        ],
-        "general": [
-            "这个行业表面上在拼增长，实际上在拼谁能把规模、效率和利润一起做出来。上游成本、需求节奏和监管变化，都会直接改写利润率，谁的成本结构更硬，谁就更容易掉队。",
-            "这门生意不是谁声音大谁赢，而是谁能把基本盘守住，再把新投入变成回报。景气一好，大家都能讲故事；景气一弱，现金流立刻见真章，市场会先挑最能兑现的公司站队。",
-        ],
-    }
-    result = fit_copy([dense_candidate] + source_candidates + candidates.get(theme, candidates["general"]), LIMIT_CARD2_INDUSTRY_CHARS, human=True)
-    if len(result) < 90:
-        forward_bits = sentence_chunks(" ".join(porter_section_texts(data, "forward")), 2)
-        for bit in forward_bits:
-            bit = ensure_terminal_punct(strip_stiff_opener(bit))
-            trial = result + bit
-            if bit and len(trial) <= LIMIT_CARD2_INDUSTRY_CHARS:
-                result = trial
-                if len(result) >= 90:
-                    break
-    return result
-
-
-def conclusion_block(data: ReportData) -> str:
-    if data.card_slots and data.card_slots.conclusion_block:
-        return clean(data.card_slots.conclusion_block)
-    theme = company_theme(data)
-    source_candidates = source_copy_candidates(
-        porter_section_texts(data, "forward") + porter_section_texts(data, "company") + executive_texts(data),
-        56,
-        sentence_options=(1,),
-        human=True,
-    )
-    candidates = {
-        "cn_ecom": [
-            "主站流量底盘还稳，Temu 全球化是中期变量，市场在等利润率企稳信号",
-            "眼前靠国内高频流量扛报表，估值上限要看跨境业务能不能跑出可持续利润",
-        ],
-        "ecom_cloud": [
-            "零售底盘还在转，真正的上限要看 AWS、广告和卖家服务能不能继续放大利润",
-            "眼前靠零售和云撑盘子，估值上限还是看高毛利业务能不能继续接棒",
-        ],
-        "pharma": [
-            "爆款药还在放量，真正的问号是产能、竞争和后续管线谁先掉链子",
-            "眼前靠重磅药冲收入，估值上限还得看供给和新适应症能不能续上",
-        ],
-        "ads_ai": [
-            "护城河还在，真正的问号是 AI 投入多久能换回更高广告回报",
-            "平台没掉队，真正要盯的是 AI 账单何时开始反哺利润",
-        ],
-        "ev_ai": [
-            "主业看现金流，上限看软件、储能和自动驾驶兑现",
-            "车卖得再多只是基本盘，估值上限仍要看新业务兑现",
-        ],
-        "software": [
-            "产品能卖不是终点，续费、提价和利润兑现才是关键",
-            "真正值钱的不是增速一时多快，而是客户留得有多稳",
-        ],
-        "general": [
-            "基本盘还在，真正的问号是新投入多久能变成真钱",
-            "市场不是不给耐心，而是只给能兑现的耐心",
-        ],
-    }
-    return fit_copy(source_candidates + candidates.get(theme, candidates["general"]), 56, human=True)
-
-
-def judgement_paragraph(data: ReportData) -> str:
-    if data.card_slots and data.card_slots.judgement_paragraph:
-        return clean(data.card_slots.judgement_paragraph)
     raise RuntimeError(
-        f"Slot 'judgement_paragraph' missing in card_slots.json for {company_short_cn(data) or data.company_en or data.ticker}. "
-        f"Renderer no longer emits a default fallback for Cards 1-5 — "
-        f"writer must produce all slot content. See plan v3 / "
-        f"references/card_voice_examples/ for the analyst-voice contract."
-    )
-
-
-def brand_statement(data: ReportData) -> str:
-    if data.card_slots and data.card_slots.brand_statement:
-        return clean(data.card_slots.brand_statement)
-    raise RuntimeError(
-        f"Slot 'brand_statement' missing in card_slots.json for {company_short_cn(data) or data.company_en or data.ticker}. "
-        f"Renderer no longer emits a default fallback for Cards 1-5 — "
-        f"writer must produce all slot content. See plan v3 / "
-        f"references/card_voice_examples/ for the analyst-voice contract."
+        f"Slot 'industry_paragraph' missing in card_slots.json for {company_short_cn(data) or data.company_en or data.ticker}. "
+        f"Renderer no longer emits a default fallback — writer must produce all slot content."
     )
 
 
 def background_points(data: ReportData) -> list[str]:
-    if data.card_slots and data.card_slots.background_bullets:
-        bullets = [clean(x) for x in data.card_slots.background_bullets if clean(x)]
-        return dedupe_texts(bullets, 4)
-    fin = finance(data)
-    rev_yoy = revenue_yoy(data)
-    net_yoy = net_income_yoy(data)
-    source_fact = source_copy_candidates(
-        summary_texts(data) + highlight_texts(data) + executive_texts(data),
-        LIMIT_CARD2_BG_BULLET_CHARS,
-        sentence_options=(1,),
-    )
-    points = [
-        fit_copy([f"{fiscal_year(data)} 营收 {money_text(fin['revenue'])}，同比{pct_text(rev_yoy, signed=True)}。"], LIMIT_CARD2_BG_BULLET_CHARS),
-        fit_copy([f"净利润 {money_text(fin['net'])}，同比{pct_text(net_yoy, signed=True)}。"], LIMIT_CARD2_BG_BULLET_CHARS),
-        fit_copy([segment_fact_line(data) or segment_sentence(data)], LIMIT_CARD2_BG_BULLET_CHARS),
-        fit_copy(source_fact, LIMIT_CARD2_BG_BULLET_CHARS),
-    ]
-    return dedupe_texts(points, 4)
+    bullets = [clean(x) for x in (data.card_slots.background_bullets or []) if clean(x)] if data.card_slots else []
+    return dedupe_texts(bullets, 4)
+
+
+def porter_evidence_entries(data: ReportData) -> list[dict[str, Any]]:
+    if not data.card_slots or not data.card_slots.porter_evidence:
+        return []
+    out: list[dict[str, Any]] = []
+    for entry in data.card_slots.porter_evidence:
+        if not isinstance(entry, dict):
+            continue
+        out.append({
+            "force": entry.get("force"),
+            "score": entry.get("score"),
+            "evidence": clean(str(entry.get("evidence") or "")),
+        })
+    return out
 
 
 def revenue_explainer_points(data: ReportData) -> list[str]:
     if data.card_slots and data.card_slots.revenue_explainer_points:
         pts = [clean(x) for x in data.card_slots.revenue_explainer_points if clean(x)]
-        return dedupe_texts(pts, 3)
+        return dedupe_texts(pts, 4)
     raise RuntimeError(
         f"Slot 'revenue_explainer_points' missing in card_slots.json for {company_short_cn(data) or data.company_en or data.ticker}. "
-        f"Renderer no longer emits a default fallback for Cards 1-5 — "
-        f"writer must produce all slot content. See plan v3 / "
-        f"references/card_voice_examples/ for the analyst-voice contract."
+        f"Renderer no longer emits a default fallback — writer must produce all slot content."
     )
 
 
-def lead_business_point(data: ReportData) -> str:
-    segments = segment_data(data)
-    if not segments:
-        return ""
-    lead = max(segments, key=lambda seg: (seg.get("pct_of_total") or 0, segment_revenue_bn(seg)))
-    name = clean_segment_name(lead.get("name", "主业务"))
-    revenue_text = f"{segment_revenue_bn(lead) * 10:.1f} 亿{_CURRENCY_LABEL}"
-    pct = lead.get("pct_of_total")
-    pct_text_part = f"，收入占比约{float(pct):.1f}%" if pct is not None else ""
-    theme = company_theme(data)
-
-    if theme == "pharma":
-        return fit_copy(
-            [f"{name} {revenue_text}{pct_text_part}。"],
-            LIMIT_CARD4_NOW_BULLET_CHARS,
+def five_year_narrative(data: ReportData) -> str:
+    arc = data.card_slots.five_year_arc if data.card_slots else None
+    if not isinstance(arc, dict):
+        raise RuntimeError(
+            f"Slot 'five_year_arc' missing in card_slots.json for {company_short_cn(data) or data.company_en or data.ticker}."
         )
-    if theme == "ecom_cloud":
-        if name in {"北美", "国际"}:
-            return fit_copy(
-                [f"{name} {revenue_text}{pct_text_part}。"],
-                LIMIT_CARD4_NOW_BULLET_CHARS,
-            )
-        if "云" in name:
-            return fit_copy(
-                [f"{name} {revenue_text}{pct_text_part}。"],
-                LIMIT_CARD4_NOW_BULLET_CHARS,
-            )
-    if theme == "software":
-        return fit_copy(
-            [f"{name} {revenue_text}{pct_text_part}。"],
-            LIMIT_CARD4_NOW_BULLET_CHARS,
+    return clean(str(arc.get("narrative") or ""))
+
+
+def five_year_inflection_points(data: ReportData) -> list[str]:
+    arc = data.card_slots.five_year_arc if data.card_slots else None
+    if not isinstance(arc, dict):
+        return []
+    pts = [clean(str(x)) for x in (arc.get("inflection_points") or []) if clean(str(x))]
+    return dedupe_texts(pts, 4)
+
+
+def recent_financial_highlights(data: ReportData) -> list[str]:
+    if not data.card_slots or not data.card_slots.recent_financial_highlights:
+        raise RuntimeError(
+            f"Slot 'recent_financial_highlights' missing in card_slots.json for {company_short_cn(data) or data.company_en or data.ticker}."
         )
-    if theme == "cn_ecom":
-        return fit_copy(
-            [f"{name} {revenue_text}{pct_text_part}。"],
-            LIMIT_CARD4_NOW_BULLET_CHARS,
+    items = [clean(x) for x in data.card_slots.recent_financial_highlights if clean(x)]
+    return dedupe_texts(items, 4)
+
+
+def cfa_lens_data(data: ReportData) -> dict[str, Any]:
+    lens = data.card_slots.cfa_lens if data.card_slots else None
+    if not isinstance(lens, dict):
+        raise RuntimeError(
+            f"Slot 'cfa_lens' missing in card_slots.json for {company_short_cn(data) or data.company_en or data.ticker}."
         )
-    return fit_copy(
-        [f"{name} {revenue_text}{pct_text_part}，仍是当前第一大产品线。"],
-        LIMIT_CARD4_NOW_BULLET_CHARS,
-    )
-
-
-def operating_margin_point(data: ReportData) -> str:
-    prof = profitability(data)
-    margin = prof.get("operating_margin_pct")
-    if margin is None:
-        return ""
-    prior = prof.get("operating_margin_prior_pct")
-    if prior is None:
-        return fit_copy([f"营业利润率 {pct_text(margin)}。"], LIMIT_CARD4_NOW_BULLET_CHARS)
-    delta = float(margin) - float(prior)
-    if abs(delta) < 0.2:
-        return fit_copy([f"营业利润率 {pct_text(margin)}，与上年基本持平。"], LIMIT_CARD4_NOW_BULLET_CHARS)
-    if delta > 0:
-        return fit_copy([f"营业利润率 {pct_text(margin)}，较上年提升约{delta:.1f}个百分点。"], LIMIT_CARD4_NOW_BULLET_CHARS)
-    return fit_copy([f"营业利润率 {pct_text(margin)}，较上年回落约{abs(delta):.1f}个百分点。"], LIMIT_CARD4_NOW_BULLET_CHARS)
-
-
-def cash_flow_point(data: ReportData) -> str:
-    cf = cash_flow(data)
-    ocf = cf.get("operating_cash_flow")
-    capex = cf.get("capex_purchases")
-    fcf = cf.get("free_cash_flow")
-    trend_candidates = source_copy_candidates(trend_texts(data), LIMIT_CARD4_NOW_BULLET_CHARS, sentence_options=(1,))
-    if ocf and capex and fcf is not None:
-        return fit_copy(
-            [f"经营现金流 {money_text(float(ocf))}，Capex {money_text(float(capex))}，自由现金流 {money_text(float(fcf))}。", *trend_candidates],
-            LIMIT_CARD4_NOW_BULLET_CHARS,
-        )
-    if ocf and capex:
-        return fit_copy(
-            [f"经营现金流 {money_text(float(ocf))}，Capex {money_text(float(capex))}。", *trend_candidates],
-            LIMIT_CARD4_NOW_BULLET_CHARS,
-        )
-    return ""
-
-
-def business_now_points(data: ReportData) -> list[str]:
-    if data.card_slots and data.card_slots.current_business_points:
-        pts = [clean(x) for x in data.card_slots.current_business_points if clean(x)]
-        return dedupe_texts(pts, 4)
-    points: list[str] = []
-    lead_point = lead_business_point(data)
-    if lead_point:
-        points.append(lead_point)
-    kpis = operational_kpis(data)
-    if "dap_billion" in kpis:
-        points.append(fit_copy([f"DAP {bn_to_yi(float(kpis['dap_billion']))}，流量底盘和分发效率都还在线，广告机器没有掉链子。"], LIMIT_CARD4_NOW_BULLET_CHARS))
-    elif "ad_impressions_yoy_pct" in kpis:
-        points.append(fit_copy([f"广告展示量同比{pct_text(kpis['ad_impressions_yoy_pct'], signed=True)}，平台活跃度还在往上走，用户时长也还撑得住。"], LIMIT_CARD4_NOW_BULLET_CHARS))
-    margin_point = operating_margin_point(data)
-    if margin_point:
-        points.append(margin_point)
-    cf_point = cash_flow_point(data)
-    if cf_point:
-        points.append(cf_point)
-    now_texts = highlight_texts(data) + summary_texts(data) + executive_texts(data) + trend_texts(data)
-    points.extend(
-        fit_copy([text], LIMIT_CARD4_NOW_BULLET_CHARS)
-        for text in source_copy_candidates(
-            now_texts + combined_source_texts(now_texts, max_parts=2),
-            LIMIT_CARD4_NOW_BULLET_CHARS,
-            sentence_options=(1, 2),
-        )
-    )
-    dense = dedupe_texts(points, 4)
-    return dense
-
-
-def future_watch_points(data: ReportData) -> list[str]:
-    if data.card_slots and data.card_slots.future_watch_points:
-        pts = [clean(x) for x in data.card_slots.future_watch_points if clean(x)]
-        return dedupe_texts(pts, 4)
-    theme = company_theme(data)
-    points: list[str] = [
-        fit_copy([text], LIMIT_CARD4_FUTURE_BULLET_CHARS)
-        for text in source_copy_candidates(
-            risk_texts(data) + porter_section_texts(data, "forward") + executive_texts(data) + summary_texts(data)[-1:],
-            LIMIT_CARD4_FUTURE_BULLET_CHARS,
-            sentence_options=(1,),
-        )
-    ]
-    theme_points = {
-        "cn_ecom": [
-            "别只看收入增速，更要看 Temu 本地化后利润率能不能回升，不然全球化是在拿利润换规模。",
-            "关税政策扰动是短期变量，但若持续收紧，Temu 的价格优势会被履约成本逐步对冲。",
-            "阿里、京东、抖音持续加码补贴，国内平台 take rate 和广告效率是下一步核心分水岭。",
-            "市场给低估值说明增长叙事已打折；一旦 Temu 利润开始兑现，重估空间仍然存在。",
-        ],
-        "ecom_cloud": [
-            "别只看收入，更要看 AWS、广告和履约效率能不能一起守住，不然利润弹性很容易被成本吃掉。",
-            "云服务和广告是估值锚，但零售网络、劳资和物流投入提醒市场，这门生意并不轻。",
-            "高毛利业务继续提占比，市场就愿意给耐心；一旦云增速回落、capex 再抬，估值会很快被压缩。",
-            "眼下大家买的是飞轮越转越顺，不是单看卖货规模；谁能把规模变成更厚利润，谁就更值钱。",
-        ],
-        "pharma": [
-            "别只看销量，更要看产能爬坡、医保覆盖和竞品节奏能不能一起扛住，不然高增长很容易先撞到供给天花板。",
-            "减重赛道够大，但越是高景气，市场越会盯供给、定价和长期安全性这些硬问题。",
-            "新适应症一旦持续放量，估值天花板还会被往上抬；但只要临床或供给节奏一慢，市场也会立刻重估。",
-            "眼下大家买的是爆款延续性和管线接棒，一旦这两条线松动，回撤通常不会太温和。",
-        ],
-        "ads_ai": [
-            "别只看广告景气，更要看 AI 投入能不能换回更高 ROI，不然账单会先把利润吃薄。",
-            "算力、电力和数据中心是硬约束，费用率短期还会紧，资本开支也未必马上降温。",
-            "监管一收紧，广告定向和产品节奏都可能被打断，产品迭代会直接被拖慢。",
-            "收入继续快跑，市场就夸它敢投；增速一掉，估值先挨打，情绪切得会非常快。",
-        ],
-        "ev_ai": [
-            "别只看交付量，更要看软件付费和储能扩张能不能继续兑现，利润池能不能真正换挡。",
-            "价格战如果拉太久，硬件利润会先被挤薄，现金流修复也会往后拖。",
-            "自动驾驶一旦兑现，估值天花板会被重新打开，但市场不会无限等。",
-            "市场现在买的是未来，兑现节奏一慢，回撤也会很快，故事反噬会比想象中更狠。",
-        ],
-        "software": [
-            "别只看新单，更要看续费、扩张率和提价能不能一起守住，单靠签单堆不出好估值。",
-            "AI 会拉高效率，也会加速同质化，护城河得靠客户黏性守，不能只靠新功能。",
-            "宏观一转弱，预算和回款节奏会先传到报表里，利润弹性往往比收入更早变脸。",
-            "增速守得住，估值就稳；留存一松，市场会立刻砍价，而且一点都不会客气。",
-        ],
-        "general": [
-            "别只看收入，更要看新投入多久能变成真钱，不然规模越大反而越容易被质疑。",
-            "上游成本、需求节奏和监管变化，都会先打到利润率，报表会比故事更早翻脸。",
-            "故事讲得再大，兑现一慢，市场就会先收估值，而且通常不会给第二次解释机会。",
-            "基本盘守得住，市场才愿意继续为远期叙事买单，不然耐心会掉得很快。",
-        ],
+    application = [clean(str(x)) for x in (lens.get("company_application") or []) if clean(str(x))]
+    return {
+        "concept_key": clean(str(lens.get("concept_key") or "")),
+        "concept_name_cn": clean(str(lens.get("concept_name_cn") or "")),
+        "concept_intro": clean(str(lens.get("concept_intro") or "")),
+        "company_application": dedupe_texts(application, 4),
+        "different_angle_insight": clean(str(lens.get("different_angle_insight") or "")),
+        "takeaway": clean(str(lens.get("takeaway") or "")),
+        "cfa_progress_source": clean(str(lens.get("cfa_progress_source") or "")),
     }
-    points.extend(fit_copy([item], LIMIT_CARD4_FUTURE_BULLET_CHARS, human=("别看" in item or "夸它敢投" in item)) for item in theme_points[theme])
-    return dedupe_texts(points, 4)
-
-
-def brand_summary_points(data: ReportData) -> list[str]:
-    if data.card_slots and data.card_slots.memory_points:
-        pts = [clean(x) for x in data.card_slots.memory_points if clean(x)]
-        return dedupe_texts(pts, 3)
-    rev_yoy = revenue_yoy(data)
-    points = [
-        fit_copy([f"收入同比{pct_text(rev_yoy, signed=True)}，基本盘还稳。"], 24),
-        fit_copy([brand_statement(data)], 24, human=True),
-        fit_copy([future_watch_points(data)[0]], 28, human=True),
-    ]
-    return dedupe_texts(points, 3)
-
-
-def watch_sentence(data: ReportData) -> str:
-    right = future_watch_points(data)
-    return right[0] if right else judgement_paragraph(data)
-
-
-def post_title(data: ReportData) -> str:
-    if data.card_slots and data.card_slots.post_title:
-        return clean(data.card_slots.post_title)
-    return f"{POST_TITLE_PREFIX}{company_short_cn(data)}"
-
-
-def post_content_lines(data: ReportData) -> list[str]:
-    if data.card_slots and data.card_slots.post_content_lines:
-        lines = [clean(x) for x in data.card_slots.post_content_lines if clean(x)]
-        return dedupe_texts(lines, 4)
-    fin = finance(data)
-    rev_yoy = revenue_yoy(data)
-    label, value, _ = operational_metric(data)
-    watch = clean(watch_sentence(data)).rstrip("。！？!?")
-    lines = [
-        fit_copy([brand_statement(data)], 42, human=True),
-        fit_copy([f"财报里，{fiscal_year(data)} 营收 {money_text(fin['revenue'])}，同比{pct_text(rev_yoy, signed=True)}，先看增长质量。"], 44),
-        fit_copy([f"{label} {value}，这就是它眼下最值得盯的经营抓手。"], 44, human=True),
-        fit_copy([f"后面真要看的是：{watch}？"], 44, human=True),
-    ]
-    return dedupe_texts(lines, 4)
-
-
-def keyword_tags(data: ReportData) -> list[str]:
-    text = all_text(data)
-    tags: list[str] = [hashtag_token(company_short_cn(data))]
-    if data.ticker:
-        tags.append(hashtag_token(data.ticker))
-    sector = str(get_nested(data.financial_data, "sector", default=""))
-    if "通信" in sector or "广告" in text:
-        tags.append("#数字广告")
-    if "社交" in text:
-        tags.append("#社交平台")
-    if "AI" in text or "人工智能" in text:
-        tags.append("#AI")
-    if "云" in text:
-        tags.append("#云计算")
-    if "电动车" in text:
-        tags.append("#电动车")
-    tags.extend(["#商业模式", "#上市公司", "#金融豹"])
-    return normalize_post_tags(tags)
-
-
-def normalize_post_tags(raw_tags: list[Any]) -> list[str]:
-    tags: list[str] = []
-    seen: set[str] = set()
-    base_limit = max(0, MAX_POST_TAGS - len(REQUIRED_POST_TAGS))
-    required = set(REQUIRED_POST_TAGS)
-    for raw in raw_tags:
-        if not clean(str(raw)):
-            continue
-        token = hashtag_token(str(raw).lstrip("#"))
-        if not token or token in seen or token in required:
-            continue
-        tags.append(token)
-        seen.add(token)
-        if len(tags) >= base_limit:
-            break
-    for token in REQUIRED_POST_TAGS:
-        if token not in seen:
-            tags.append(token)
-            seen.add(token)
-    return tags[:MAX_POST_TAGS]
-
-
-def post_hashtags(data: ReportData) -> str:
-    if data.card_slots and data.card_slots.hashtags:
-        return " ".join(normalize_post_tags(data.card_slots.hashtags))
-    return " ".join(keyword_tags(data))
 
 
 def measure_block(
@@ -2633,19 +2126,23 @@ def fit_block_font(
 
 
 def generated_copy_slots(data: ReportData) -> dict[str, list[str]]:
+    lens = cfa_lens_data(data)
     return {
         "Card 1 intro sentence": [cover_intro(data)],
         "Card 1 company-focus paragraph": [company_focus_paragraph(data)],
         "Card 2 background bullets": background_points(data),
         "Card 2 industry paragraph": [industry_paragraph(data)],
-        "Card 2 conclusion": [conclusion_block(data)],
+        "Card 2 Porter evidence": [
+            entry["evidence"] for entry in porter_evidence_entries(data) if entry.get("evidence")
+        ],
+        "Card 3 five-year narrative": [five_year_narrative(data)],
+        "Card 3 inflection points": five_year_inflection_points(data),
+        "Card 3 recent financial highlights": recent_financial_highlights(data),
         "Card 3 explainer bullets": revenue_explainer_points(data),
-        "Card 4 left column": business_now_points(data),
-        "Card 4 right column": future_watch_points(data),
-        "Card 4 judgement paragraph": [judgement_paragraph(data)],
-        "Card 5 main statement": [brand_statement(data)],
-        "Card 5 summary bullets": brand_summary_points(data),
-        "Card 6 content lines": post_content_lines(data),
+        "Card 4 CFA concept intro": [lens["concept_intro"]],
+        "Card 4 CFA company application": lens["company_application"],
+        "Card 4 CFA different-angle insight": [lens["different_angle_insight"]],
+        "Card 4 CFA takeaway": [lens["takeaway"]],
     }
 
 
@@ -2729,13 +2226,12 @@ def validate_report(data: ReportData, brand: str, *, allow_no_logo: bool = False
     intro = cover_intro(data)
     bg_points = background_points(data)
     industry = industry_paragraph(data)
-    left = business_now_points(data)
-    right = future_watch_points(data)
-    brand_points = brand_summary_points(data)
-    brand_line = brand_statement(data)
-    title = post_title(data)
-    lines = post_content_lines(data)
-    tags = post_hashtags(data)
+    porter_evidence = porter_evidence_entries(data)
+    explainer_points = revenue_explainer_points(data)
+    five_year_text = five_year_narrative(data)
+    inflection_points = five_year_inflection_points(data)
+    recent_highlights = recent_financial_highlights(data)
+    lens = cfa_lens_data(data)
     fin = finance(data)
     prof = profitability(data)
     current_income = income_current(data)
@@ -2824,18 +2320,13 @@ def validate_report(data: ReportData, brand: str, *, allow_no_logo: bool = False
         ("Card 1 intro sentence", intro),
         ("Card 1 company-focus paragraph", focus),
         ("Card 2 industry paragraph", industry),
-        ("Card 2 conclusion", conclusion_block(data)),
-        ("Card 4 judgement paragraph", judgement_paragraph(data)),
-        ("Card 5 main statement", brand_line),
+        ("Card 3 five-year narrative", five_year_text),
+        ("Card 4 CFA concept intro", lens["concept_intro"]),
+        ("Card 4 CFA different-angle insight", lens["different_angle_insight"]),
+        ("Card 4 CFA takeaway", lens["takeaway"]),
     ]:
         if not is_complete_copy(text):
             issues.append(f"{label} must be a complete sentence or paragraph without ellipsis.")
-    for label, text in [
-        ("Card 4 judgement paragraph", judgement_paragraph(data)),
-        ("Card 5 main statement", brand_line),
-    ]:
-        if not is_human_copy(text):
-            issues.append(f"{label} must read like a human voice, not analyst template copy.")
     intro_font = f(FONT_INTRO)
     if len(wrap(draw, clean(intro), intro_font, 860)) > 2:
         issues.append("Card 1 intro sentence exceeds 2 lines.")
@@ -2854,16 +2345,14 @@ def validate_report(data: ReportData, brand: str, *, allow_no_logo: bool = False
     if has_bad_linebreak(focus, 860, f(FONT_PANEL_BODY), draw):
         issues.append("Card 1 company-focus paragraph contains a punctuation-led line break.")
 
-    left_card_height = measure_bullets(draw, bg_points, 446, f(FONT_BULLET), 12, 24, max_lines_per_item=4) + measure_block(
-        draw, industry, 446, f(FONT_PANEL_BODY), 13, max_lines=11
-    )
+    # ---- Card 2 ----
     if len(bg_points) != 4:
         issues.append("Card 2 must contain exactly 4 background bullets.")
     for point in bg_points:
         if not is_complete_copy(point):
             issues.append(f"Card 2 background bullet must be a complete sentence: {point}")
-        if len(wrap(draw, clean(point), f(FONT_BULLET), 422)) > 4:
-            issues.append(f"Card 2 background bullet is too long: {point}")
+        if len(point) > LIMIT_CARD2_BG_BULLET_CHARS:
+            issues.append(f"Card 2 background bullet exceeds its character budget: {point}")
         if has_bad_linebreak(point, 422, f(FONT_BULLET), draw):
             issues.append(f"Card 2 background bullet contains a punctuation-led line break: {point}")
 
@@ -2875,27 +2364,42 @@ def validate_report(data: ReportData, brand: str, *, allow_no_logo: bool = False
         issues.append("Card 2 industry paragraph exceeds its section box.")
     if has_bad_linebreak(industry, 446, f(FONT_PANEL_BODY), draw):
         issues.append("Card 2 industry paragraph contains a punctuation-led line break.")
-    y_card2 = 424
-    for _bp in bg_points:
-        y_card2 = block_final_y(draw, _bp, y_card2, 422, f(FONT_BULLET), 12, 4)
-        y_card2 += 24
-    industry_title_y_sim = max(728, y_card2 + 6)
-    industry_body_y_sim = industry_title_y_sim + 58
-    card2_industry_end_y = block_final_y(draw, industry, industry_body_y_sim, 446, f(FONT_PANEL_BODY), 13, 11)
-    if card2_industry_end_y > 1224:
-        issues.append(
-            "Card 2 industry paragraph overflows the left panel (same dynamic layout as card_2: bullets push 行业层面 down). "
-            "Shorten background_bullets or industry_paragraph."
-        )
-    if left_card_height < 360:
-        issues.append("Card 2 left card is too sparse and leaves obvious whitespace.")
-    conclusion = conclusion_block(data)
-    if len(wrap(draw, clean(conclusion), f(FONT_CONCLUSION), 300)) > 4:
-        issues.append("Card 2 conclusion exceeds its box.")
 
-    if 710 < 438 + 4 * 56 + 28 + 20:
-        issues.append("Card 3 metric cards are too close to the revenue rows.")
-    explainer_points = revenue_explainer_points(data)
+    expected_forces = set(PORTER_FORCE_KEYS)
+    actual_forces = {entry.get("force") for entry in porter_evidence}
+    if actual_forces != expected_forces:
+        issues.append(
+            f"Card 2 porter_evidence must cover exactly {sorted(expected_forces)} (got {sorted(actual_forces)})."
+        )
+    for entry in porter_evidence:
+        ev = entry.get("evidence") or ""
+        if not is_complete_copy(ev):
+            issues.append(f"Card 2 porter_evidence[{entry.get('force')}] must be a complete sentence: {ev}")
+        if len(ev) > LIMIT_CARD2_PORTER_EVIDENCE_CHARS:
+            issues.append(
+                f"Card 2 porter_evidence[{entry.get('force')}] exceeds its character budget: {ev}"
+            )
+
+    # ---- Card 3 ----
+    if len(five_year_text) > LIMIT_CARD3_FIVE_YEAR_NARRATIVE_CHARS:
+        issues.append("Card 3 five-year narrative exceeds its character budget.")
+    if len(inflection_points) < 3:
+        issues.append("Card 3 five_year_arc.inflection_points must contain at least 3 entries.")
+    for pt in inflection_points:
+        if not is_complete_copy(pt):
+            issues.append(f"Card 3 inflection point must be a complete sentence: {pt}")
+        if len(pt) > LIMIT_CARD3_INFLECTION_CHARS:
+            issues.append(f"Card 3 inflection point exceeds its character budget: {pt}")
+        if has_bad_linebreak(pt, 396, f(FONT_BULLET_COMPACT), draw):
+            issues.append(f"Card 3 inflection point contains a punctuation-led line break: {pt}")
+    if len(recent_highlights) < 3:
+        issues.append("Card 3 recent_financial_highlights must contain at least 3 entries.")
+    for hl in recent_highlights:
+        if not is_complete_copy(hl):
+            issues.append(f"Card 3 recent financial highlight must be a complete sentence: {hl}")
+        if len(hl) > LIMIT_CARD2_BG_BULLET_CHARS:
+            issues.append(f"Card 3 recent financial highlight exceeds its character budget: {hl}")
+
     explainer_height = measure_bullets(draw, explainer_points, 820, f(FONT_BULLET), 12, 12, max_lines_per_item=3)
     if explainer_height > LIMIT_CARD3_EXPLAINER_TOTAL_HEIGHT:
         issues.append("Card 3 explainer bullets exceed the yellow panel.")
@@ -2907,111 +2411,23 @@ def validate_report(data: ReportData, brand: str, *, allow_no_logo: bool = False
         if has_bad_linebreak(point, 796, f(FONT_BULLET), draw):
             issues.append(f"Card 3 explainer bullet contains a punctuation-led line break: {point}")
 
-    left_height = measure_bullets(draw, left, 350, f(FONT_BULLET_COMPACT), 10, 18, max_lines_per_item=5)
-    right_height = measure_bullets(draw, right, 368, f(FONT_BULLET_COMPACT), 10, 18, max_lines_per_item=5)
-    if sum(len(x) for x in left) < 90:
-        issues.append("Card 4 left column is too sparse.")
-    if sum(len(x) for x in right) < 90:
-        issues.append("Card 4 right column is too sparse.")
-    if left_height < 320:
-        issues.append("Card 4 left column leaves too much empty space.")
-    if right_height < 320:
-        issues.append("Card 4 right column leaves too much empty space.")
-    if left_height > 520:
-        issues.append("Card 4 left column exceeds its available height.")
-    if right_height > 520:
-        issues.append("Card 4 right column exceeds its available height.")
-    for point in left:
+    # ---- Card 4 (CFA lens) ----
+    for required_key in CFA_LENS_REQUIRED_STR_KEYS:
+        if not lens.get(required_key):
+            issues.append(f"Card 4 cfa_lens.{required_key} must be non-empty.")
+    if len(lens.get("concept_intro") or "") > LIMIT_CARD4_CONCEPT_INTRO_CHARS:
+        issues.append("Card 4 cfa_lens.concept_intro exceeds its character budget.")
+    for point in lens.get("company_application") or []:
         if not is_complete_copy(point):
-            issues.append(f"Card 4 left column must use complete sentences: {point}")
-        if len(point) > LIMIT_CARD4_NOW_BULLET_CHARS:
-            issues.append(f"Card 4 left column exceeds its character budget: {point}")
-        if has_bad_linebreak(point, 326, f(FONT_BULLET_COMPACT), draw):
-            issues.append(f"Card 4 left column contains a punctuation-led line break: {point}")
-    for point in right:
-        if not is_complete_copy(point):
-            issues.append(f"Card 4 right column must use complete sentences: {point}")
-        if len(point) > LIMIT_CARD4_FUTURE_BULLET_CHARS:
-            issues.append(f"Card 4 right column exceeds its character budget: {point}")
-        if has_bad_linebreak(point, 344, f(FONT_BULLET_COMPACT), draw):
-            issues.append(f"Card 4 right column contains a punctuation-led line break: {point}")
-
-    judgement = judgement_paragraph(data)
-    judgement_font = fit_block_font(
-        draw,
-        judgement,
-        316,
-        CARD4_JUDGEMENT_BOX_HEIGHT,
-        start_size=FONT_JUDGEMENT,
-        min_size=FONT_JUDGEMENT_MIN,
-        line_gap=10,
-        max_lines=CARD4_JUDGEMENT_MAX_LINES,
-    )
-    judgement_lines = wrap(draw, judgement, judgement_font, 316)
-    if len(judgement) > LIMIT_CARD4_JUDGEMENT_CHARS:
-        issues.append("Card 4 judgement paragraph exceeds its character budget.")
-    if len(judgement_lines) > CARD4_JUDGEMENT_MAX_LINES:
-        issues.append("Card 4 judgement paragraph exceeds its line budget.")
-    jl_vis = judgement_lines[:CARD4_JUDGEMENT_MAX_LINES]
-    if raster_text_block_height(draw, jl_vis, judgement_font, 10) > CARD4_JUDGEMENT_BOX_HEIGHT:
-        issues.append(
-            "Card 4 judgement paragraph exceeds its beige box height (raster line heights can exceed font.size estimates; shorten copy)."
-        )
-    if has_bad_linebreak(judgement, 316, judgement_font, draw):
-        issues.append("Card 4 judgement paragraph contains a punctuation-led line break.")
-
-    if len(wrap(draw, clean(brand_line), f(52, True), 760)) > 3:
-        issues.append("Card 5 main statement exceeds its allowed block.")
-    if measure_bullets(draw, brand_points, 820, f(FONT_BRAND_SUMMARY), 12, 22, max_lines_per_item=3) > 210:
-        issues.append("Card 5 summary bullets exceed the yellow panel.")
-    for point in brand_points:
-        if not is_complete_copy(point):
-            issues.append(f"Card 5 summary bullet must be a complete sentence: {point}")
-        if has_bad_linebreak(point, 796, f(FONT_BRAND_SUMMARY), draw):
-            issues.append(f"Card 5 summary bullet contains a punctuation-led line break: {point}")
-
-    if len(wrap(draw, clean(title), f(FONT_POST_TITLE, True), 860)) > 2:
-        issues.append("Card 6 title exceeds its allowed block.")
-    if not clean(title).startswith(POST_TITLE_PREFIX):
-        issues.append(f"Card 6 title must start with {POST_TITLE_PREFIX!r}.")
-    if "一天吃透一家上市公司" in clean(title):
-        issues.append("Card 6 title must use 一天吃透一家公司, not 一天吃透一家上市公司.")
-    if has_bad_linebreak(title, 860, f(FONT_POST_TITLE, True), draw):
-        issues.append("Card 6 title contains a punctuation-led line break.")
-    if len(lines) != 4:
-        issues.append("Card 6 content must contain exactly 4 bullet lines.")
-    question_count = sum(1 for line in lines if clean(line).endswith(("？", "?")))
-    if len(lines) == 4 and question_count != 1:
-        issues.append("Card 6 content must contain exactly three statements and one question.")
-    for line in lines:
-        if not is_complete_copy(line):
-            issues.append(f"Card 6 content line must be a complete sentence without ellipsis: {line}")
-        hype_markers = card6_hype_markers(line)
-        if hype_markers:
-            issues.append(
-                "Card 6 content line uses clickbait/forum hype markers that are no longer allowed "
-                f"({', '.join(hype_markers)}): {line}"
-            )
-        if not card6_line_sounds_human(line):
-            issues.append(f"Card 6 content line lacks plain-spoken educational voice: {line}")
-        if len(wrap(draw, clean(line), f(FONT_POST_LINE), 860)) > 2:
-            issues.append(f"Card 6 content line is too long: {line}")
-        if has_bad_linebreak(line, 860, f(FONT_POST_LINE), draw):
-            issues.append(f"Card 6 content line contains a punctuation-led line break: {line}")
-    if lines and not any(card6_line_has_report_anchor(line) for line in lines):
-        issues.append("Card 6 content must include at least one report-grounded financial or operating anchor.")
-    if lines and not any(card6_line_has_context_anchor(line) for line in lines):
-        issues.append("Card 6 content must include at least one current-event, policy, market, or industry context anchor.")
-    if len(wrap(draw, clean(tags), f(FONT_POST_TAG), 860)) > 4:
-        issues.append("Card 6 hashtags exceed their section.")
-    if has_bad_linebreak(tags, 860, f(FONT_POST_TAG), draw):
-        issues.append("Card 6 hashtags contain a punctuation-led line break.")
-    tag_tokens = clean(tags).split()
-    for required_tag in REQUIRED_POST_TAGS:
-        if required_tag not in tag_tokens:
-            issues.append(f"Card 6 hashtags must include {required_tag}.")
-    if len(tag_tokens) > MAX_POST_TAGS:
-        issues.append(f"Card 6 hashtags may not exceed {MAX_POST_TAGS} tags.")
+            issues.append(f"Card 4 cfa_lens.company_application must use complete sentences: {point}")
+        if len(point) > LIMIT_CARD4_APPLICATION_CHARS:
+            issues.append(f"Card 4 cfa_lens.company_application exceeds its character budget: {point}")
+        if has_bad_linebreak(point, 820, f(FONT_BULLET_COMPACT), draw):
+            issues.append(f"Card 4 cfa_lens.company_application contains a punctuation-led line break: {point}")
+    if len(lens.get("different_angle_insight") or "") > LIMIT_CARD4_ANGLE_CHARS:
+        issues.append("Card 4 cfa_lens.different_angle_insight exceeds its character budget.")
+    if len(lens.get("takeaway") or "") > LIMIT_CARD4_TAKEAWAY_CHARS:
+        issues.append("Card 4 cfa_lens.takeaway exceeds its character budget.")
 
     if issues:
         raise ValueError("Validation failed:\n- " + "\n- ".join(issues))
@@ -3201,15 +2617,25 @@ def bullets(
 
 
 def cover_metrics(data: ReportData) -> list[tuple[str, str, str]]:
-    fin = finance(data)
-    second_label = "净利润" if fin["net"] else "营业利润"
-    second_value = money_text(fin["net"] or fin["op"])
-    third_label, third_value, _ = operational_metric(data)
-    return [
-        (f"{fiscal_year(data)} 总收入", money_text(fin["revenue"]), GOLD),
-        (second_label, second_value, RED),
-        (third_label, third_value, GREEN),
-    ]
+    """Card 1 metric cards. Writer supplies `metrics_row` entries as
+    `"label|value"` strings (e.g. `"FY2026Q2 总收入|352 亿美元"`); split on
+    the first `|` to fill the label/value tiles. Accent colors cycle through
+    GOLD / RED / GREEN / BLUE."""
+    accents = [GOLD, RED, GREEN, BLUE]
+    items: list[tuple[str, str, str]] = []
+    raw_entries: list[str] = []
+    if data.card_slots and data.card_slots.metrics_row:
+        raw_entries = [clean(x) for x in data.card_slots.metrics_row if clean(x)]
+    for idx, entry in enumerate(raw_entries[:4]):
+        if "|" in entry:
+            label, value = entry.split("|", 1)
+            label, value = clean(label), clean(value)
+        else:
+            parts = entry.split(maxsplit=1)
+            label = parts[0]
+            value = parts[1] if len(parts) > 1 else ""
+        items.append((label or "指标", value or label, accents[idx % len(accents)]))
+    return items
 
 
 def rate_metrics(data: ReportData) -> list[tuple[str, str, str]]:
@@ -3231,8 +2657,16 @@ def card_1(data: ReportData) -> Image.Image:
     draw_text(d, (72, 292), company_short_cn(data), company_font, RED)
     draw_text(d, (78, 412), f"{data.company_en} · {data.ticker}", f(FONT_COVER_META), MUTED)
     block(d, cover_intro(data), 78, 454, 860, f(FONT_INTRO), "#344054", 12, 2)
-    for idx, (label, value, color) in enumerate(cover_metrics(data)):
-        metric(d, 72 + idx * 300, 566, 280, label, value, color)
+
+    metrics = cover_metrics(data)
+    if metrics:
+        slot_count = min(len(metrics), 4)
+        total_w = 936
+        gap = 16
+        tile_w = max(180, (total_w - gap * (slot_count - 1)) // slot_count)
+        for idx, (label, value, color) in enumerate(metrics[:slot_count]):
+            metric(d, 72 + idx * (tile_w + gap), 566, tile_w, label, value, color)
+
     draw_panel = (72, 736, 1008, 1060)
     d.rounded_rectangle(draw_panel, radius=28, fill=PANEL)
     draw_text(d, (108, 786), "公司看点", f(34, True), TEXT)
@@ -3243,42 +2677,81 @@ def card_1(data: ReportData) -> Image.Image:
 
 
 def card_2(data: ReportData) -> Image.Image:
+    """Card 2: Porter five forces — per-force evidence on the left,
+    score bars on the right. Replaces the old left-side背景 + right-side
+    conclusion box; evidence now lives beside its own bar so the reader sees
+    the score and the reasoning together."""
     img = background()
     d = ScaledDraw(ImageDraw.Draw(img), LAYOUT_SCALE)
     header(d, 2)
     draw_text(d, (72, 198), "竞争结构 + 波特五力", f(58, True), TEXT)
-    panel(d, (72, 314, 598, 1224))
-    d.rounded_rectangle((622, 314, 1008, 1224), radius=28, fill=PANEL)
-    draw_text(d, (108, 362), "五力拆解", f(34, True), TEXT)
-    left_end_y = bullets(d, background_points(data), 108, 424, 446, 4, 4)
-    industry_title_y = max(728, left_end_y + 6)
-    industry_body_y = industry_title_y + 58
-    draw_text(d, (108, industry_title_y), "结构判断", f(34, True), TEXT)
-    block(d, industry_paragraph(data), 108, industry_body_y, 446, f(FONT_PANEL_BODY), "#344054", 13, 11)
-    draw_text(d, (656, 362), "波特五力", f(34, True), TEXT)
-    labels = ["供应商", "买方", "新进入者", "替代品", "竞争强度"]
-    y = 430
-    for idx, (label, score) in enumerate(zip(labels, porter_scores_for_card(data))):
-        draw_text(d, (656, y), label, f(FONT_PORTER_LABEL), "#475467")
-        d.rounded_rectangle((656, y + 36, 856, y + 46), radius=8, fill=TRACK)
+
+    # Top: industry-structure paragraph + 4 background bullets (left + right).
+    panel(d, (72, 290, 598, 720))
+    draw_text(d, (108, 320), "行业结构", f(30, True), TEXT)
+    block(d, industry_paragraph(data), 108, 372, 446, f(FONT_PANEL_BODY), "#344054", 13, 10)
+
+    d.rounded_rectangle((622, 290, 1008, 720), radius=28, fill=PANEL)
+    draw_text(d, (656, 320), "背景要点", f(30, True), TEXT)
+    bullets(d, background_points(data), 656, 372, 350, 4, 4, gap_after=14, font_size=FONT_BULLET_COMPACT, line_gap=10)
+
+    # Bottom: per-force evidence with score bar + evidence text.
+    panel(d, (72, 740, 1008, 1240))
+    draw_text(d, (108, 770), "波特五力 — 每股力量证据", f(30, True), TEXT)
+    evidence_by_force = {entry["force"]: entry for entry in porter_evidence_entries(data)}
+    display_order = ("supplier_power", "buyer_power", "new_entrants", "substitutes", "rivalry")
+    y = 826
+    for idx, force in enumerate(display_order):
+        entry = evidence_by_force.get(force, {})
+        score = entry.get("score") or 3
+        label = PORTER_FORCE_LABEL_CN[force]
+        draw_text(d, (108, y), label, f(FONT_PORTER_LABEL, True), TEXT)
+        d.rounded_rectangle((216, y + 12, 416, y + 22), radius=8, fill=TRACK)
         color = PORTER_COLORS[idx] if idx < len(PORTER_COLORS) else (RED if score >= 4 else GOLD)
-        d.rounded_rectangle((656, y + 36, 656 + int(200 * score / 5), y + 46), radius=8, fill=color)
-        draw_text(d, (880, y + 6), f"{score}/5", f(FONT_PORTER_SCORE, True), TEXT)
-        y += 110
-    d.rounded_rectangle((622, 960, 1008, 1224), radius=28, fill=PANEL_PINK)
-    draw_text(d, (656, 1018), "一句结论", f(30, True), TEXT)
-    block(d, conclusion_block(data), 656, 1066, 300, f(FONT_CONCLUSION), "#344054", 12, 4)
+        d.rounded_rectangle((216, y + 12, 216 + int(200 * score / 5), y + 22), radius=8, fill=color)
+        draw_text(d, (438, y - 4), f"{score}/5", f(FONT_PORTER_SCORE, True), TEXT)
+        ev_text = clean(str(entry.get("evidence") or ""))
+        if ev_text:
+            block(d, ev_text, 496, y - 6, 488, f(FONT_PORTER_EVIDENCE), "#475467", 6, 2)
+        y += 80
+
     footer(d, data)
     return finalize_export(img)
 
 
 def card_3(data: ReportData) -> Image.Image:
+    """Card 3: five-year arc + recent quarter financials + revenue explainer.
+    Top panel = transformation narrative + inflection points. Middle band =
+    recent-quarter Sankey-style bars from finance(). Bottom panel = revenue
+    explainer bullets."""
     img = background()
     d = ScaledDraw(ImageDraw.Draw(img), LAYOUT_SCALE)
     header(d, 3)
-    draw_text(d, (72, 198), "实际收入分析", f(58, True), TEXT)
-    panel(d, (72, 314, 1008, 856))
-    draw_text(d, (108, 360), f"{fiscal_year(data)} 收入流", f(34, True), TEXT)
+    draw_text(d, (72, 198), "五年故事 + 最近季度财务", f(58, True), TEXT)
+
+    # 1) Five-year arc panel (top).
+    d.rounded_rectangle((72, 290, 1008, 552), radius=28, fill=PANEL)
+    draw_text(d, (108, 318), "过去 5 年的故事", f(30, True), TEXT)
+    block(d, five_year_narrative(data), 108, 366, 880, f(FONT_PANEL_BODY), "#344054", 12, 5)
+
+    inflection_y = 466
+    draw_text(d, (108, inflection_y - 10), "拐点", f(24, True), MUTED)
+    bullets(
+        d,
+        five_year_inflection_points(data),
+        108,
+        inflection_y + 24,
+        880,
+        max_items=3,
+        max_lines=1,
+        gap_after=8,
+        font_size=FONT_BULLET_COMPACT,
+        line_gap=8,
+    )
+
+    # 2) Recent-quarter financial bars (middle).
+    panel(d, (72, 572, 1008, 894))
+    draw_text(d, (108, 602), f"{fiscal_year(data)} 最近季度收入流", f(30, True), TEXT)
     fin = finance(data)
     chart_labels = get_nested(data.financial_data, "income_statement", "chart_labels", default={}) or {}
     rows = [
@@ -3290,96 +2763,79 @@ def card_3(data: ReportData) -> Image.Image:
     ]
     maxv = max(abs(v) for _, v, _ in rows) or 1
     for idx, (label, value, color) in enumerate(rows):
-        y = 438 + idx * 56
+        y = 654 + idx * 44
         draw_text(d, (108, y), label, f(FONT_CHART_LABEL), "#475467")
-        d.rounded_rectangle((244, y + 6, 744, y + 28), radius=11, fill=TRACK)
+        d.rounded_rectangle((244, y + 6, 744, y + 24), radius=9, fill=TRACK)
         bar_color = RED if value < 0 else color
-        d.rounded_rectangle((244, y + 6, 244 + int(500 * abs(value) / maxv), y + 28), radius=11, fill=bar_color)
-        draw_text(d, (782, y - 6), f"{value:.1f} 亿{_CURRENCY_LABEL}", f(FONT_CHART_VALUE, True), TEXT)
-    for idx, (label, value, color) in enumerate(rate_metrics(data)):
-        metric(d, 108 + idx * 242, 710, 220, label, value, color)
-    d.rounded_rectangle((72, 896, 1008, CARD3_EXPLAINER_PANEL_BOTTOM), radius=28, fill=PANEL)
-    draw_text(d, (108, 942), "收入分析", f(34, True), TEXT)
-    bullets(d, revenue_explainer_points(data), 108, CARD3_EXPLAINER_START_Y, 820, 3, 3, 12)
+        d.rounded_rectangle((244, y + 6, 244 + int(500 * abs(value) / maxv), y + 24), radius=9, fill=bar_color)
+        draw_text(d, (782, y - 4), f"{value:.1f} 亿{_CURRENCY_LABEL}", f(FONT_CHART_VALUE, True), TEXT)
+
+    # 3) Revenue explainer panel (bottom).
+    d.rounded_rectangle((72, 914, 1008, 1240), radius=28, fill=PANEL_CREAM)
+    draw_text(d, (108, 942), "收入分析", f(30, True), TEXT)
+    bullets(
+        d,
+        revenue_explainer_points(data),
+        108,
+        998,
+        880,
+        max_items=3,
+        max_lines=3,
+        gap_after=12,
+        font_size=FONT_BULLET,
+        line_gap=10,
+    )
     footer(d, data)
     return finalize_export(img)
 
 
-def card_4(data: ReportData) -> Image.Image:
+def card_4_cfa(data: ReportData) -> Image.Image:
+    """Card 4: CFA-concept lens applied to this company. Layout —
+    top: concept name + intro (panel);
+    middle: 3-bullet 应用 panel + different-angle insight panel;
+    bottom: takeaway band (large serif)."""
     img = background()
     d = ScaledDraw(ImageDraw.Draw(img), LAYOUT_SCALE)
     header(d, 4)
-    draw_text(d, (72, 198), "实际业务 + 未来展望", f(58, True), TEXT)
-    d.rounded_rectangle((72, 314, 506, 1220), radius=28, fill=PANEL_SKY)
-    d.rounded_rectangle((534, 314, 1008, 1220), radius=28, fill=PANEL_CREAM)
-    draw_text(d, (108, 362), "现在靠什么赚钱", f(32, True), TEXT)
-    bullets(d, business_now_points(data), 108, 424, 350, 4, 5, 18, font_size=FONT_BULLET_COMPACT, line_gap=10)
-    draw_text(d, (570, 362), "未来 2-3 年看什么", f(32, True), TEXT)
-    bullets(d, future_watch_points(data), 570, 424, 368, 4, 5, 18, font_size=FONT_BULLET_COMPACT, line_gap=10)
-    d.rounded_rectangle((570, 980, 948, 1176), radius=24, fill=PANEL_PINK)
-    draw_text(d, (602, 1028), "一句判断", f(28, True), TEXT)
-    judgement = judgement_paragraph(data)
-    judgement_font = fit_block_font(
+    draw_text(d, (72, 198), "CFA 镜头：把概念套在这家公司上", f(46, True), TEXT)
+
+    lens = cfa_lens_data(data)
+
+    # Concept intro panel.
+    d.rounded_rectangle((72, 280, 1008, 472), radius=28, fill=PANEL)
+    label_text = lens.get("concept_name_cn") or lens.get("concept_key") or "CFA 概念"
+    label_font = _fit_serif(d, label_text, 880, 56, 36)
+    draw_text(d, (108, 304), label_text, label_font, RED)
+    draw_text(d, (108, 376), "概念在做什么", f(22, True), MUTED)
+    block(d, lens["concept_intro"], 108, 410, 880, f(FONT_CFA_BODY), "#344054", 10, 3)
+
+    # Application panel (left) + different-angle insight panel (right).
+    d.rounded_rectangle((72, 492, 540, 1010), radius=28, fill=PANEL_MINT)
+    draw_text(d, (108, 522), "用到这家公司", f(30, True), TEXT)
+    bullets(
         d,
-        judgement,
-        316,
-        CARD4_JUDGEMENT_BOX_HEIGHT,
-        start_size=FONT_JUDGEMENT,
-        min_size=FONT_JUDGEMENT_MIN,
-        line_gap=10,
-        max_lines=CARD4_JUDGEMENT_MAX_LINES,
+        lens["company_application"],
+        108,
+        582,
+        412,
+        max_items=4,
+        max_lines=4,
+        gap_after=14,
+        font_size=FONT_CFA_BODY,
+        line_gap=8,
     )
-    block(d, judgement, 602, 1076, 316, judgement_font, "#344054", 10, CARD4_JUDGEMENT_MAX_LINES)
+
+    d.rounded_rectangle((560, 492, 1008, 1010), radius=28, fill=PANEL_PINK)
+    draw_text(d, (596, 522), "不同角度看到了什么", f(30, True), TEXT)
+    block(d, lens["different_angle_insight"], 596, 582, 392, f(FONT_CFA_BODY), "#344054", 10, 12)
+
+    # Takeaway band.
+    d.rounded_rectangle((72, 1030, 1008, 1240), radius=28, fill=PANEL_CREAM)
+    draw_text(d, (108, 1056), "记住这一条", f(26, True), TEXT)
+    takeaway_font = _fit_serif(d, lens["takeaway"], 880, 48, 30)
+    block(d, lens["takeaway"], 108, 1110, 880, takeaway_font, RED, 14, 3)
+
     footer(d, data)
-    return finalize_export(img)
-
-
-def card_5(data: ReportData, brand: str) -> Image.Image:
-    img = background()
-    d = ScaledDraw(ImageDraw.Draw(img), LAYOUT_SCALE)
-    header(d, 5)
-    draw_text(d, (72, 214), brand, fs(110, True), TEXT)
-    subtitle = (
-        clean(data.card_slots.brand_subheading)
-        if data.card_slots and data.card_slots.brand_subheading
-        else f"一句话看{company_short_cn(data)}"
-    )
-    subtitle_font = _fit_serif(d, subtitle, 760, 46, 34)
-    draw_text(d, (78, 346), subtitle, subtitle_font, ORANGE)
-    statement_font = _fit_serif(d, brand_statement(data), 760, 52, 38)
-    block(d, brand_statement(data), 78, 476, 760, statement_font, RED, 14, 3)
-    d.rounded_rectangle((72, 646, 1008, 1006), radius=28, fill=PANEL_CREAM)
-    draw_text(d, (108, 696), "今日总结", f(34, True), TEXT)
-    bullets(d, brand_summary_points(data), 108, 758, 820, 3, 3, 22, font_size=FONT_BRAND_SUMMARY, line_gap=12)
-    cta = (
-        clean(data.card_slots.cta_line)
-        if data.card_slots and data.card_slots.cta_line
-        else "关注金融豹，每天学习一个公司。"
-    )
-    draw_text(d, (72, 1098), cta, f(34, True), TEXT)
-    for x, y, s, col in [(900, 218, 88, RED), (980, 360, 64, GREEN), (900, 520, 74, ORANGE)]:
-        d.ellipse((x, y, x + s, y + s), outline=col, width=3)
-    paste_logo(img, find_logo_asset(data), (840, 240, 1010, 520))
-    footer(d, data)
-    return finalize_export(img)
-
-
-def card_6(data: ReportData) -> Image.Image:
-    img = Image.new("RGBA", (W, H), "#101318")
-    d = ScaledDraw(ImageDraw.Draw(img), LAYOUT_SCALE)
-    draw_text(d, (72, 64), "发帖文案", f(FONT_BULLET, True), "#F8FAFC")
-    draw_text(d, (72, 104), "TITLE / CONTENT / HASHTAGS", f(FONT_HEADER_SUBTITLE), "#94A3B8")
-    draw_text(d, (72, 190), post_title(data), f(FONT_POST_TITLE, True), "#F8FAFC")
-
-    y = 310
-    for line in post_content_lines(data):
-        d.ellipse((72, y + 12, 84, y + 24), fill="#F6B48A")
-        y = block(d, line, 102, y, 880, f(FONT_POST_LINE), "#E5E7EB", 14, 2)
-        y += 30
-
-    d.rounded_rectangle((72, y + 10, 1008, y + 210), radius=28, fill="#171B22")
-    draw_text(d, (102, y + 42), post_hashtags(data), f(FONT_POST_TAG), "#F8FAFC")
-    draw_text(d, (72, 1288), f"{company_short_cn(data)} | 发帖文案图", f(FONT_POST_FOOTER), "#94A3B8")
     return finalize_export(img)
 
 
@@ -3398,16 +2854,12 @@ def render_one(
     validate_report(data, brand, allow_no_logo=allow_no_logo)
     out_dir = output_root / data.stem
     out_dir.mkdir(parents=True, exist_ok=True)
-    cards = [
-        ("01_cover.png", card_1(data)),
-        ("02_background_industry.png", card_2(data)),
-        ("03_revenue.png", card_3(data)),
-        ("04_business_outlook.png", card_4(data)),
-        ("05_brand.png", card_5(data, brand)),
-        ("06_post_copy.png", card_6(data)),
-    ]
+    images = [card_1(data), card_2(data), card_3(data), card_4_cfa(data)]
+    assert len(images) == len(CARD_FILENAMES), (
+        f"Card renderer count drift: {len(images)} images vs {len(CARD_FILENAMES)} filenames."
+    )
     paths = []
-    for name, img in cards:
+    for name, img in zip(CARD_FILENAMES, images):
         out = out_dir / name
         img.save(out, quality=95)
         paths.append(out)
@@ -3480,8 +2932,20 @@ def main() -> None:
             "Use only when the customer explicitly waived the logo; default is to fail validation."
         ),
     )
+    parser.add_argument(
+        "--cfa-progress",
+        default=None,
+        help=(
+            "Optional CFA progress hint (e.g. 'Level 2 - Fixed Income - Binomial Tree'). "
+            "Exported to env var CFA_PROGRESS so the CFA-lens selector can pick a fitting concept. "
+            "Precedence: --cfa-progress > existing CFA_PROGRESS env > USER.md sticky > agent default. "
+            "Mirrors validate_cards.py so the orchestrator can pass the same flag to either script."
+        ),
+    )
     args = parser.parse_args()
     apply_palette(args.palette)
+    if args.cfa_progress is not None:
+        _os.environ["CFA_PROGRESS"] = args.cfa_progress
     _EXPORT_DOWN_SAMPLE_TO_LOGICAL = args.export_logical_size
 
     src = Path(args.input).expanduser().resolve()

@@ -46,7 +46,7 @@ description: >-
 
 ---
 
-**What you are building:** Agents consume **equity research HTML** (and optional sibling JSON), write copy into a **fixed set of named slots** (`*.card_slots.json`), and the renderer places that text into **predetermined image frames** (six cards; **logical** layout 1080×1350, **default PNG export** 2160×2700 for zoom-friendly assets) — not a bespoke layout per company.
+**What you are building:** Agents consume **equity research HTML** (and optional sibling JSON), write copy into a **fixed set of named slots** (`*.card_slots.json`), and the renderer places that text into **predetermined image frames** (**four** cards; **logical** layout 1080×1350, **default PNG export** 2160×2700 for zoom-friendly assets) — not a bespoke layout per company.
 
 ## Skill layout (skill-creator anatomy)
 
@@ -89,13 +89,12 @@ The goal is that a new company HTML should normally flow through the same pipeli
 - JSON slot contract (machine): [references/card-slots.schema.json](./references/card-slots.schema.json)
 - New-report slot starter (copy → rename to `<stem>.card_slots.json`): [references/templates/card_slots.template.json](./references/templates/card_slots.template.json)
 - Visual and layout rules: [references/design-spec.md](./references/design-spec.md)
-- Card 6 reasoning target (金融豹判断逻辑 + examples): [references/card6-voice.md](./references/card6-voice.md)
-
 **Agents (who does what before export):**
 
 - Agent handoff: [agents/agent-slot-pipeline.md](./agents/agent-slot-pipeline.md)
 - Logo production (web official logo → regenerated clean asset): [agents/logo-production-agent.md](./agents/logo-production-agent.md)
 - Content production (HTML → draft slots): [agents/content-production-agent.md](./agents/content-production-agent.md)
+- CFA lens selector (picks the Card 4 CFA concept): [agents/cfa-lens-selector-agent.md](./agents/cfa-lens-selector-agent.md)
 - Layout fill (draft → validator-clean): [agents/layout-fill-agent.md](./agents/layout-fill-agent.md)
 - Hardcode and logic audit policy: [agents/hardcode-audit-agent.md](./agents/hardcode-audit-agent.md)
 - Validation policy (Validator 1 — `validate_cards.py`): [agents/validation-agent.md](./agents/validation-agent.md)
@@ -120,7 +119,7 @@ Use this skill as — with the job palette confirmed first ([配色选择](#pale
 5. `copy -> hardcode / logic audit` (on the final slot text)
 6. `audited copy -> Validator 1 / rewrite loop` (`validate_cards.py` — **`--slots` 必填**)
 7. `Validator 1 clean -> Validator 2`（联网逐项核对卡片中的数字与事实，见 [validator-2-agent.md](./agents/validator-2-agent.md)；有错则改 slots 并回到步骤 6，直至两轮均通过）
-8. `Validator 1 + Validator 2 passed -> exported cards` (`generate_social_cards.py` — **`--slots` 必填**, **`--palette` 须与客户确认一致**；export 后自动清理未使用 logo 文件)
+8. `Validator 1 + Validator 2 passed -> exported cards` (`generate_social_cards.py` — **`--slots` 必填**, **`--palette` 须与客户确认一致**；export 后自动清理未使用 logo 文件，输出固定为 **4** 张 PNG)
 
 **No alternate path:** The CLI **does not** accept a run without `--slots`. Incomplete JSON is **rejected** (`assert_card_slots_complete`): every required body slot must be present so export never silently falls back to Python template copy.
 
@@ -134,7 +133,7 @@ Use this skill as — with the job palette confirmed first ([配色选择](#pale
 
 **⚠️ Logo check when receiving a pre-existing `card_slots.json`:** If the user provides a folder or JSON file that already contains `card_slots.json`, do **not** assume logo production was already done. Before running Validator 1, inspect `card_slots.json` for a non-empty `logo_asset_path`. If the field is absent or empty, run [logo-production-agent.md](./agents/logo-production-agent.md) first and set it. When `logo_asset_path` **is** set, confirm **`cover_company_name_cn`** is also set (same agent). `validate_cards.py` now **fails by default** when `logo_asset_path` is missing; only allow omission with explicit customer waiver + `--allow-no-logo`.
 
-**Why there is no one “universal” filled `card_slots.json`:** The file is **per-company body copy** (facts, wording, hashtags) read by the renderer into **fixed** card frames. The skill ships a **structure template** you copy for each new stem — [references/templates/card_slots.template.json](./references/templates/card_slots.template.json) — plus machine schema [references/card-slots.schema.json](./references/card-slots.schema.json) and a worked example [references/examples/pdd_holdings_card_slots.example.json](./references/examples/pdd_holdings_card_slots.example.json). Agents still **author** `<stem>.card_slots.json` from the HTML package; the template only avoids starting from a blank file.
+**Why there is no one "universal" filled `card_slots.json`:** The file is **per-company body copy** (facts, wording, CFA-lens application) read by the renderer into **fixed** card frames. The skill ships a **structure template** you copy for each new stem — [references/templates/card_slots.template.json](./references/templates/card_slots.template.json) — plus machine schema [references/card-slots.schema.json](./references/card-slots.schema.json) and a worked example [references/examples/pdd_holdings_card_slots.example.json](./references/examples/pdd_holdings_card_slots.example.json). Agents still **author** `<stem>.card_slots.json` from the HTML package; the template only avoids starting from a blank file.
 
 The important boundary is this:
 
@@ -201,12 +200,12 @@ After color confirmation and company identity extraction, run the **[logo produc
 - After export, keep only the file referenced by `logo_asset_path`; delete source downloads, rejected variants, and temporary folders.
 
 **Logo save order (mandatory):**
-1. Determine the final output folder for the 6 PNGs — create it now if it does not exist.
+1. Determine the final output folder for the 4 PNGs — create it now if it does not exist.
 2. Save `logo_official.png` directly into that output folder (not the source report folder, not a temp path).
 3. Set `logo_asset_path` in `card_slots.json` to the logo's absolute path inside the output folder.
 4. Only then proceed through normalization, card planning, and copy generation.
 
-Saving to the output folder first guarantees the logo and the 6 PNGs are always co-located — nothing needs to be moved manually after export.
+Saving to the output folder first guarantees the logo and the 4 PNGs are always co-located — nothing needs to be moved manually after export.
 
 **⚠️ If starting from a pre-existing `card_slots.json`:** Check that `logo_asset_path` is set and the file exists before proceeding to §6. An absent or empty field means logo production/check was skipped — after color confirmation, inspect the output/report folder for a valid logo; if absent, run web logo production.
 
@@ -222,7 +221,7 @@ If the source uses different names such as `revenue_growth_yoy_pct` vs `yoy_reve
 
 ### 4. Card Planning
 
-- Build a slot plan for all 6 cards using the normalized model
+- Build a slot plan for all 4 cards using the normalized model
 - Decide what each card must say before writing polished copy
 - Treat the cards as fixed containers with placeholders to fill, not as blank canvases
 - Every slot should be backed by a fact, a compressed inference, or a curated framing sentence
@@ -231,8 +230,8 @@ The slot schema is defined in [references/workflow-spec.md](./references/workflo
 
 ### 5. Copy Generation (standard = materialize `card_slots.json`)
 
-- **Copy writing order:** content production agent → **hardcode & logic audit** → layout fill agent. `logo_asset_path` must already be set in `card_slots.json` from §2.5 before content production begins; all body copy must be complete before any PNG export. See [content-production-agent.md](./agents/content-production-agent.md), [hardcode-audit-agent.md](./agents/hardcode-audit-agent.md), and [layout-fill-agent.md](./agents/layout-fill-agent.md). Running the audit before layout means bad copy is caught while still full-length — layout compression makes the same problem harder to spot and fix.
-- **Card 6 current-context + reasoning check (required):** Before writing `post_content_lines`, the content agent must inspect report-package current context (`news_intel.json`, `macro_factors.json`, `prediction_waterfall.json`, HTML summary/risk text) and search the web only if those files are insufficient. It must also read [references/card6-voice.md](./references/card6-voice.md) and build a compact analysis pack covering competitors, past-five-year changes, future outlook, and operating/revenue geography. Use the 金融豹判断逻辑: hard fact → hidden business mechanism → useful metaphor/comparison when it clarifies → measurable forward question. Card 6 must be based on financial-report facts, written in clear plain Chinese, educational, deep, and connected to recent company/industry/policy/market context. It must **not** force identical phrasing, use clickbait/forum hype, or marker-stuffed boilerplate. See [content-production-agent.md §Card 6](./agents/content-production-agent.md) for the exact protocol.
+- **Copy writing order:** content production agent (Cards 1–3) → **CFA lens selector** (Card 4) → **hardcode & logic audit** → layout fill agent. `logo_asset_path` must already be set in `card_slots.json` from §2.5 before content production begins; all body copy must be complete before any PNG export. See [content-production-agent.md](./agents/content-production-agent.md), [cfa-lens-selector-agent.md](./agents/cfa-lens-selector-agent.md), [hardcode-audit-agent.md](./agents/hardcode-audit-agent.md), and [layout-fill-agent.md](./agents/layout-fill-agent.md). Running the audit before layout means bad copy is caught while still full-length — layout compression makes the same problem harder to spot and fix.
+- **Card 4 CFA-lens (required):** The CFA lens selector picks ONE concept from the owner's current CFA syllabus (sourced from `--cfa-progress` CLI flag → `CFA_PROGRESS` env var → `USER.md` sticky → agent default) and applies it to this company. The four `cfa_lens` sub-slots are: `concept_intro` (what the CFA concept does), `company_application` (3 bullets — how to map the concept to this company), `different_angle_insight` (the AUTHORITY slot — what the lens reveals that consensus misses; requires `primary_quote`), and `takeaway` (one-line memory aid). See [cfa-lens-selector-agent.md](./agents/cfa-lens-selector-agent.md).
 - **`card_slots.json` 必须填满** 所有脚本要求的槽位（见 `assert_card_slots_complete`）；不允许依赖内置 `fit_copy` / `company_theme` 自动糊字作为交付物。
 - Write copy slot by slot, not card by card in one pass
 - Use report facts first, thematic framing second
@@ -270,19 +269,19 @@ Rewrite priority:
 ### 8. Export
 
 - Only export once **Validator 1 and Validator 2** have passed with the **intended** `card_slots.json`
-- Export all 6 images for the report as one set (`generate_social_cards.py --input … --slots … --palette …`)，其中 **`--palette` 必须与步骤 0 中用户选择的配色一致**。
+- Export all 4 images for the report as one set (`generate_social_cards.py --input … --slots … --palette …`)，其中 **`--palette` 必须与步骤 0 中用户选择的配色一致**。
 - Keep the file naming convention stable
 
 ## Fixed Card Schema
 
 The fixed output is always:
 
-- Card 1: cover + core tension
-- Card 2: Porter evidence + industry structure + Porter bars
-- Card 3: revenue / profit flow
-- Card 4: current business + next 2 to 3 years
-- Card 5: brand close + three memory points
-- Card 6: social post copy image with title, content, hashtags — **金融豹判断逻辑**; title must start with `一天吃透一家公司：`; **four** `post_content_lines` exactly as **three statements + one question**; each line must satisfy `card6_line_sounds_human` in `generate_social_cards.py`, but the real target is [references/card6-voice.md](./references/card6-voice.md): hard fact, hidden mechanism, useful comparison, measurable final question. Hashtags always include `#A股` and `#美股`; content must include at least one report-grounded financial/operating anchor and at least one current-event, policy, market, or industry context anchor, and must analyze competitors, past-five-year changes, future outlook, and operating/revenue geography where material (see [content-production-agent.md](./agents/content-production-agent.md) §Card 6)
+| # | File | Role |
+|---|------|------|
+| 1 | `01_cover.png` | Cover + 公司定位 + 核心张力 + logo + metrics_row |
+| 2 | `02_porter.png` | Industry structure + 4 background bullets + Porter five forces (per-force evidence) |
+| 3 | `03_five_year_financials.png` | 5-year arc (转型/拐点) + 最近季度财务 bars + revenue explainer |
+| 4 | `04_cfa_lens.png` | CFA 镜头 — 选定概念 + 公司应用 + 不同角度 + takeaway |
 
 Do not change the card count or reorder the card roles unless the design spec is explicitly revised.
 
@@ -299,19 +298,19 @@ For each new report:
 
 Examples of placeholders:
 
-- `core_tension`
 - `intro_sentence`
+- `company_focus_paragraph`
 - `metrics_row`
 - `background_bullets`
 - `industry_paragraph`
+- `porter_evidence`
+- `five_year_arc.narrative` and `five_year_arc.inflection_points`
+- `recent_financial_highlights`
 - `revenue_explainer_points`
-- `current_business_points`
-- `future_watch_points`
-- `brand_statement`
-- `memory_points`
-- `post_title`
-- `post_content_lines`
-- `hashtags`
+- `cfa_lens.concept_intro`
+- `cfa_lens.company_application`
+- `cfa_lens.different_angle_insight`
+- `cfa_lens.takeaway`
 
 These placeholders must always be filled from normalized facts first. Theme or sector logic should only help decide emphasis, ordering, and wording.
 
@@ -349,7 +348,7 @@ python3 scripts/generate_social_cards.py \
 
 **配色：** 必须由客户先明确选择 `macaron|default|b|c`，并在 Validator 1 与导出时显式传同一 `--palette`；未指定不得默认。**Logo：** 默认要求 `logo_asset_path`；仅在客户明确放弃时，校验与导出均加 **`--allow-no-logo`**。
 
-**单张 PNG 重渲（常见坑）：** 若只重跑某一张（例如只更新 `01_cover.png`），**必须使用与整套六张相同的 `--palette`**。`generate_social_cards.py` 在进程内调用 `apply_palette()`；`macaron` 和 `c` 均有深色顶栏，`default` / `b` 顶栏为浅色。混用会导致 **Card 1 顶栏与其他卡片不一致**。`card_slots.json` **不记录** palette，须靠流程约定或整套重渲。
+**单张 PNG 重渲（常见坑）：** 若只重跑某一张（例如只更新 `01_cover.png`），**必须使用与整套四张相同的 `--palette`**。`generate_social_cards.py` 在进程内调用 `apply_palette()`；`macaron` 和 `c` 均有深色顶栏，`default` / `b` 顶栏为浅色。混用会导致 **Card 1 顶栏与其他卡片不一致**。`card_slots.json` **不记录** palette，须靠流程约定或整套重渲。
 
 ## Output Folder Organization
 
@@ -358,21 +357,19 @@ python3 scripts/generate_social_cards.py \
 ```
 {output-root}/{CompanyName}_{ExportDate}_Cards/
   ├── 01_cover.png
-  ├── 02_background_industry.png
-  ├── 03_revenue.png
-  ├── 04_business_outlook.png
-  ├── 05_brand.png
-  ├── 06_post_copy.png
+  ├── 02_porter.png
+  ├── 03_five_year_financials.png
+  ├── 04_cfa_lens.png
   └── logo_official.png
 ```
 
 **Rules:**
 - **`{CompanyName}`**: Extract from HTML `.company-name-cn` (preferred) or `.company-name-en`; use the short company name without trailing `公司`.
-- **`{ExportDate}`**: Use the **date when cards are generated** (today’s date in YYYY-MM-DD format), **not** the report date. Example: if report is from 2026-04-08 but cards are generated on 2026-04-14, folder name is `{CompanyName}_2026-04-14_Cards`.
-- PNG files are **always** named `01_cover.png` through `06_post_copy.png` (fixed, no variation).
+- **`{ExportDate}`**: Use the **date when cards are generated** (today's date in YYYY-MM-DD format), **not** the report date. Example: if report is from 2026-04-08 but cards are generated on 2026-04-14, folder name is `{CompanyName}_2026-04-14_Cards`.
+- PNG files are **always** named per `CARD_FILENAMES` in `scripts/generate_social_cards.py`: `01_cover.png`, `02_porter.png`, `03_five_year_financials.png`, `04_cfa_lens.png` (fixed, no variation).
 - Logo file is **always** named `logo_official.png`.
 - **`card_slots.json` stays in the parent directory** alongside the report HTML (use `--no-copy-slots` to prevent copying into the Cards folder).
-- Default `{output-root}` is this skill repo’s `output/` directory; override with `--output-root {path}`.
+- Default `{output-root}` is this skill repo's `output/` directory; override with `--output-root {path}`.
 
 **Example:**
 ```
@@ -386,11 +383,9 @@ python3 scripts/generate_social_cards.py \
   │
   └── StateGrid_2026-04-14_Cards/                  (Export folder, generated today)
       ├── 01_cover.png
-      ├── 02_background_industry.png
-      ├── 03_revenue.png
-      ├── 04_business_outlook.png
-      ├── 05_brand.png
-      ├── 06_post_copy.png
+      ├── 02_porter.png
+      ├── 03_five_year_financials.png
+      ├── 04_cfa_lens.png
       └── logo_official.png
 ```
 

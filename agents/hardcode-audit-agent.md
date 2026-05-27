@@ -7,19 +7,20 @@ This audit runs after slot copy is generated and before layout validation. Its j
 
 ## Placement In The Loop
 
-This agent runs at **step 5** in the pipeline. Steps 1–4 are upstream (already completed before this agent is invoked). The full sequence is shown below for context:
+This agent runs after both the content production agent (Cards 1–3) and the CFA lens selector (Card 4) have written their copy. Full pipeline for context:
 
 1. extract *(upstream)*
 2. normalize *(upstream)*
 3. logo production *(upstream)*
 4. plan slots *(upstream)*
-5. write slot copy (content production agent) *(upstream)*
-6. **run hardcode and logic audit** ← **this agent**, before layout
-7. run layout fill agent *(downstream)*
-8. run Validator 1 (`validate_cards.py`) *(downstream)*
-9. rewrite failing slots only → rerun layout → rerun Validator 1 *(downstream)*
-10. run Validator 2 (web fact-check) *(downstream)*
-11. export *(downstream)*
+5. write Cards 1–3 (content production agent) *(upstream)*
+6. write Card 4 (CFA lens selector) *(upstream)*
+7. **run hardcode and logic audit** ← **this agent**, before layout
+8. run layout fill agent *(downstream)*
+9. run Validator 1 (`validate_cards.py`) *(downstream)*
+10. rewrite failing slots only → rerun layout → rerun Validator 1 *(downstream)*
+11. run Validator 2 (web fact-check) *(downstream)*
+12. export *(downstream)*
 
 Running audit before layout means bad copy is caught while it is still full-length and easy to read. Layout compression can obscure the same issue by making a vague sentence harder to spot.
 

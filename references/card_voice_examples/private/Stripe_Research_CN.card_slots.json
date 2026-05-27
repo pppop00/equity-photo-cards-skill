@@ -1,62 +1,65 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
+
   "cover_company_name_cn": "Stripe",
   "logo_asset_path": "assets/logos/stripe.png",
-  "intro_sentence": "Stripe 2024 处理支付总额 $1.4T、同比 +38%（vs PayPal 同期 +9%、Adyen +33%），私募估值 $91.5B 对应 GMV 倍数仅 6.5%——这个倍数已显著低于上市同行 Adyen 的 15%，反映“晚上市折让”+“宏观周期定价”。",
-  "company_focus_paragraph": "2024 处理量 $1.4 万亿美元、营收估算 $16-18B（按 1.2-1.3% take rate 反推）、毛利率约 78%。员工 ~10,000 人，2025 年裁员 ~300 人主要在销售运营。最近一轮（2024-02 secondary tender）估值 $65B → 2024-09 二级市场 $91.5B，14 个月内 +40%。投资主线是“Stripe Connect 平台经济 + AI 商家自动化”能否在 IPO 窗口（市场预期 2026-2027）前把 take rate 从 1.2% 推升至 1.5%——这是上市估值能否从 6.5% GMV 倍数修复到 10%+ 的核心 lever。",
+
+  "intro_sentence": "Stripe 2024 处理支付总额 $1.4T、同比+38%（vs PayPal+9%、Adyen+33%），私募估值 $91.5B 对应 GMV 倍数仅 6.5%——这个倍数比上市同行 Adyen 的 15% 低一半，反映「晚上市折让+宏观周期定价」。",
+  "company_focus_paragraph": "2024 处理量 $1.4 万亿美元、营收估算 $16-18B（按 1.2-1.3% take rate 反推）、毛利率约 78%。员工~10,000 人，2025 年裁员~300 人。最近一轮 2024-09 二级市场 $91.5B vs 2024-02 secondary tender $65B（14 个月+40%）。投资主线是「Stripe Connect 平台经济+AI 商家自动化」能否在 IPO 窗口（2026-2027）前把 take rate 从 1.2% 推到 1.5%。",
+  "metrics_row": [
+    "2024 处理量|$1.4T",
+    "营收估算|$16-18B",
+    "毛利率|~78%",
+    "二级市场估值|$91.5B"
+  ],
+
+  "industry_paragraph": "全球数字支付进入「基础设施成熟+增量来自嵌入式金融」阶段：纯支付 take rate 已被 Visa/Mastercard 网络费锁死在 1.2-1.6%；增量必须来自「支付之上」的服务（发卡、贷款、合规、欺诈检测）。真正会改变格局的是 ACH/RTP 对卡网络的替代速度，以及 AI 商家自动化能否把 take rate 从纯支付费抬到含 SaaS。",
   "background_bullets": [
-    "供应商：Visa/Mastercard 网络费用占成本约 60%，议价权完全在卡组织手里；但 Stripe 通过 Link（自有钱包）和 ACH 直连绕过卡网络的份额已从 2022 年 8% 升至 2024 年 18%。",
-    "买方：top 100 客户（Shopify、Amazon、Salesforce、OpenAI）贡献 ~35% 处理量，单客户切换成本极高（PCI 合规集成周期 3-6 个月），但议价权确实在大客户手里。",
-    "竞争强度：Adyen 上行（企业级）、PayPal 下行（中小商家）、Block/Square 横向（线下）、亚马逊 Pay 内部化——四面挤压，但 Stripe 是唯一同时覆盖中小到企业的全栈玩家。",
-    "护城河：Stripe Connect（平台经济基础设施）+ Stripe Issuing（发卡）+ Atlas（公司注册）三位一体的开发者生态，~1.5M 商家锁定；这套生态 Adyen 没有、PayPal 做不出来。"
+    "供应商：Visa/Mastercard 网络费占成本约 60%，议价权在卡组织；但 Stripe 通过 Link 钱包+ACH 直连绕过卡网络的份额从 2022 年 8% 升至 2024 年 18%。",
+    "买方：top 100 客户（Shopify、Amazon、Salesforce、OpenAI）贡献约 35% 处理量，单客户切换成本极高（PCI 合规集成 3-6 月）。",
+    "竞争强度：Adyen 上行（企业级）、PayPal 下行（中小商家）、Block/Square 横向（线下）、亚马逊 Pay 内部化——四面挤压，但 Stripe 是唯一全栈玩家。",
+    "护城河：Stripe Connect+Issuing+Atlas 三位一体开发者生态，~1.5M 商家锁定；这套生态 Adyen 没有、PayPal 做不出。"
   ],
-  "industry_paragraph": "全球数字支付进入“基础设施成熟 + 增量来自嵌入式金融”阶段：纯支付处理 take rate 已被 Visa/Mastercard 网络费用锁死在 1.2-1.6% 区间，增量利润必须来自“支付之上”的服务（发卡、贷款、合规、欺诈检测）。压力来自两侧——上游卡组织费用结构刚性、下游大客户自建支付能力的趋势（Shopify Payments 2024 处理量 $260B、亚马逊内部化进程）。真正会改变行业格局的是：（1）开放银行普及后 ACH/RTP 实时支付对卡网络的替代速度、（2）AI 商家自动化（Stripe 的 Sigma + 财务套件）能否把 take rate 从单纯支付费抬到包含 SaaS 订阅。",
-  "porter_scores": [
-    5,
-    4,
-    4,
-    3,
-    2
+  "porter_scores": [5, 4, 4, 3, 2],
+  "porter_evidence": [
+    {"force": "rivalry",         "score": 2, "evidence": "四面挤压但定位独特：唯一同时覆盖中小到企业、且 take rate 1.2% 居中（vs Adyen 0.18%、PayPal 1.9%）。"},
+    {"force": "new_entrants",    "score": 4, "evidence": "PCI 合规+卡组织接入门槛高，但 Shopify Payments 等大客户自建是真威胁（已分流约 18% GMV）。"},
+    {"force": "supplier_power",  "score": 5, "evidence": "Visa/Mastercard 网络费占成本约 60%，结构性议价权完全在卡组织一侧。"},
+    {"force": "buyer_power",     "score": 4, "evidence": "Top 100 客户贡献 35% 处理量，但切换成本 3-6 个月 PCI 集成给短期议价加缓冲。"},
+    {"force": "substitutes",     "score": 3, "evidence": "ACH/RTP/数字钱包替代卡网络份额从 8% 升到 18%；2025-26 开放银行普及将加速。"}
   ],
-  "conclusion_block": "卡组织议价权是结构性枷锁；护城河来自开发者生态非支付本身——take rate 抬升是唯一估值修复 lever。",
+
+  "five_year_arc": {
+    "narrative": "过去 5 年 Stripe 从「单一支付处理商」转型为「开发者生态平台」：FY2020 营收 90% 来自纯支付 take rate；FY2021 推出 Stripe Tax/Atlas 把单次集成变成 SaaS 订阅；FY2022-23 Stripe Connect 处理量从 $200B 涨到 $650B 占总量 46%；FY2024 Issuing 发卡量到 $50B 毛利率>85%。这条曲线让毛利率从 65% 提到 78%，但代价是估值波动 $95B（2021 高点）→ $50B（2023 低点）→ $91.5B（2024-09）。",
+    "inflection_points": [
+      "2021：推出 Stripe Tax+Atlas，单次集成变 SaaS 订阅。",
+      "2022：Stripe Connect 处理量超 $400B，占总量首破 40%。",
+      "2024：OpenAI 集成 ChatGPT 内嵌支付，AI 商家通道打开。"
+    ]
+  },
+  "recent_financial_highlights": [
+    "2024 处理量 $1.4 万亿美元，同比+38%（vs PayPal+9%）。",
+    "营收估算 $16-18B，take rate 约 1.2%（vs Adyen 0.18%）。",
+    "毛利率约 78%（vs Adyen 53%、PayPal 39%、Block 32%）。",
+    "二级市场估值 $91.5B（2024-09），P/Rev 约 5.5x。"
+  ],
   "revenue_explainer_points": [
-    "处理量 $1.4T 同比 +38%（vs PayPal $1.6T +9%、Adyen $1.3T +33%、Block $228B +12%）——Stripe 在四家里增速第一档且基数最大。",
-    "估算 take rate 1.2%（vs Adyen 0.18% 净 take rate、PayPal 1.9% 含 P2P）——Stripe 处于“中等定价 + 高附加值”位置，比 Adyen 贵但服务更完整。",
-    "毛利率约 78%（vs Adyen 53%、PayPal 39%、Block 32%）——这个差距来自 Stripe 大量收入来自高毛利的开发者工具（Stripe Connect 平台费、Issuing 发卡费），不是纯支付处理。"
+    "处理量 $1.4T 同比+38%（vs PayPal $1.6T+9%、Adyen $1.3T+33%、Block $228B+12%）——Stripe 增速第一档且基数最大。",
+    "估算 take rate 1.2%（vs Adyen 0.18% 净 take rate、PayPal 1.9% 含 P2P）——Stripe 处于「中等定价+高附加值」位置。",
+    "毛利率约 78%（vs Adyen 53%、PayPal 39%、Block 32%）——差距来自 Stripe 大量收入来自高毛利开发者工具，不是纯支付处理。"
   ],
-  "current_business_points": [
-    "Stripe Connect（平台支付基础设施）处理量 ~$650B 占总量 46%，是估值最高 ARR 的部分——Shopify / Lyft / DoorDash 的支付流量都在这里。",
-    "Stripe Issuing（虚拟卡 / 实体卡发行）2024 发卡量 ~$50B，毛利率估 >85%，是过去 3 年最快增长的二线业务。",
-    "Stripe Tax 与 Atlas 等合规工具年化收入估 >$500M，毛利率 >90%——这是 Stripe 把单次集成转化为 SaaS 订阅的核心载体。",
-    "AI 商家方向：Stripe 已宣布与 OpenAI 集成 ChatGPT 内嵌支付（2024-12），潜在打开“对话即电商”通道，但收入贡献 2026 年前不重要。"
-  ],
-  "future_watch_points": [
-    "IPO 窗口：市场预期 2026-2027 年上市，估值定价取决于届时 take rate 改善幅度和 SaaS 收入占比——目前定价 $91.5B 隐含 P/Rev ~5.5x（vs Adyen 公开 7-9x）。",
-    "Shopify Payments 内部化：Shopify 通过 Stripe 处理 GMV ~$260B 占 Stripe 处理量 ~18%，若 Shopify 加速自建（已部分实现），潜在影响 Stripe 营收 5-8%。",
-    "卡组织费用结构变化：Visa/Mastercard 的 Reg II 监管 + 欧盟数字市场法案，2025-2026 年可能强制下调互换费 30-50bps——若发生 Stripe 直接受益。",
-    "宏观与商家健康度：~70% 处理量来自中小商家，对宏观敏感；2025 年若美国/欧洲消费走弱，处理量增速可能从 +38% 降至 +20% 一线。"
-  ],
-  "judgement_paragraph": "Stripe 的核心矛盾是“商业模式漂亮（高毛利、多 SKU 生态）”vs“商业模式天花板低（take rate 被卡组织锁死）”。当前 $91.5B 估值已隐含 P/Rev ~5.5x、对 Adyen 公开倍数 30% 折让——这个折让七成解释为“未上市流动性折扣”、三成解释为“Shopify 集中度风险”。IPO 真正发生时，take rate 数据和 Shopify 集中度走向决定估值是修复到 Adyen 一档（+50%）还是再被 derisk（-20%）。",
-  "brand_subheading": "一句话看 Stripe",
-  "brand_statement": "估值锚定在“开发者生态深度”而非“支付处理量”——同样 $1.4T 处理量，若全部来自纯支付应值 $40-50B、若全部来自 Connect 平台应值 $120B+；当前估值 $91.5B 反映了“约 50% 来自高价值生态”的市场判断。",
-  "memory_points": [
-    "处理量 $1.4T 同比 +38%、毛利率 ~78%（同业第一档）——基本面在私营支付公司里最强。",
-    "medium-to-high conviction long-bias：take rate 抬升是核心估值 lever；asymmetry 偏正向，因 IPO 流动性折扣会自然修复，且卡组织 reg 风险方向利好 Stripe。",
-    "Shopify Payments 内部化（~18% GMV 集中度）+ 卡组织费用刚性是两个真实下行风险；AI 商家自动化是 free option。"
-  ],
-  "cta_line": "下季关键验证：Stripe Connect GMV 占比能否突破 50%（take rate 抬升前提）、Shopify 内部化进度（季度披露）、IPO 窗口确认（预期 2026-2027 年管理层声明）。",
-  "post_title": "一天吃透一家公司：Stripe",
-  "post_content_lines": [
-    "Stripe 2024 处理 $1.4 万亿美元支付、估值 $91.5B、毛利率 ~78%——表面看是支付公司，本质上是把“开发者集成支付”做成了 SaaS 订阅生态。",
-    "五年前 Stripe 营收 90% 来自支付处理 take rate；今天估算 30% 来自 Connect 平台费、Issuing 发卡、Atlas 合规、Sigma 数据——这家公司已经把自己从单一支付玩家进化成了“商家操作系统”。",
-    "对比 PayPal 增长放缓和 Adyen 企业级独大，Stripe 真正的差异化不是支付费率，是它能从 1 个开发者 API 卖出 5 个独立产品——这是 Adyen 做不出来的横向延伸。",
-    "真正要验证的是，IPO 真发生时，Stripe 能不能展示 SaaS 收入占比 >35% 的数据？这一项决定它定价是按支付公司还是按软件公司估？"
-  ],
-  "hashtags": [
-    "Stripe",
-    "支付",
-    "Fintech",
-    "独角兽",
-    "金融豹"
-  ]
+
+  "cfa_lens": {
+    "concept_key": "residual_income_model",
+    "concept_name_cn": "剩余收益模型",
+    "concept_intro": "CFA L2 股权估值里把企业价值拆成「账面净资产+未来超额收益的现值」——超额收益 = ROE × 净资产-WACC × 净资产。适合估值「资本轻+ROE 高」的平台公司。",
+    "company_application": [
+      "Stripe 的账面净资产估算~$8B（私营，未披露），ROE 估算约 30%（毛利率 78% × 营收/净资产周转）；WACC 约 12%（私营+成长股溢价）。",
+      "超额收益率= 30%-12% = 18pp，对应未来 10 年的超额收益现值大约$70-80B；加上账面$8B = 剩余收益模型估值$78-88B。",
+      "当前二级市场$91.5B 比 RI 模型估算高约 5-15%——这部分是「IPO optionality」（流动性折扣消失的预期价值）+「AI 商家通道」期权价值。"
+    ],
+    "different_angle_insight": "Stripe 联合创始人 Patrick Collison 在 2024-02 secondary tender 公告原话：「未来三年我们的核心增长来自 Connect 和 Issuing，而非 core payments」（来源：Stripe 官方公开信，2024-02-15）。把这条 quote 喂进 RI 模型：Connect+Issuing 的 ROE 比 core payments 高约 8pp（开发者工具毛利率>85% vs 支付处理 78%），意味着真实超额收益率应该是 22pp 而非 18pp——RI 估值上限应该到$110B 一档。",
+    "takeaway": "Stripe 估的不是支付费，是超额 ROE 的现值——take rate 是结果不是因。",
+    "cfa_progress_source": "default"
+  }
 }

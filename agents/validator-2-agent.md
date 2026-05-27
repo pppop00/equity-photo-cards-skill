@@ -14,7 +14,7 @@ Validator 1 不能保证「数字与 SEC/交易所/公司财报一致」——�
 
 ## 目标
 
-对 **`card_slots.json` 所承载、并将出现在六张卡片上的全部事实性内容** 建立核查清单，用联网搜索在 **一级或二级权威来源** 上交叉验证；**全部正确、或可接受的表述降级** 之后才允许导出。若发现错误：**先改** `card_slots.json`（必要时同步修正 sibling JSON 的工作副本说明），**再跑 Validator 1**，**再跑 Validator 2**，循环直到两轮都通过，**最后** 再执行 `generate_social_cards.py`。
+对 **`card_slots.json` 所承载、并将出现在四张卡片上的全部事实性内容** 建立核查清单，用联网搜索在 **一级或二级权威来源** 上交叉验证；**全部正确、或可接受的表述降级** 之后才允许导出。若发现错误：**先改** `card_slots.json`（必要时同步修正 sibling JSON 的工作副本说明），**再跑 Validator 1**，**再跑 Validator 2**，循环直到两轮都通过，**最后** 再执行 `generate_social_cards.py`。
 
 ## 输入
 
@@ -32,7 +32,10 @@ Validator 1 不能保证「数字与 SEC/交易所/公司财报一致」——�
 5. **与内部 JSON 的一致性**：若 slots 中的数字与 `financial_data.json` 不一致，先判定哪一侧错误；**对外发布以权威披露为准**，并回写 slots（及必要时标注 JSON 勘误）。
 6. **空值与占位符清零**：最终卡片不得出现 `--` / `N/A` / `不适用` 这类占位符作为关键财务字段（收入、成本、毛利、营业利润、净利润、毛利率、营业利润率、净利率）。若原字段缺失，必须通过可验证数据重算或改写为可核实且不越权的表达；无法核实则不得导出。
 7. **收入不为零**：若 `financial_data.income_statement.current_year.revenue` 为 0 或 Sankey 收入汇总为 0，视为数据抽取错误，必须重新从报告包提取后方可导出。不得以「季度未披露」「分部数据不全」等理由放过数值为零的收入字段。
-8. **Card 6 时事背景可信核查**：Card 6 中用于解释财报的近期新闻、政策、监管、宏观或行业背景必须能追溯到公开报道、官方公告、公司披露或报告包中的 `news_intel.json` / `macro_factors.json` 等来源；确认日期、主体、主要内容与 slots 文案描述一致。若发现事件已辟谣、日期错误、与公司无关，或只是博眼球热点而不能解释财报，修改对应 `post_content_lines` 后重走 Validator 1 + Validator 2 流程。
+8. **Card 4 CFA-lens 引用与适用性核查**：
+   - 核对 `cfa_lens.different_angle_insight` 中引用的 CFO/CEO/IR/filing 原话（来源 URL、日期、说话人姓名职位）是否在公开记录中存在。如果是 [TODO] 占位符，必须找到真实引用才能放行。
+   - 核对 `cfa_lens.company_application` 中给出的隐含数字（如 NPV / 隐含价值 / probability weights）是否与 `analyst_call.json` 的 base/bull/bear scenarios 一致；显著超出报告区间需要补依据或下调精度。
+   - 核对所选 CFA 概念是否适用于本公司：例如不应该用 DDM 给从未分红的公司估值；不应该用 binomial tree 给单一确定性现金流的公用事业估值。若概念明显不适用，回退到 [cfa-lens-selector-agent.md](./cfa-lens-selector-agent.md) 默认 menu 重新挑。
 
 **不要求**把每一条市场观点（例如「定价锚是××」）证成学术论文；但若观点 **隐含可证伪数字或事实**（例如「份额第一」），则必须能落地到来源或改写为弱化表述。
 

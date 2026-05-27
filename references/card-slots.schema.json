@@ -1,34 +1,124 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/pppop00/equity-photo-cards-skill/card-slots.schema.json",
-  "title": "Equity photo card slot overrides",
+  "title": "Equity photo card slot overrides (4-card layout, v2)",
   "type": "object",
   "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "intro_sentence",
+    "company_focus_paragraph",
+    "metrics_row",
+    "industry_paragraph",
+    "background_bullets",
+    "porter_evidence",
+    "five_year_arc",
+    "recent_financial_highlights",
+    "revenue_explainer_points",
+    "cfa_lens"
+  ],
   "properties": {
-    "schema_version": { "type": "integer", "minimum": 1 },
+    "schema_version": { "type": "integer", "const": 2 },
+
+    "logo_asset_path": { "type": "string" },
+    "cover_company_name_cn": { "type": "string" },
+
     "intro_sentence": { "type": "string" },
     "company_focus_paragraph": { "type": "string" },
-    "background_bullets": { "type": "array", "items": { "type": "string" } },
+    "metrics_row": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 3,
+      "maxItems": 4
+    },
+
     "industry_paragraph": { "type": "string" },
+    "background_bullets": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 4,
+      "maxItems": 4
+    },
     "porter_scores": {
       "type": "array",
       "items": { "type": "integer", "minimum": 1, "maximum": 5 },
       "minItems": 5,
       "maxItems": 5
     },
-    "conclusion_block": { "type": "string" },
-    "revenue_explainer_points": { "type": "array", "items": { "type": "string" } },
-    "current_business_points": { "type": "array", "items": { "type": "string" } },
-    "future_watch_points": { "type": "array", "items": { "type": "string" } },
-    "judgement_paragraph": { "type": "string" },
-    "brand_subheading": { "type": "string" },
-    "brand_statement": { "type": "string" },
-    "memory_points": { "type": "array", "items": { "type": "string" } },
-    "cta_line": { "type": "string" },
-    "logo_asset_path": { "type": "string" },
-    "cover_company_name_cn": { "type": "string" },
-    "post_title": { "type": "string" },
-    "post_content_lines": { "type": "array", "items": { "type": "string" } },
-    "hashtags": { "type": "array", "items": { "type": "string" } }
+    "porter_evidence": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["force", "score", "evidence"],
+        "properties": {
+          "force": {
+            "type": "string",
+            "enum": ["rivalry", "new_entrants", "supplier_power", "buyer_power", "substitutes"]
+          },
+          "score": { "type": "integer", "minimum": 1, "maximum": 5 },
+          "evidence": { "type": "string" }
+        }
+      }
+    },
+
+    "five_year_arc": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["narrative", "inflection_points"],
+      "properties": {
+        "narrative": { "type": "string" },
+        "inflection_points": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 3,
+          "maxItems": 4
+        }
+      }
+    },
+    "recent_financial_highlights": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 3,
+      "maxItems": 4
+    },
+    "revenue_explainer_points": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 3,
+      "maxItems": 4
+    },
+
+    "cfa_lens": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "concept_key",
+        "concept_name_cn",
+        "concept_intro",
+        "company_application",
+        "different_angle_insight",
+        "takeaway"
+      ],
+      "properties": {
+        "concept_key": { "type": "string" },
+        "concept_name_cn": { "type": "string" },
+        "concept_intro": { "type": "string" },
+        "company_application": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 3,
+          "maxItems": 4
+        },
+        "different_angle_insight": { "type": "string" },
+        "takeaway": { "type": "string" },
+        "cfa_progress_source": {
+          "type": "string",
+          "enum": ["USER.md", "CLI", "env", "default"]
+        }
+      }
+    }
   }
 }
