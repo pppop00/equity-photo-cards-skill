@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/pppop00/equity-photo-cards-skill/card-slots.schema.json",
-  "title": "Equity photo card slot overrides (4-card layout, v3)",
+  "title": "Equity photo card slot overrides (4-card layout, v4 财务分析)",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -13,12 +13,11 @@
     "background_bullets",
     "porter_evidence",
     "five_year_arc",
-    "recent_financial_highlights",
-    "revenue_explainer_points",
+    "financial_metrics_panel",
     "cfa_lens"
   ],
   "properties": {
-    "schema_version": { "type": "integer", "const": 3 },
+    "schema_version": { "type": "integer", "minimum": 3, "maximum": 4 },
 
     "logo_asset_path": { "type": "string" },
     "cover_company_name_cn": { "type": "string" },
@@ -82,13 +81,48 @@
       "type": "array",
       "items": { "type": "string" },
       "minItems": 3,
-      "maxItems": 4
+      "maxItems": 4,
+      "description": "Legacy v3 slot. Card 3 v4 (财务分析) no longer renders it; field is accepted for backward compatibility but ignored at render time."
     },
     "revenue_explainer_points": {
       "type": "array",
       "items": { "type": "string" },
       "minItems": 3,
-      "maxItems": 4
+      "maxItems": 4,
+      "description": "Legacy v3 slot — replaced by financial_metrics_panel in v4. Accepted for backward compatibility but no longer rendered."
+    },
+    "financial_metrics_panel": {
+      "description": "Card 3 v4 bottom-panel 6-metric grid. Fixed display order, ranked by CFA importance: slots 0..2 = profitability (毛利率, 营业利润率, 净利率), slots 3..4 = cash_flow (FCFF, FCFE), slot 5 = leverage (Net Debt / EBITDA when net debt is positive; 净现金 when net cash). All 6 must be present so the renderer never silently truncates the grid.",
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["label_cn", "value", "period_cn", "category"],
+        "properties": {
+          "label_cn": {
+            "type": "string",
+            "maxLength": 12,
+            "description": "Short metric label, e.g. 毛利率, 营业利润率, 净利率, FCFF, FCFE, 净债务/EBITDA, 净现金."
+          },
+          "value": {
+            "type": "string",
+            "maxLength": 14,
+            "description": "Formatted metric value. Percentages: '75.7%'. Currency: '23.37亿' (no '$', '美元', or '近似' inside cell). Ratios: '0.5×'. Net cash uses label_cn='净现金' and value='11.89亿'."
+          },
+          "period_cn": {
+            "type": "string",
+            "maxLength": 14,
+            "description": "Fiscal context for audit, e.g. 'FY2025', 'Q1 FY2026', '近12个月'. Renderer localizes visible labels and collapses a shared period into one panel caption."
+          },
+          "category": {
+            "type": "string",
+            "enum": ["profitability", "cash_flow", "leverage"],
+            "description": "Category drives cell accent color: profitability=GREEN, cash_flow=BLUE, leverage=RED. Display order is fixed (see top-level description)."
+          }
+        }
+      }
     },
 
     "cfa_lens": {

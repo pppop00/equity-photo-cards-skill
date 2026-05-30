@@ -1,5 +1,5 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
 
   "logo_asset_path": "可选：logo-production-agent 联网查官方来源并重新生成的透明 logo 文件绝对路径（横版字标建议宽≥840px，见 validate_cards）；没有可信官方 logo 时删除本字段。",
   "cover_company_name_cn": "有 logo 时必填：由 logo production agent 写入（核对/翻译 HTML .company-name-cn 后的中文短名，去掉尾缀「公司」）。无 logo 时：若 HTML 已为中文可省略；若 HTML 为英文则由 content agent 填入。",
@@ -30,23 +30,20 @@
   ],
 
   "five_year_arc": {
-    "narrative": "Card 3 上半：过去 5 年这家公司的商业模式或 margin 结构变迁，2-3 句长文，描述真实转型路径。",
+    "narrative": "Card 3 上半：用中文短名说明过去5年从什么业务/收入结构变成什么，怎样落到收入/利润/现金流，下一阶段看什么变量。",
     "inflection_points": [
-      "年份/事件 + 一条 KPI 变化（如：2022 新业务线占比从 5% 提到 22%）",
-      "年份/事件 + 一条结构变化（如：海外收入从 12% 提到 38%）",
-      "年份/事件 + 一条利润结构变化（如：毛利率从 32% 修复到 48%）"
+      "2025财年：一条KPI变化 + 含义（如收入同比增长115%，利润转正）",
+      "2026财年一季度：一条结构变化 + 含义（如需求由AI机架拉动）",
+      "2026年下半年：一条产品/产能/客户验证变量 + 含义"
     ]
   },
-  "recent_financial_highlights": [
-    "最新季度收入 XXX 亿XXX，同比+XX%（vs guide XX%）",
-    "最新季度净利润 XXX 亿XXX，同比+XX%（vs consensus XX 亿）",
-    "毛利率 XX.X%，环比+X.X 个百分点",
-    "自由现金流 XXX 亿XXX，过去四季合计 XXX 亿XXX"
-  ],
-  "revenue_explainer_points": [
-    "Card 3 收入分析 bullet 1：key_number metric + our_estimate vs consensus，解释收入流为什么是这样的形状。",
-    "Card 3 bullet 2：一条 comp_anchor（peer/历史/guidance）+ 数字。",
-    "Card 3 bullet 3：bridge to consensus — 把 gap 用业务语言翻译出来。"
+  "financial_metrics_panel": [
+    {"label_cn": "毛利率",        "value": "XX.X%",      "period_cn": "FYxxxx",   "category": "profitability"},
+    {"label_cn": "营业利润率",    "value": "XX.X%",      "period_cn": "FYxxxx",   "category": "profitability"},
+    {"label_cn": "净利率",        "value": "XX.X%",      "period_cn": "FYxxxx",   "category": "profitability"},
+    {"label_cn": "FCFF",          "value": "XX.X亿",     "period_cn": "FYxxxx",   "category": "cash_flow"},
+    {"label_cn": "FCFE",          "value": "XX.X亿",     "period_cn": "FYxxxx",   "category": "cash_flow"},
+    {"label_cn": "净债务/EBITDA", "value": "0.5×",       "period_cn": "FYxxxx",   "category": "leverage"}
   ],
 
   "cfa_lens": {

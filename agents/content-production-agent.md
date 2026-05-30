@@ -43,7 +43,7 @@ You must open inputs in this order, every run:
 |------|------|
 | 1 cover | **The call:** 立场 (`call`) + 1-句 variant view + 1 个 anchored 数字 + `metrics_row` |
 | 2 Porter | **Industry structure + per-force evidence:** consensus vs variant in the industry paragraph; per-force evidence on each Porter row |
-| 3 5-year financials | **5-year arc + recent quarter + revenue explainer:** transformation story + inflection points + most-recent-quarter bars + key-number explainer |
+| 3 财务分析 (v4) | **5-year arc + recent quarter bars + 6-metric grid:** transformation story + inflection points + most-recent-quarter Sankey bars + CFA-importance metrics panel (3 profitability + 2 cash-flow + 1 leverage) |
 
 ### Slot ↔ `analyst_call.json` field mapping (mandatory)
 
@@ -55,10 +55,11 @@ You must open inputs in this order, every run:
 | 2 | `industry_paragraph` | `porter_analysis.json` industry-context **paired with** consensus-vs-variant framing — explicit "市场认为 X，我们认为 Y" |
 | 2 | `background_bullets` (4) | 4 industry facts from `financial_*.json` / `porter_analysis.json` — each bullet 1 number + 1 comp |
 | 2 | `porter_evidence` (5) | One entry per force `{force, score 1..5, evidence}`. Pull each `evidence` from `porter_analysis.json` and tie the driver (concentration, switching cost, regulation, moat, capacity cycle, price war, bargaining power) to margins / pricing power / growth / risk |
-| 3 | `five_year_arc.narrative` | 2-3 sentence 5-year transformation pulled from `analyst_call.json.thesis_history` or HTML/financial JSON history |
+| 3 | `five_year_arc.narrative` | 2-3 sentence 5-year transformation pulled from `analyst_call.json.thesis_history` or HTML/financial JSON history. Must read in Chinese as: business shift → key financial effect → what changes next. |
 | 3 | `five_year_arc.inflection_points` (3–4) | Year-tagged KPI moves: structure change, margin restructuring, geography shift, capital intensity, regulation, customer change |
-| 3 | `recent_financial_highlights` (3–4) | Headline KPIs from the most recent quarter / fiscal year |
-| 3 | `revenue_explainer_points` (3–4) | bullet 1: `key_number.metric` + `our_estimate` vs `consensus`. bullets 2-3: 2 `comp_anchors`. optional bullet 4: `key_number.bridge` translated to prose |
+| 3 | `financial_metrics_panel` (=6, fixed order) | 6 CFA-importance metrics — see "Card 3 metrics panel contract" below. Replaces the v3 `revenue_explainer_points` 收入分析 bullet panel. |
+| 3 | `recent_financial_highlights` (legacy, optional) | Old v3 slot. v4 keeps it accepted for backward compatibility but does not render it; you can omit it for new reports. |
+| 3 | `revenue_explainer_points` (legacy, optional) | Old v3 slot. Same as above — no longer rendered, may be omitted. |
 
 `logo_asset_path`, `cover_company_name_cn`, and Card 4 `cfa_lens` are **not** authored here — they come from the logo agent and the CFA lens selector respectively.
 
@@ -75,12 +76,13 @@ Required top-level shape (v2):
   "company_focus_paragraph":              { "data_anchor": "...", "variant_view": "...", "catalyst_with_date": { ... } },
   "industry_paragraph":                   { "data_anchor": "...", "variant_view": "...", "falsifier": "..." },
   "five_year_arc.narrative":              { "data_anchor": "...", "variant_view": "...", "catalyst_with_date": { ... } },
-  "revenue_explainer_points":             { "data_anchor": "...", "variant_view": "...", "primary_quote": { ... } },
   "cfa_lens.different_angle_insight":     { "data_anchor": "...", "variant_view": "...", "primary_quote": { ... } }
 }
 ```
 
-The last entry (`cfa_lens.different_angle_insight`) is owned by the CFA lens selector — you do NOT write it, but you MUST hand the selector a file with the other five entries filled in.
+The last entry (`cfa_lens.different_angle_insight`) is owned by the CFA lens selector — you do NOT write it, but you MUST hand the selector a file with the other four entries filled in.
+
+**v4 note:** the old `revenue_explainer_points` worker-note block was removed alongside the prose slot it backed. Card 3 v4 renders the 6-metric `financial_metrics_panel` instead — that slot is source-anchored numerics, fact-checked against filings by Validator 2, and does not need the analyst-substrate worker_notes scaffolding (which exists to discipline prose, not numbers).
 
 **Required keys per slot block:**
 
@@ -123,13 +125,78 @@ Same principle as the banned-phrase backstop: if you fill `data_anchor` (number 
 | `background_bullets` | 2 right | **4 industry bullets, each = 1 number + 1 comp.** ≤60 chars each. |
 | `porter_evidence` | 2 bottom | **5 entries, one per force.** Each `{force, score 1..5, evidence ≤70 chars complete sentence}`. The evidence renders next to its score bar. |
 | `porter_scores` | 2 (optional) | If supplied, must be 5 integers in display order 供应商、买方、新进入者、替代品、竞争强度; overrides scores from `porter_evidence`. |
-| `five_year_arc.narrative` | 3 top | **5-year transformation story.** 2-3 sentences (≤200 chars). Anchor with comp keywords. |
+| `five_year_arc.narrative` | 3 top | **5-year transformation story.** 2-3 sentences (≤140 chars). Write for Chinese readers: 先说公司做什么变化，再说收入/利润/现金流结果，最后说下一阶段变量。v4 dropped the "过去 5 年的故事" subheader inside the panel; the card-level title 财务分析 frames the section instead. |
 | `five_year_arc.inflection_points` | 3 top | 3-4 year-tagged single-sentence inflections, ≤56 chars each. |
-| `recent_financial_highlights` | 3 mid | 3-4 most-recent-quarter headline KPIs, ≤60 chars each. (The bar chart pulls numbers from `finance()`; these are labels for the writer's audit trail.) |
-| `revenue_explainer_points` | 3 bottom | **The one number + comp.** Bullet 1 = `key_number.metric` + our_estimate vs consensus. Bullets 2–3 = `comp_anchors`. Optional bullet 4 = `key_number.bridge`. ≤58 chars each. |
+| `financial_metrics_panel` | 3 bottom | **6-metric CFA-importance grid (v4).** See the "Card 3 metrics panel contract" section below for the fixed display order, formatting rules, and net-cash fallback. |
+| `recent_financial_highlights` | _legacy_ | Old v3 mid-panel labels. Not rendered in v4; safe to omit. |
+| `revenue_explainer_points` | _legacy_ | Old v3 收入分析 bottom panel. Replaced by `financial_metrics_panel`; not rendered in v4; safe to omit. |
 | `cfa_lens` | 4 | **Owned by [cfa-lens-selector-agent.md](./cfa-lens-selector-agent.md).** Do not write here; hand off Cards 1–3 to that agent. |
 | `logo_asset_path` | 1 logo | From the logo production agent. |
 | `cover_company_name_cn` | 1 red title | From the logo production agent when `logo_asset_path` is set; you may fill it only when there is no logo AND the HTML `.company-name-cn` is English-only. |
+
+## Card 3 metrics panel contract (v4)
+
+The bottom of Card 3 is a 2×3 frosted-glass grid of 6 CFA-importance financial metrics. The slot is **`financial_metrics_panel`** — a list of exactly 6 objects in this **fixed display order** (the renderer hard-codes which cell gets which category color, so reordering = wrong colors):
+
+| Slot # | label_cn (default) | Category | Cell color |
+|--------|--------------------|----------|------------|
+| 0 | 毛利率 | `profitability` | GREEN |
+| 1 | 营业利润率 | `profitability` | GREEN |
+| 2 | 净利率 | `profitability` | GREEN |
+| 3 | FCFF | `cash_flow` | BLUE |
+| 4 | FCFE | `cash_flow` | BLUE |
+| 5 | 净债务/EBITDA 或 净现金 | `leverage` | RED |
+
+**Why these 6.** Three profitability margins are the CFA-canonical income-statement quality gauge. FCFF and FCFE separate firm-level vs equity-level cash returns (CFA L2 valuation staple). Net Debt / EBITDA is the most-cited solvency ratio in CFA + sell-side analyst practice. We deliberately excluded ROE/ROIC (overlaps with margins+leverage), Interest Coverage (collapses on low-leverage software / chip companies), and Debt/FCFE (not standard).
+
+**Per-entry shape:**
+
+```json
+{
+  "label_cn":  "毛利率",
+  "value":    "75.7%",
+  "period_cn": "FY2025",
+  "category":  "profitability"
+}
+```
+
+**Formatting rules — strict, validated:**
+
+- `label_cn`: ≤12 CJK chars. Stick to the defaults unless the company's filing genuinely uses a different label (e.g. some SaaS report "经营利润率" rather than "营业利润率" — fine).
+- `value`: ≤14 chars. **No currency symbols, no `美元`, no `$`, no `近似` inside the cell** — the unit context is fixed by `data.currency`. Use:
+  - Percentages → `"75.7%"` (1 decimal)
+  - Currency (FCFF/FCFE) → `"23.37亿"` (2 decimals, just `亿`)
+  - Ratio (D/EBITDA) → `"0.5×"` (1 decimal, U+00D7 multiplication sign)
+  - Net cash → `label_cn: "净现金"`, `value: "11.89亿"` (2 decimals). Do **not** write `label_cn: "净债务/EBITDA"` with `value: "净现金 11.89亿"`; that mixes a ratio label with a balance-sheet amount.
+- `period_cn`: ≤14 chars. `"FY2025"`, `"Q1 FY2026"`, `"近12个月"`, etc.
+- `category`: must match the slot's expected category exactly. Validator-1 rejects mismatches.
+
+**Period-label rule.** Still fill `period_cn` for every metric so Validator 2 can fact-check the data period, but do not use it as visual filler. The renderer localizes and collapses a shared period into one panel-level caption (for example `2025财年口径`) instead of printing `FY2025` under all six values. Only mixed-period panels should show per-cell periods, and mixed periods need a real reason (for example margins are FY2025 while FCFF/FCFE are 近12个月).
+
+**Chinese-reader clarity rule for Card 3 top panel.** The top panel is not a list of product names. It must answer, in plain Chinese, three questions:
+
+1. 过去五年公司从什么业务/收入结构变成了什么？
+2. 这个变化怎样落到收入、利润率、现金流或资产负债表？
+3. 下一阶段哪一个产品、客户、产能、价格或资本开支变量会验证这条线？
+
+Use English only for company/product/protocol names that Chinese investors normally see in English (`Scorpio`, `PCIe`, `CXL`, `NVLink`, `FCFF`, `FCFE`, `EBITDA`). Translate finance/time-frame words: `YoY` → `同比`, `QoQ` → `环比`, `margin` → `利润率`, `revenue stream` → `收入流/收入结构`. Do not write hybrid fragments like `ALAB从PCIe/CXL重定时器扩到Scorpio交换芯片` unless the following clause explains the business meaning in Chinese.
+
+**Example rewrite pattern (do not copy numbers blindly):**
+
+- Weak: `ALAB从PCIe/CXL重定时器扩到Scorpio交换芯片，FY2025收入翻倍、利润转正。`
+- Better: `过去五年，阿斯特拉从单一重定时器供应商扩成AI机架连接平台，收入随云厂服务器放量翻倍。高毛利叠加费用摊薄让2025财年转为盈利；接下来要看Scorpio交换芯片能否把产品线从“配套芯片”推向“平台入口”。`
+
+**Source rules:**
+
+- Compute from `financial_data.json` first; fall back to `financial_analysis.json.profitability` / `.cash_flow` / `.leverage` only if the raw numerator/denominator is missing.
+- Margins: `gross_margin = gross_profit / revenue`, `operating_margin = operating_income / revenue`, `net_margin = net_income / revenue`. All percentages to 1 decimal.
+- FCFF: `CFO + Interest_expense × (1 − effective_tax_rate) − CapEx`. If interest_expense or tax_rate is missing in the source, fall back to `CFO − CapEx`; keep the visible cell as `"2.82亿"` and document approximation in Validator 2 notes, not on the card.
+- FCFE: `FCFF − Interest_expense × (1 − tax_rate) + Net_Borrowing`. If net_borrowing is missing, fall back to `CFO − CapEx`; keep the visible cell as `"2.82亿"` and document approximation in Validator 2 notes, not on the card.
+- Net Debt / EBITDA: `net_debt / EBITDA`, where `net_debt = total_debt − cash − short_term_investments`. If net debt is positive and EBITDA is usable, report `label_cn = "净债务/EBITDA"`, `value = "0.5×"`. If net debt is negative (net cash), do **not** show a ratio; report `label_cn = "净现金"`, `value = "11.89亿"`. A negative net-debt/EBITDA ratio is not reader-friendly, and a ratio label with a cash value is invalid.
+- EBITDA: `Operating_income + D&A`. If D&A is not extractable from cash flow statement, fall back to `Operating_income` only when net debt is positive and label the metric as ratio; if the company is net-cash, skip EBITDA and show net cash amount.
+- Period selection: pick the most-recent **annual** value (FY) for stability. Only use a quarterly value if the FY is older than 12 months from report date. If the middle revenue-flow bar chart uses the same annual pool, the chart title should read `20xx财年收入流`, not `FYxxxx 最近季度收入流`.
+
+**Self-check before handoff:** the values you write here must be reproducible from `financial_data.json` to within ±0.5pp (margins) / ±0.5% relative (cash flows). Validator 2 will fact-check each number against the 10-K/10-Q.
 
 ## Length
 
@@ -139,7 +206,7 @@ Do **not** micro-fit in this agent. Write natural copy; the layout agent will co
 
 This agent emits **two** files side-by-side beside the HTML:
 
-1. `<stem>.card_slots.json` — Valid JSON only, UTF-8, `schema_version: 2`. Cards 1–3 filled; `cfa_lens` left to the CFA-lens selector. If you start from a **partial** `card_slots.json` produced by the logo agent, **merge** your body copy into it so **`logo_asset_path`** and **`cover_company_name_cn`** remain exactly as the logo agent set them.
-2. `<stem>.card_slots_worker_notes.json` — Valid JSON only, UTF-8, `schema_version: 2`. Hidden analytical fields for Cards 1–3 narrative slots (intro_sentence, company_focus_paragraph, industry_paragraph, five_year_arc.narrative, revenue_explainer_points). **Required for every run.** Must be written *before* you draft the prose.
+1. `<stem>.card_slots.json` — Valid JSON only, UTF-8, `schema_version: 4`. Cards 1–3 filled; `cfa_lens` left to the CFA-lens selector. If you start from a **partial** `card_slots.json` produced by the logo agent, **merge** your body copy into it so **`logo_asset_path`** and **`cover_company_name_cn`** remain exactly as the logo agent set them.
+2. `<stem>.card_slots_worker_notes.json` — Valid JSON only, UTF-8, `schema_version: 2`. Hidden analytical fields for Cards 1–3 narrative slots (intro_sentence, company_focus_paragraph, industry_paragraph, five_year_arc.narrative). **Required for every run.** Must be written *before* you draft the prose.
 
 See worked shape for `card_slots.json`: [examples/pdd_holdings_card_slots.example.json](../references/examples/pdd_holdings_card_slots.example.json).

@@ -28,6 +28,13 @@ Validator 1 不能保证「数字与 SEC/交易所/公司财报一致」——�
 1. **公司身份**：中文简称、英文名称、ticker、上市地 —— 与交易所/公司 IR 一致。
 2. **报告期与日期**：财年、季度、报告日期 —— 与财报封面或新闻稿一致。
 3. **金额与增速**：收入、利润、分部收入、YoY、毛利率等 —— 优先核对 **公司官方财报、新闻稿、SEC/HKEX 等披露**；注意单位（亿美元 vs 亿人民币）与 **单季度 vs 财年**。
+   - **Card 3 financial_metrics_panel（v4 6 指标格子）专项核查**：对 6 个槽位（毛利率 / 营业利润率 / 净利率 / FCFF / FCFE / 杠杆或净现金）逐项核对：
+     - **3 个利润率**：用 `gross_profit / revenue`、`operating_income / revenue`、`net_income / revenue` 重算并与 10-K / 10-Q 数据交叉，差异 >0.5pp 必须修正。
+     - **FCFF**：标准公式 `CFO + Interest × (1 − tax_rate) − CapEx`。若 interest 或 tax_rate 不可得，允许用 `CFO − CapEx`，但可见 cell 不写 `近似`；在核查记录里说明近似口径即可。如果披露了完整字段但作者未用，必须改为完整公式。
+     - **FCFE**：标准 `FCFF − Interest × (1 − tax_rate) + Net Borrowing`。若 Net Borrowing 不可得，允许用 `CFO − CapEx`，但可见 cell 不写 `近似`；在核查记录里说明近似口径即可。
+     - **净债务/EBITDA / 净现金**：核对 `Total Debt − Cash − Short-term Investments` 是否与 balance sheet 一致。若净债务为正且 EBITDA 可用，slot 必须是 `label_cn: 净债务/EBITDA` + ratio value（如 `0.5×`）。若净值为负（净现金），slot 必须是 `label_cn: 净现金` + currency value（如 `11.89亿`），不得在 `净债务/EBITDA` 标签下显示 `净现金 X.XX亿`，也不得写负 ratio。EBITDA 当 D&A 不可得时允许用 Operating Income 近似，但只适用于正净债务 ratio。
+     - **period_cn 一致性**：所有 6 个槽位的 period_cn 要相互一致或明确不同（例如 5 个用 FY2025、1 个用 Q1 FY2026 是可以的，但不能在没有理由时混排）。若 6 个 period 相同，导出图应只显示一个共享口径标签，不应在每个格子底部重复显示同一期间。
+     - **Card 3 中段期间一致性**：收入流条形图的标题必须匹配 `financial_data.income_statement.current_year` 的数据池。年度数据写 `2025财年收入流` 或 `FY2025 收入流`，季度数据写对应季度；不得把年度数据标为“最近季度”。
 4. **业务表述**：分部名称、产品线占比、重大事件（并购、监管）—— 需有公开报道或披露支撑，不得与权威来源矛盾。
 5. **与内部 JSON 的一致性**：若 slots 中的数字与 `financial_data.json` 不一致，先判定哪一侧错误；**对外发布以权威披露为准**，并回写 slots（及必要时标注 JSON 勘误）。
 6. **空值与占位符清零**：最终卡片不得出现 `--` / `N/A` / `不适用` 这类占位符作为关键财务字段（收入、成本、毛利、营业利润、净利润、毛利率、营业利润率、净利率）。若原字段缺失，必须通过可验证数据重算或改写为可核实且不越权的表达；无法核实则不得导出。

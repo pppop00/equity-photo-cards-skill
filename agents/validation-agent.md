@@ -76,11 +76,17 @@ Do not try to fix an overflow by compressing whitespace alone. Rewrite the copy 
 - Card 2 industry-structure paragraph must be a complete summarized paragraph (≤113 chars), not a clipped fragment
 - Card 2 background bullets: exactly 4 entries, each ≤60 chars, complete sentences
 - Card 2 porter_evidence: exactly 5 entries — one per force (`rivalry`, `new_entrants`, `supplier_power`, `buyer_power`, `substitutes`); each `evidence` ≤70 chars complete sentence
-- Card 3 five-year arc narrative ≤200 chars; ≥3 inflection_points, each ≤56 chars and a complete sentence
-- Card 3 recent_financial_highlights ≥3 entries
-- Card 3 explainer bullets must stay inside their per-bullet character budget (≤58) and the yellow panel's **measured** height budget
+- Card 3 five-year arc narrative ≤140 chars; ≥3 inflection_points, each ≤56 chars and a complete sentence
+- Card 3 visible Chinese prose must localize fiscal/time shorthand: use `2025财年`, `2026财年一季度`, `2026年下半年`, `同比增长115%`; reject raw `FY2025`, `Q1 FY2026`, `2026 Q1`, `2026 H2`, and ticker-led prose such as `ALAB从...`.
+- Card 3 top narrative must be intelligible without product-roadmap knowledge: it names the Chinese short company name or `公司`, explains the business shift, and connects that shift to a financial result.
+- Card 3 financial_metrics_panel: exactly 6 entries, fixed order — slots 0..2 `profitability`, 3..4 `cash_flow`, 5 `leverage`. Per-entry: `label_cn` ≤12, `value` ≤14, `period_cn` ≤14. `category` must equal the expected category for its slot index. Validator-1 rejects mismatches.
+- Card 3 metrics-panel `value` must not embed `$`, `美元`, or visible approximation markers such as `近似` (unit context and calculation method are audited outside the cell). Use plain `亿` for currency, `%` for ratios, and `×` for the leverage multiple.
+- Card 3 leverage cell must not mix metric type and value type: `label_cn: "净债务/EBITDA"` requires a ratio value such as `0.5×`; net-cash companies must use `label_cn: "净现金"` with a currency value such as `11.89亿`.
+- Card 3 metrics-panel values and the middle revenue-flow value column are measured against real pixel bounds; long CJK+number strings must shrink cleanly and may not collide with labels, period text, dividers, or the panel edge.
+- If all six Card 3 metrics share the same `period_cn`, the renderer displays one localized panel caption such as `2025财年口径` and suppresses repeated per-cell period footers. Per-cell periods render only when periods differ intentionally.
 - Card 3 numeric fields and margin fields must not render as placeholders (`--`, `N/A`, `不适用`); if source data is missing, derive from available report data or fail and revise before export
-- Card 4 cfa_lens: every required string field non-empty; `company_application` ≥3 bullets ≤95 chars; `concept_intro` ≤110; `different_angle_insight` ≤105 and AUTHORITY (requires `primary_quote` in worker_notes); `takeaway` ≤48
+- Card 3 v3 legacy slots `recent_financial_highlights` / `revenue_explainer_points` are accepted (so old card_slots.json files still load) but are not rendered or checked in v4. The bottom-panel gate is now the 6-metric `financial_metrics_panel`.
+- Card 4 cfa_lens: every required string field non-empty; `company_application` ≥3 bullets ≤95 chars; `concept_intro` ≤110; `different_angle_insight` ≤105 and AUTHORITY (requires `primary_quote` in worker_notes); `formula` and `company_calculation` required
 - Any paragraph or bullet that is meant to be read as body copy must end as a complete Chinese sentence
 - Text rendering must use high-quality supersampling so exported fonts remain crisp
 
@@ -88,13 +94,19 @@ Do not try to fix an overflow by compressing whitespace alone. Rewrite the copy 
 
 `--slots` is **required** for both tools. Pass a **JSON file** (single HTML) or a **directory** of `<stem>.card_slots.json` when `--input` lists multiple HTML files. The loader rejects incomplete slot files before these checks run.
 
+Validator 1 command:
+
 ```bash
 python3 scripts/validate_cards.py \
   --input "/abs/path/to/Company_Research_CN.html" \
   --slots "/abs/path/to/Company_Research_CN.card_slots.json" \
   --brand "金融豹" \
   --palette <confirmed_palette>
+```
 
+After Validator 1 passes, hand off to [Validator 2](./validator-2-agent.md) for external fact-check. Only after Validator 2 passes, export:
+
+```bash
 python3 scripts/generate_social_cards.py \
   --input "/abs/path/to/Company_Research_CN.html" \
   --slots "/abs/path/to/Company_Research_CN.card_slots.json" \
@@ -103,8 +115,6 @@ python3 scripts/generate_social_cards.py \
 ```
 
 (Renderer defaults to this skill repo’s `output/<report_stem>/`; pass `--output-root` to override.)
-
-**After** the commands above succeed, run **[Validator 2](./validator-2-agent.md)** before `generate_social_cards.py`.
 
 ## Failure Policy
 

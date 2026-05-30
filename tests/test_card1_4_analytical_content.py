@@ -518,6 +518,14 @@ _FULL_CARDS_BASE: dict = {
         "游戏 $3.3B 同比+15%，汽车 $0.45B 同比+72%，合计 12%。",
         "运营利润率 62% vs AMD 11%、Intel-3%，规模效应在 OPEX 端兑现。",
     ],
+    "financial_metrics_panel": [
+        {"label_cn": "毛利率",       "value": "74.6%",  "period_cn": "FY26 Q3", "category": "profitability"},
+        {"label_cn": "营业利润率",   "value": "62.0%",  "period_cn": "FY26 Q3", "category": "profitability"},
+        {"label_cn": "净利率",       "value": "55.0%",  "period_cn": "FY26 Q3", "category": "profitability"},
+        {"label_cn": "FCFF",         "value": "180亿",  "period_cn": "FY26 LTM", "category": "cash_flow"},
+        {"label_cn": "FCFE",         "value": "172亿",  "period_cn": "FY26 LTM", "category": "cash_flow"},
+        {"label_cn": "净现金",      "value": "60亿",   "period_cn": "FY26 Q3", "category": "leverage"},
+    ],
 }
 
 
@@ -592,6 +600,73 @@ class Card4SchemaTests(unittest.TestCase):
     def test_schema_version_is_three(self) -> None:
         slots = _full_positive_overrides()
         self.assertEqual(slots.schema_version, 3)
+
+    def test_card3_cash_flow_values_must_not_show_approximate_prefix(self) -> None:
+        slots = _full_positive_overrides()
+        slots.financial_metrics_panel = copy.deepcopy(slots.financial_metrics_panel or [])
+        slots.financial_metrics_panel[3]["value"] = "近似 180亿"
+        with self.assertRaises(ValueError) as ctx:
+            assert_card_slots_complete(slots)
+        self.assertIn("近似", str(ctx.exception))
+
+    def test_card3_net_cash_must_not_hide_under_net_debt_ratio_label(self) -> None:
+        slots = _full_positive_overrides()
+        slots.financial_metrics_panel = copy.deepcopy(slots.financial_metrics_panel or [])
+        slots.financial_metrics_panel[5] = {
+            "label_cn": "净债务/EBITDA",
+            "value": "净现金 60亿",
+            "period_cn": "FY26 Q3",
+            "category": "leverage",
+        }
+        with self.assertRaises(ValueError) as ctx:
+            assert_card_slots_complete(slots)
+        self.assertIn("净现金", str(ctx.exception))
+
+    def test_card3_net_debt_ratio_label_requires_ratio_value(self) -> None:
+        slots = _full_positive_overrides()
+        slots.financial_metrics_panel = copy.deepcopy(slots.financial_metrics_panel or [])
+        slots.financial_metrics_panel[5] = {
+            "label_cn": "净债务/EBITDA",
+            "value": "11.89亿",
+            "period_cn": "FY26 Q3",
+            "category": "leverage",
+        }
+        with self.assertRaises(ValueError) as ctx:
+            assert_card_slots_complete(slots)
+        self.assertIn("ratio", str(ctx.exception))
+
+
+class Card3ChineseReadabilityTests(unittest.TestCase):
+    def test_rejects_ticker_led_cn_narrative_and_raw_periods(self) -> None:
+        cards, worker = _fresh_fixture()
+        cards["cover_company_name_cn"] = "阿斯特拉"
+        cards["five_year_arc"] = {
+            "narrative": "ALAB从PCIe/CXL重定时器扩到Scorpio交换芯片，FY2025收入翻倍、利润转正。",
+            "inflection_points": [
+                "2025：收入8.53亿美元，同比+115.1%。",
+                "2026 Q1：收入3.08亿美元，增长仍快。",
+                "2026 H2：Scorpio X/P系列进入生产爬坡。",
+            ],
+        }
+        issues = validate_card1_4_analytical_content(cards, worker)
+        joined = "\n".join(issues)
+        self.assertIn("ticker-led", joined)
+        self.assertIn("FY2025", joined)
+        self.assertIn("Chinese time wording", joined)
+
+    def test_accepts_localized_cn_card3_story(self) -> None:
+        cards, worker = _fresh_fixture()
+        cards["cover_company_name_cn"] = "阿斯特拉"
+        cards["five_year_arc"] = {
+            "narrative": "过去五年，阿斯特拉从重定时器供应商扩成AI机架连接平台，收入随云厂放量翻倍。高毛利叠加费用摊薄让2025财年利润转正。",
+            "inflection_points": [
+                "2025财年：收入8.53亿美元，同比增长115.1%，利润转正。",
+                "2026财年一季度：收入3.08亿美元，需求仍由AI机架拉动。",
+                "2026年下半年：Scorpio X/P系列进入量产爬坡。",
+            ],
+        }
+        issues = validate_card1_4_analytical_content(cards, worker)
+        self.assertFalse([issue for issue in issues if "Card 3" in issue or "period" in issue])
 
 
 if __name__ == "__main__":

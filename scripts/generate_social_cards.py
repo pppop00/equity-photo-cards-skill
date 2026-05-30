@@ -26,31 +26,41 @@ _EXPORT_DOWN_SAMPLE_TO_LOGICAL: bool = False
 _ACTIVE_PALETTE: str | None = None
 
 # Macaron palette: mirrors the updated HTML visual tokens.
-BG = "#FBF6EF"
-TEXT = "#3B3A4A"
-MUTED = "#6C6A7C"
-LINE = "#E9E2D6"
-PANEL = "#FFF2E2"
-RED = "#D86B79"
-ORANGE = "#D68852"
-GOLD = "#E9C17A"
-GREEN = "#8FCF9F"
-BLUE = "#9FB9E2"
+BG = "#FFF9F3"
+TEXT = "#24263A"
+MUTED = "#5C5A6D"
+LINE = "#EEDFCC"
+PANEL = "#FFF3E6"
+RED = "#E44F67"
+ORANGE = "#E07A3D"
+GOLD = "#F1B84B"
+GREEN = "#25B879"
+BLUE = "#4E8DEB"
 WHITE = "#FFFFFF"
 
 HEADER_BG: str | None = "#141A2C"
 HEADER_BRAND_TEXT = "#FFFFFF"
-HEADER_SUBTITLE_TEXT = "#F6B48A"
+HEADER_SUBTITLE_TEXT = "#FFBF7A"
 HEADER_PAGE_TEXT = "#F2EFE6"
 HEADER_RULE = "#2A3046"
 
-PANEL_MINT = "#E6F5E4"
-PANEL_SKY = "#DCE9F7"
-PANEL_PINK = "#FBE0E4"
-PANEL_LILAC = "#EADCF3"
-PANEL_CREAM = "#FFF2E2"
-TRACK = "#F0EBE0"
-PORTER_COLORS = ["#F6B48A", "#F4A5AE", "#9FB9E2", "#8FCF9F", "#B9A2D9"]
+PANEL_MINT = "#E8F8EC"
+PANEL_SKY = "#E7F0FF"
+PANEL_PINK = "#FFE3E8"
+PANEL_LILAC = "#EFE3FA"
+PANEL_CREAM = "#FFF3E6"
+TRACK = "#EFE6D8"
+PORTER_COLORS = ["#FFB06F", "#F6788C", "#68A2F2", "#42C487", "#A77AE4"]
+
+# Frosted-glass "Apple card" tokens used by Card 3 metrics panel.
+# PANEL_GLASS is a near-white tinted with each palette's warmth — lighter than
+# PANEL_CREAM so it reads as an elevated translucent surface against the body.
+# GLASS_STROKE is the 1.5px hairline outline; GLASS_DIVIDER is the inner grid.
+PANEL_GLASS = "#FFF8EC"
+GLASS_STROKE = "#EBD8BA"
+GLASS_DIVIDER = "#E9DCC5"
+GLASS_LABEL = "#4F4A5A"
+GLASS_PERIOD = "#A98662"
 
 import os as _os
 
@@ -69,31 +79,37 @@ def apply_palette(name: str) -> None:
     global BG, TEXT, MUTED, LINE, PANEL, RED, ORANGE, GOLD, GREEN, BLUE, WHITE
     global HEADER_BG, HEADER_BRAND_TEXT, HEADER_SUBTITLE_TEXT, HEADER_PAGE_TEXT, HEADER_RULE
     global PANEL_MINT, PANEL_SKY, PANEL_PINK, PANEL_LILAC, PANEL_CREAM, TRACK, PORTER_COLORS
+    global PANEL_GLASS, GLASS_STROKE, GLASS_DIVIDER, GLASS_LABEL, GLASS_PERIOD
     _ACTIVE_PALETTE = name
     if name == "macaron":
-        BG = "#FBF6EF"
-        TEXT = "#3B3A4A"
-        MUTED = "#6C6A7C"
-        LINE = "#E9E2D6"
-        PANEL = "#FFF2E2"
-        RED = "#D86B79"
-        ORANGE = "#D68852"
-        GOLD = "#E9C17A"
-        GREEN = "#8FCF9F"
-        BLUE = "#9FB9E2"
+        BG = "#FFF9F3"
+        TEXT = "#24263A"
+        MUTED = "#5C5A6D"
+        LINE = "#EEDFCC"
+        PANEL = "#FFF3E6"
+        RED = "#E44F67"
+        ORANGE = "#E07A3D"
+        GOLD = "#F1B84B"
+        GREEN = "#25B879"
+        BLUE = "#4E8DEB"
         WHITE = "#FFFFFF"
         HEADER_BG = "#141A2C"
         HEADER_BRAND_TEXT = "#FFFFFF"
-        HEADER_SUBTITLE_TEXT = "#F6B48A"
+        HEADER_SUBTITLE_TEXT = "#FFBF7A"
         HEADER_PAGE_TEXT = "#F2EFE6"
         HEADER_RULE = "#2A3046"
-        PANEL_MINT = "#E6F5E4"
-        PANEL_SKY = "#DCE9F7"
-        PANEL_PINK = "#FBE0E4"
-        PANEL_LILAC = "#EADCF3"
-        PANEL_CREAM = "#FFF2E2"
-        TRACK = "#F0EBE0"
-        PORTER_COLORS = ["#F6B48A", "#F4A5AE", "#9FB9E2", "#8FCF9F", "#B9A2D9"]
+        PANEL_MINT = "#E8F8EC"
+        PANEL_SKY = "#E7F0FF"
+        PANEL_PINK = "#FFE3E8"
+        PANEL_LILAC = "#EFE3FA"
+        PANEL_CREAM = "#FFF3E6"
+        TRACK = "#EFE6D8"
+        PORTER_COLORS = ["#FFB06F", "#F6788C", "#68A2F2", "#42C487", "#A77AE4"]
+        PANEL_GLASS = "#FFF8EC"
+        GLASS_STROKE = "#EBD8BA"
+        GLASS_DIVIDER = "#E9DCC5"
+        GLASS_LABEL = "#4F4A5A"
+        GLASS_PERIOD = "#A98662"
         return
     if name == "default":
         BG = "#FCFCFD"
@@ -119,6 +135,11 @@ def apply_palette(name: str) -> None:
         PANEL_CREAM = PANEL
         TRACK = LINE
         PORTER_COLORS = []
+        PANEL_GLASS = "#FAFAFA"
+        GLASS_STROKE = "#E6E6E6"
+        GLASS_DIVIDER = "#EBEBEB"
+        GLASS_LABEL = "#6B7280"
+        GLASS_PERIOD = "#9CA3AF"
         return
     if name == "b":
         # Xiaohongshu-friendly: soft violet canvas + purple / emerald accents.
@@ -145,6 +166,11 @@ def apply_palette(name: str) -> None:
         PANEL_CREAM = PANEL
         TRACK = LINE
         PORTER_COLORS = []
+        PANEL_GLASS = "#F8F4FE"
+        GLASS_STROKE = "#EAE0F4"
+        GLASS_DIVIDER = "#EFE6F9"
+        GLASS_LABEL = "#6B7280"
+        GLASS_PERIOD = "#9CA3AF"
         return
     if name == "c":
         # Magazine-style: warm paper body + dark header bar.
@@ -171,6 +197,11 @@ def apply_palette(name: str) -> None:
         PANEL_CREAM = PANEL
         TRACK = LINE
         PORTER_COLORS = []
+        PANEL_GLASS = "#FAF4E5"
+        GLASS_STROKE = "#E6DCC1"
+        GLASS_DIVIDER = "#EBE2CB"
+        GLASS_LABEL = "#57534E"
+        GLASS_PERIOD = "#A8A29E"
         return
     raise ValueError(f"Unknown palette: {name!r}")
 
@@ -350,10 +381,22 @@ LIMIT_CARD3_INFLECTION_CHARS = 56
 CARD3_NARRATIVE_MAX_LINES = 3
 CARD3_FIVE_YEAR_PANEL_BOTTOM = 630
 CARD3_FIVE_YEAR_PANEL_BOTTOM_INSET = 16
-CARD3_NARRATIVE_START_Y = 346
-# Yellow explainer panel: rounded rect ends at CARD3_EXPLAINER_PANEL_BOTTOM; bullets start at CARD3_EXPLAINER_START_Y.
-# CARD3_EXPLAINER_BOTTOM_INSET reserves space inside the panel so the last line does not sit on the bottom edge.
-CARD3_EXPLAINER_PANEL_BOTTOM = 1300
+# v4 (财务分析): the "过去 5 年的故事" subheader was removed; narrative now
+# begins at panel-top + ~36px so the panel still breathes correctly without
+# the subheader label above it. Old value 346 (subheader at 298 + ~48 gap).
+CARD3_NARRATIVE_START_Y = 306
+# v4 frosted-glass metrics panel (replaces the old yellow 收入分析 panel).
+# Panel rounded-rect spans Y=940..1300 (height 360); the 2×3 grid sits inside
+# with `CARD3_METRICS_*` padding tokens.
+CARD3_METRICS_PANEL_TOP = 940
+CARD3_METRICS_PANEL_BOTTOM = 1300
+CARD3_METRICS_PANEL_LEFT = 72
+CARD3_METRICS_PANEL_RIGHT = 1008
+CARD3_METRICS_INNER_PAD_X = 36
+CARD3_METRICS_INNER_PAD_Y = 32
+CARD3_METRICS_DIVIDER_INSET = 32
+# Legacy tokens kept so older Card 3 callsites don't break before refactor lands.
+CARD3_EXPLAINER_PANEL_BOTTOM = CARD3_METRICS_PANEL_BOTTOM
 CARD3_EXPLAINER_START_Y = 1024
 CARD3_EXPLAINER_BOTTOM_INSET = 16
 LIMIT_CARD3_EXPLAINER_TOTAL_HEIGHT = CARD3_EXPLAINER_PANEL_BOTTOM - CARD3_EXPLAINER_START_Y - CARD3_EXPLAINER_BOTTOM_INSET
@@ -476,6 +519,7 @@ class CardSlotOverrides:
     five_year_arc: dict[str, Any] | None = None
     recent_financial_highlights: list[str] | None = None
     revenue_explainer_points: list[str] | None = None
+    financial_metrics_panel: list[dict[str, Any]] | None = None
     cfa_lens: dict[str, Any] | None = None
     logo_asset_path: str | None = None
     cover_company_name_cn: str | None = None
@@ -494,6 +538,7 @@ class CardSlotOverrides:
             "five_year_arc",
             "recent_financial_highlights",
             "revenue_explainer_points",
+            "financial_metrics_panel",
             "cfa_lens",
             "logo_asset_path",
             "cover_company_name_cn",
@@ -586,8 +631,69 @@ def assert_card_slots_complete(slots: CardSlotOverrides) -> None:
     arc_points = arc.get("inflection_points")
     if not isinstance(arc_points, list) or len([x for x in arc_points if clean(str(x))]) < 3:
         raise ValueError("card_slots.json five_year_arc.inflection_points needs at least 3 non-empty entries.")
-    need_list("recent_financial_highlights", slots.recent_financial_highlights, 3)
-    need_list("revenue_explainer_points", slots.revenue_explainer_points, 3)
+    # `recent_financial_highlights` and `revenue_explainer_points` are legacy
+    # slots from the v2/v3 layout; the v4 Card 3 (财务分析) renders a 6-metric
+    # frosted-glass grid instead of a revenue-analysis bullet panel. The legacy
+    # slots are still accepted (so old card_slots.json files load), but no
+    # longer required.
+    #
+    # `financial_metrics_panel`: 6 entries authored by the content production
+    # agent, in this fixed display order (CFA importance × 3 profitability + 2
+    # cash-flow + 1 leverage). Each entry: label_cn, value, period_cn, category.
+    panel_metrics = slots.financial_metrics_panel
+    if not isinstance(panel_metrics, list):
+        raise ValueError(
+            "card_slots.json missing required list: financial_metrics_panel "
+            "(need exactly 6 entries, one per CFA-importance metric)."
+        )
+    if len(panel_metrics) != 6:
+        raise ValueError(
+            f"card_slots.json financial_metrics_panel must contain exactly 6 entries (got {len(panel_metrics)})."
+        )
+    _ALLOWED_METRIC_CATEGORIES = {"profitability", "cash_flow", "leverage"}
+    for idx, entry in enumerate(panel_metrics):
+        if not isinstance(entry, dict):
+            raise ValueError(f"card_slots.json financial_metrics_panel[{idx}] must be an object.")
+        for key in ("label_cn", "value", "period_cn", "category"):
+            if not clean(str(entry.get(key) or "")):
+                raise ValueError(
+                    f"card_slots.json financial_metrics_panel[{idx}].{key} must be non-empty text."
+                )
+        if entry.get("category") not in _ALLOWED_METRIC_CATEGORIES:
+            raise ValueError(
+                f"card_slots.json financial_metrics_panel[{idx}].category must be one of "
+                f"{sorted(_ALLOWED_METRIC_CATEGORIES)} (got {entry.get('category')!r})."
+            )
+        label = clean(str(entry.get("label_cn") or ""))
+        value = clean(str(entry.get("value") or ""))
+        if any(marker in value for marker in ("近似", "$", "美元")):
+            raise ValueError(
+                f"card_slots.json financial_metrics_panel[{idx}].value must not contain "
+                f"visible approximation/currency markers ('近似', '$', '美元'): {value!r}."
+            )
+        if "净现金" in value:
+            raise ValueError(
+                f"card_slots.json financial_metrics_panel[{idx}] must put net-cash wording in "
+                f"label_cn='净现金' and keep value as a plain amount like '11.89亿'."
+            )
+        if idx == 5:
+            if label == "净债务/EBITDA":
+                if "×" not in value:
+                    raise ValueError(
+                        "card_slots.json financial_metrics_panel[5] label_cn='净债务/EBITDA' "
+                        "requires a ratio value like '0.5×'. Use label_cn='净现金' for net-cash companies."
+                    )
+            elif label in {"净现金", "净现金头寸"}:
+                if "亿" not in value or "×" in value:
+                    raise ValueError(
+                        "card_slots.json financial_metrics_panel[5] label_cn='净现金' "
+                        "requires a plain amount value like '11.89亿'."
+                    )
+            else:
+                raise ValueError(
+                    "card_slots.json financial_metrics_panel[5].label_cn must be "
+                    "'净债务/EBITDA' for positive net debt or '净现金' for net-cash companies."
+                )
 
     # Card 4 (CFA lens)
     lens = slots.cfa_lens
@@ -1155,16 +1261,28 @@ _STYLE_BANNED_ABBREV_RE = re.compile(
 _STYLE_FIRST_MENTION_RE = re.compile(
     r"[（(][^（()）]{0,40}\b(CC|YoY|Y/Y|QoQ|Q/Q|FX|CAGR)\b[^（()）]{0,40}[)）]"
 )
+_CN_RAW_PERIOD_TOKEN_RE = re.compile(
+    r"(?:Q[1-4]\s*FY\d{4}|FY\d{4}|\d{4}\s*Q[1-4]|\d{4}\s*H[12])",
+    re.IGNORECASE,
+)
+_TICKER_LED_CN_RE = re.compile(r"^\s*[A-Z]{2,5}(?:从|的|在|是|由|把|靠)")
+_CARD3_CHANGE_VERBS = ("从", "扩到", "扩至", "转向", "切入", "升级为", "变成", "转为", "走向")
+_CARD3_FIN_RESULT_TERMS = ("收入", "利润", "毛利率", "利润率", "现金流", "转正", "亏损", "净现金")
+_CN_INFLECTION_TIME_RE = re.compile(r"^\s*(?:19|20)\d{2}(?:年|财年)")
 
 # slot keys covered by Cards 1-4 contract
 # Note: five_year_arc.narrative and cfa_lens.company_calculation are nested;
 # the worker_notes file uses the bare leaf name as the top-level key.
+#
+# v4: Card 3 dropped `revenue_explainer_points` (the old 收入分析 bullet panel)
+# in favor of the 6-metric `financial_metrics_panel` grid. Numeric metrics are
+# source-anchored (validator-2 fact-checks each number against filings) and do
+# not need worker_notes analyst substrate the way prose slots do.
 CARD1_4_WORKER_SLOTS = (
     "intro_sentence",                # Card 1
     "company_focus_paragraph",       # Card 1
     "industry_paragraph",            # Card 2
     "five_year_arc.narrative",       # Card 3 (nested)
-    "revenue_explainer_points",      # Card 3
     "cfa_lens.company_calculation",  # Card 4 (nested, AUTHORITY)
 )
 # slots that REQUIRE primary_quote (analyst-authority slots)
@@ -1177,8 +1295,6 @@ CARD1_4_PROSE_TOP_LEVEL_KEYS = (
     "company_focus_paragraph",
     "background_bullets",
     "industry_paragraph",
-    "recent_financial_highlights",
-    "revenue_explainer_points",
 )
 
 
@@ -1321,6 +1437,7 @@ def validate_card1_4_analytical_content(
         style_first_mention_abbrevs.add(m.group(1))
 
     for key, text in prose_chunks:
+        text_clean = clean(text)
         if key == "intro_sentence" and text.lstrip().startswith("说白了"):
             issues.append(f"card_slots.{key}: starts with '说白了' (banned on Cards 1-4)")
         for phrase in _BANNED_PHRASES:
@@ -1354,6 +1471,53 @@ def validate_card1_4_analytical_content(
                 f"CAGR→复合年化增长率; first-mention '恒定汇率（CC）' would "
                 f"whitelist later uses): ...{snippet}..."
             )
+
+        # Chinese-reader localization: visible Chinese card prose should not
+        # expose raw fiscal shorthand that reads like an English spreadsheet.
+        # Keep product/protocol names in English when normal, but localize
+        # time labels and growth syntax for CN cards.
+        if has_cjk(text_clean):
+            period_match = _CN_RAW_PERIOD_TOKEN_RE.search(text_clean)
+            if period_match:
+                issues.append(
+                    f"card_slots.{key}: Chinese prose should localize fiscal period "
+                    f"'{period_match.group(0)}' (e.g. FY2025→2025财年, "
+                    f"Q1 FY2026→2026财年一季度, 2026 H2→2026年下半年)."
+                )
+            if _TICKER_LED_CN_RE.search(text_clean):
+                issues.append(
+                    f"card_slots.{key}: Chinese prose should use the Chinese company short name, "
+                    "not a ticker-led sentence."
+                )
+
+            if key == "five_year_arc.inflection_points":
+                if not _CN_INFLECTION_TIME_RE.search(text_clean):
+                    issues.append(
+                        f"card_slots.{key}: Card 3 inflection bullet must start with "
+                        f"Chinese time wording like '2025财年' or '2026年下半年': {text_clean}"
+                    )
+                if re.search(r"\b(?:FY|Q[1-4]|H[12])\b", text_clean, flags=re.IGNORECASE):
+                    issues.append(
+                        f"card_slots.{key}: Card 3 inflection bullet should localize "
+                        f"FY/Q/H labels for Chinese readers: {text_clean}"
+                    )
+
+            if key == "five_year_arc.narrative":
+                if not (card_slots.get("cover_company_name_cn") or "公司" in text_clean):
+                    issues.append(
+                        "card_slots.five_year_arc.narrative: Card 3 top story should name "
+                        "the Chinese company short name or say 公司 so readers know the subject."
+                    )
+                if not any(term in text_clean for term in _CARD3_CHANGE_VERBS):
+                    issues.append(
+                        "card_slots.five_year_arc.narrative: Card 3 top story must explain "
+                        "the business shift (从/转向/切入/升级为/扩到等), not just list products."
+                    )
+                if not any(term in text_clean for term in _CARD3_FIN_RESULT_TERMS):
+                    issues.append(
+                        "card_slots.five_year_arc.narrative: Card 3 top story must connect "
+                        "the shift to a financial result (收入/利润/毛利率/现金流/转正等)."
+                    )
 
     return issues
 
@@ -1528,6 +1692,82 @@ def dedupe_texts(items: list[str], limit: int | None = None) -> list[str]:
 
 def fiscal_year(data: ReportData) -> str:
     return str(get_nested(data.financial_data, "fiscal_year", default="FY"))
+
+
+def current_financial_period(data: ReportData) -> str:
+    """Visible period label for renderer-generated Card 3 financial bars."""
+    current = income_current(data)
+    return pick_first(
+        current.get("period"),
+        current.get("period_cn"),
+        current.get("fiscal_period_label"),
+        current.get("fiscal_year"),
+        get_nested(data.financial_data, "income_statement", "period"),
+        get_nested(data.financial_data, "fiscal_period"),
+        fiscal_year(data),
+    )
+
+
+def normalize_period_key(period: str) -> str:
+    return re.sub(r"\s+", "", clean(period)).upper().replace("FY", "FY")
+
+
+_CN_QUARTER_LABEL = {"1": "一季度", "2": "二季度", "3": "三季度", "4": "四季度"}
+_CN_HALF_LABEL = {"1": "上半年", "2": "下半年"}
+
+
+def period_display_cn(period: str) -> str:
+    """Localize common fiscal shorthand for visible Chinese card labels."""
+    raw = clean(period)
+    if not raw:
+        return ""
+    m = re.search(r"\bFY(\d{4})\s+ended\s+\d{4}-\d{2}-\d{2}\b", raw, flags=re.IGNORECASE)
+    if m:
+        return f"{m.group(1)}财年"
+    m = re.search(r"\bFY(\d{4})\s+Q([1-4])\s+ended\s+\d{4}-\d{2}-\d{2}\b", raw, flags=re.IGNORECASE)
+    if m:
+        return f"{m.group(1)}财年{_CN_QUARTER_LABEL[m.group(2)]}"
+    compact = normalize_period_key(raw)
+    m = re.fullmatch(r"FY(\d{4})", compact)
+    if m:
+        return f"{m.group(1)}财年"
+    m = re.fullmatch(r"Q([1-4])FY(\d{4})", compact)
+    if m:
+        return f"{m.group(2)}财年{_CN_QUARTER_LABEL[m.group(1)]}"
+    m = re.fullmatch(r"FY(\d{4})Q([1-4])", compact)
+    if m:
+        return f"{m.group(1)}财年{_CN_QUARTER_LABEL[m.group(2)]}"
+    m = re.fullmatch(r"(\d{4})Q([1-4])", compact)
+    if m:
+        return f"{m.group(1)}年{_CN_QUARTER_LABEL[m.group(2)]}"
+    m = re.fullmatch(r"(\d{4})H([12])", compact)
+    if m:
+        return f"{m.group(1)}年{_CN_HALF_LABEL[m.group(2)]}"
+    return raw
+
+
+def card3_income_flow_title(data: ReportData) -> str:
+    period = period_display_cn(current_financial_period(data))
+    return f"{period}收入流" if period else "收入流"
+
+
+def fit_font_for_width(
+    draw: ImageDraw.ImageDraw,
+    text: str,
+    max_width: int,
+    sizes: tuple[int, ...],
+    *,
+    bold: bool = True,
+) -> ImageFont.FreeTypeFont:
+    """Pick the largest listed font size that fits max_width logical pixels."""
+    raw_draw = draw._draw if isinstance(draw, ScaledDraw) else draw
+    for size in sizes:
+        candidate = f(size, bold)
+        bbox = raw_draw.textbbox((0, 0), text, font=candidate)
+        text_w = (bbox[2] - bbox[0]) / LAYOUT_SCALE
+        if text_w <= max_width:
+            return candidate
+    return f(sizes[-1], bold)
 
 
 def income_current(data: ReportData) -> dict[str, Any]:
@@ -2050,6 +2290,32 @@ def five_year_inflection_points(data: ReportData) -> list[str]:
     return dedupe_texts(pts, 4)
 
 
+def financial_metrics_panel(data: ReportData) -> list[dict[str, Any]]:
+    """Return the 6-metric Card 3 grid (v4: replaces revenue_explainer_points).
+
+    Each entry is a dict with keys (label_cn, value, period_cn, category).
+    Display order is fixed by CFA importance: 3 profitability rows first, then
+    2 cash-flow rows, then 1 leverage row.
+    """
+    if not data.card_slots or not data.card_slots.financial_metrics_panel:
+        raise RuntimeError(
+            f"Slot 'financial_metrics_panel' missing in card_slots.json for "
+            f"{company_short_cn(data) or data.company_en or data.ticker}. "
+            f"Renderer no longer emits a default fallback — writer must produce all slot content."
+        )
+    out: list[dict[str, Any]] = []
+    for entry in data.card_slots.financial_metrics_panel:
+        if not isinstance(entry, dict):
+            continue
+        out.append({
+            "label_cn": clean(str(entry.get("label_cn") or "")),
+            "value": clean(str(entry.get("value") or "")),
+            "period_cn": clean(str(entry.get("period_cn") or "")),
+            "category": entry.get("category"),
+        })
+    return out
+
+
 def recent_financial_highlights(data: ReportData) -> list[str]:
     if not data.card_slots or not data.card_slots.recent_financial_highlights:
         raise RuntimeError(
@@ -2208,8 +2474,9 @@ def generated_copy_slots(data: ReportData) -> dict[str, list[str]]:
         ],
         "Card 3 five-year narrative": [five_year_narrative(data)],
         "Card 3 inflection points": five_year_inflection_points(data),
-        "Card 3 recent financial highlights": recent_financial_highlights(data),
-        "Card 3 explainer bullets": revenue_explainer_points(data),
+        "Card 3 financial metrics labels": [
+            f"{m['label_cn']} {m['value']} ({m['period_cn']})" for m in financial_metrics_panel(data)
+        ],
         "Card 4 CFA concept intro": [lens["concept_intro"]],
         "Card 4 CFA formula": [lens["formula"]],
         "Card 4 CFA company calculation": lens["company_calculation"],
@@ -2299,10 +2566,9 @@ def validate_report(data: ReportData, brand: str, *, allow_no_logo: bool = False
     bg_points = background_points(data)
     industry = industry_paragraph(data)
     porter_evidence = porter_evidence_entries(data)
-    explainer_points = revenue_explainer_points(data)
+    metrics_panel = financial_metrics_panel(data)
     five_year_text = five_year_narrative(data)
     inflection_points = five_year_inflection_points(data)
-    recent_highlights = recent_financial_highlights(data)
     lens = cfa_lens_data(data)
     fin = finance(data)
     prof = profitability(data)
@@ -2496,11 +2762,10 @@ def validate_report(data: ReportData, brand: str, *, allow_no_logo: bool = False
     if len(five_year_text) > LIMIT_CARD3_FIVE_YEAR_NARRATIVE_CHARS:
         issues.append("Card 3 five-year narrative exceeds its character budget.")
     # Five-year-arc panel overflow: the narrative + 3 inflection bullets must
-    # fit inside the cream panel that ends at CARD3_FIVE_YEAR_PANEL_BOTTOM.
-    # Pre-compute the rendered end-Y the way card_3() does it so the validator
-    # catches collisions (like the narrative running into the bullets) before
-    # render. Mirrors the bullets() call in card_3 with no intervening 拐点
-    # sublabel — the RED ellipse markers in bullets() distinguish them.
+    # fit inside the panel that ends at CARD3_FIVE_YEAR_PANEL_BOTTOM. In v4 the
+    # "过去 5 年的故事" subheader was removed; narrative starts higher (Y=306),
+    # so there's even more slack — the panel is more generous now, but the
+    # same overflow guard still catches edge cases.
     narrative_end_y = block_final_y(
         draw, five_year_text, CARD3_NARRATIVE_START_Y, 880, f(FONT_PANEL_BODY), 12,
         CARD3_NARRATIVE_MAX_LINES,
@@ -2526,24 +2791,157 @@ def validate_report(data: ReportData, brand: str, *, allow_no_logo: bool = False
             issues.append(f"Card 3 inflection point exceeds its character budget: {pt}")
         if has_bad_linebreak(pt, 396, f(FONT_BULLET_COMPACT), draw):
             issues.append(f"Card 3 inflection point contains a punctuation-led line break: {pt}")
-    if len(recent_highlights) < 3:
-        issues.append("Card 3 recent_financial_highlights must contain at least 3 entries.")
-    for hl in recent_highlights:
-        if not is_complete_copy(hl):
-            issues.append(f"Card 3 recent financial highlight must be a complete sentence: {hl}")
-        if len(hl) > LIMIT_CARD2_BG_BULLET_CHARS:
-            issues.append(f"Card 3 recent financial highlight exceeds its character budget: {hl}")
+    # ---- Card 3 metrics panel (v4 frosted-glass 6-cell grid) ----
+    # The v4 bottom panel replaces the old 收入分析 explainer bullets with a
+    # 2×3 grid of CFA-importance financial metrics. Order is fixed (the writer
+    # must place them this way so the renderer renders the right category color
+    # in each cell): 0..2 = profitability, 3..4 = cash_flow, 5 = leverage.
+    _EXPECTED_PANEL_LAYOUT = (
+        (0, "profitability"),
+        (1, "profitability"),
+        (2, "profitability"),
+        (3, "cash_flow"),
+        (4, "cash_flow"),
+        (5, "leverage"),
+    )
+    if len(metrics_panel) != 6:
+        issues.append(
+            f"Card 3 financial_metrics_panel must contain exactly 6 entries (got {len(metrics_panel)})."
+        )
+    else:
+        for slot_idx, expected_category in _EXPECTED_PANEL_LAYOUT:
+            actual = metrics_panel[slot_idx].get("category")
+            if actual != expected_category:
+                issues.append(
+                    f"Card 3 financial_metrics_panel[{slot_idx}].category must be "
+                    f"{expected_category!r} (got {actual!r}). Fixed display order: "
+                    "3 profitability → 2 cash_flow → 1 leverage."
+                )
+    # Per-cell budget: value text must fit cleanly inside the cell. The cell
+    # inner width allows ~14 CJK chars at value font size. Labels are short
+    # CN nouns (毛利率 etc.) so they have generous budget. period_cn is for the
+    # tiny FY/quarter footnote.
+    for idx, entry in enumerate(metrics_panel):
+        label = entry.get("label_cn") or ""
+        value = entry.get("value") or ""
+        period = entry.get("period_cn") or ""
+        if len(label) > 12:
+            issues.append(
+                f"Card 3 financial_metrics_panel[{idx}].label_cn exceeds 12 chars ({len(label)}): {label}"
+            )
+        if len(value) > 14:
+            issues.append(
+                f"Card 3 financial_metrics_panel[{idx}].value exceeds 14 chars ({len(value)}): {value}. "
+                "Compress: drop '美元'/'$', use '亿' alone; ratios use '×' or '0.5×' form."
+            )
+        if any(marker in value for marker in ("近似", "$", "美元")):
+            issues.append(
+                f"Card 3 financial_metrics_panel[{idx}].value must not contain visible "
+                f"approximation/currency markers ('近似', '$', '美元'): {value}"
+            )
+        if "净现金" in value:
+            issues.append(
+                f"Card 3 financial_metrics_panel[{idx}] must put net-cash wording in "
+                "label_cn='净现金' and keep value as a plain amount like '11.89亿'."
+            )
+        if idx == 5:
+            if label == "净债务/EBITDA" and "×" not in value:
+                issues.append(
+                    "Card 3 financial_metrics_panel[5] label '净债务/EBITDA' requires a ratio "
+                    "value like '0.5×'. Use label '净现金' for net-cash companies."
+                )
+            elif label in {"净现金", "净现金头寸"}:
+                if "亿" not in value or "×" in value:
+                    issues.append(
+                        "Card 3 financial_metrics_panel[5] label '净现金' requires a plain amount "
+                        "value like '11.89亿'."
+                    )
+            else:
+                issues.append(
+                    "Card 3 financial_metrics_panel[5].label_cn must be '净债务/EBITDA' "
+                    "for positive net debt or '净现金' for net-cash companies."
+                )
+        if len(period) > 14:
+            issues.append(
+                f"Card 3 financial_metrics_panel[{idx}].period_cn exceeds 14 chars ({len(period)}): {period}"
+            )
 
-    explainer_height = measure_bullets(draw, explainer_points, 820, f(FONT_BULLET), 12, 12, max_lines_per_item=3)
-    if explainer_height > LIMIT_CARD3_EXPLAINER_TOTAL_HEIGHT:
-        issues.append("Card 3 explainer bullets exceed the yellow panel.")
-    for point in explainer_points:
-        if len(point) > LIMIT_CARD3_EXPLAINER_CHARS:
-            issues.append(f"Card 3 explainer bullet exceeds its character budget: {point}")
-        if not is_complete_copy(point):
-            issues.append(f"Card 3 explainer bullet must be a complete sentence: {point}")
-        if has_bad_linebreak(point, 796, f(FONT_BULLET), draw):
-            issues.append(f"Card 3 explainer bullet contains a punctuation-led line break: {point}")
+    # Pixel-fit the Card 3 metrics grid with the same geometry and font-size
+    # fallback used by the renderer. Character counts alone are not enough for
+    # mixed CJK + digits strings such as "11.89亿".
+    if len(metrics_panel) == 6:
+        panel_periods = [clean(str(entry.get("period_cn") or "")) for entry in metrics_panel]
+        shared_period = len({normalize_period_key(p) for p in panel_periods if p}) == 1
+        inner_left = CARD3_METRICS_PANEL_LEFT + CARD3_METRICS_INNER_PAD_X
+        inner_right = CARD3_METRICS_PANEL_RIGHT - CARD3_METRICS_INNER_PAD_X
+        inner_top = CARD3_METRICS_PANEL_TOP + CARD3_METRICS_INNER_PAD_Y
+        inner_bottom = CARD3_METRICS_PANEL_BOTTOM - CARD3_METRICS_INNER_PAD_Y
+        cell_w = (inner_right - inner_left) // 3
+        cell_h = (inner_bottom - inner_top) // 2
+        for idx, entry in enumerate(metrics_panel):
+            row = idx // 3
+            col = idx % 3
+            cell_x = inner_left + col * cell_w
+            cell_y = inner_top + row * cell_h
+            strip_left = cell_x + 16
+            text_x = strip_left + 24
+            cell_right = inner_left + (col + 1) * cell_w
+            text_max_w = cell_right - text_x - 16
+            label = entry.get("label_cn") or ""
+            value = entry.get("value") or ""
+            period = period_display_cn(entry.get("period_cn") or "")
+
+            label_font = f(26, True)
+            value_font = fit_font_for_width(
+                draw, value, text_max_w, (60, 56, 52, 48, 44, 40, 36, 32, 28), bold=True
+            )
+            value_bbox = draw._draw.textbbox((0, 0), value, font=value_font)
+            value_w = (value_bbox[2] - value_bbox[0]) / LAYOUT_SCALE
+            if value_w > text_max_w:
+                issues.append(
+                    f"Card 3 financial_metrics_panel[{idx}].value does not fit its cell at min font: {value}"
+                )
+            label_bottom = cell_y + 14 + line_raster_height(draw, label_font, label)
+            value_bottom = cell_y + 52 + line_raster_height(draw, value_font, value)
+            if label_bottom > cell_y + 48:
+                issues.append(f"Card 3 financial_metrics_panel[{idx}].label collides with value: {label}")
+            value_limit = cell_y + cell_h - (14 if shared_period else 38)
+            if value_bottom > value_limit:
+                issues.append(
+                    f"Card 3 financial_metrics_panel[{idx}].value vertically overflows its cell: {value}"
+                )
+            if not shared_period:
+                period_font = f(18)
+                period_bbox = draw._draw.textbbox((0, 0), period, font=period_font)
+                period_w = (period_bbox[2] - period_bbox[0]) / LAYOUT_SCALE
+                if period_w > text_max_w:
+                    issues.append(
+                        f"Card 3 financial_metrics_panel[{idx}].period_cn display text does not fit: {period}"
+                    )
+                period_top = cell_y + cell_h - 34
+                if value_bottom > period_top - 4:
+                    issues.append(
+                        f"Card 3 financial_metrics_panel[{idx}].value collides with period label: {value}"
+                    )
+
+    # Pixel-fit the middle revenue-flow value column. The text is renderer
+    # generated, so slot reconciliation alone will not catch long currency
+    # labels running past the panel.
+    chart_labels = [
+        chart_value_as_yi(fin["revenue"]),
+        chart_value_as_yi(fin["cogs"]),
+        chart_value_as_yi(fin["gross"]),
+        chart_value_as_yi(fin["op"]),
+        chart_value_as_yi(fin["net"]),
+    ]
+    chart_value_w = 1008 - 782 - 36
+    for value in chart_labels:
+        value_text = f"{value:.1f} 亿{_CURRENCY_LABEL}"
+        value_font = fit_font_for_width(draw, value_text, chart_value_w, (FONT_CHART_VALUE, 26, 24, 22), bold=True)
+        value_bbox = draw._draw.textbbox((0, 0), value_text, font=value_font)
+        value_w = (value_bbox[2] - value_bbox[0]) / LAYOUT_SCALE
+        if value_w > chart_value_w:
+            issues.append(f"Card 3 revenue-flow value does not fit the value column: {value_text}")
 
     # ---- Card 4 (CFA lens) ----
     for required_key in CFA_LENS_REQUIRED_STR_KEYS:
@@ -2895,23 +3293,22 @@ def card_2(data: ReportData) -> Image.Image:
 
 
 def card_3(data: ReportData) -> Image.Image:
-    """Card 3: five-year arc + recent quarter financials + revenue explainer.
-    Top panel = transformation narrative + inflection points. Middle band =
-    recent-quarter Sankey-style bars from finance(). Bottom panel = revenue
-    explainer bullets."""
+    """Card 3 (v4 财务分析): five-year arc + recent quarter bars + 6-metric
+    frosted-glass grid. Top panel = transformation narrative + inflection
+    points (no subheader). Middle band = recent-quarter Sankey-style bars.
+    Bottom panel = 2×3 Apple-style metrics grid (3 profitability + 2 cash flow
+    + 1 leverage) — replaces the v3 收入分析 explainer bullets."""
     img = background()
     d = ScaledDraw(ImageDraw.Draw(img), LAYOUT_SCALE)
     header(d, 3)
-    draw_text(d, (72, 198), "五年故事 + 最近季度财务", f(58, True), TEXT)
+    draw_text(d, (72, 198), "财务分析", f(58, True), TEXT)
 
-    # 1) Five-year arc panel (top). The panel spans Y=270..630; narrative
-    # starts at CARD3_NARRATIVE_START_Y and the inflection bullets follow 22 px
-    # below the narrative's rendered end-Y. Narrative is capped at 3 lines so
-    # the panel can hold both without overlap; the inflection-bullet Y is
-    # derived from block()'s actual end-Y rather than a fixed offset so any
-    # narrative shorter than the cap still places bullets cleanly underneath.
+    # 1) Five-year arc panel (top). v4 drops the "过去 5 年的故事" subheader
+    # — the card-level title "财务分析" already frames this section, and the
+    # extra subheader read as 公众号-cheap. The narrative now starts at
+    # CARD3_NARRATIVE_START_Y (Y=306) instead of 346, restoring tight visual
+    # rhythm at the top of the panel.
     d.rounded_rectangle((72, 270, 1008, CARD3_FIVE_YEAR_PANEL_BOTTOM), radius=28, fill=PANEL)
-    draw_text(d, (108, 298), "过去 5 年的故事", f(30, True), TEXT)
     narrative_end_y = block(
         d, five_year_narrative(data), 108, CARD3_NARRATIVE_START_Y, 880,
         f(FONT_PANEL_BODY), "#344054", 12, CARD3_NARRATIVE_MAX_LINES,
@@ -2929,9 +3326,11 @@ def card_3(data: ReportData) -> Image.Image:
         line_gap=8,
     )
 
-    # 2) Recent-quarter financial bars (middle).
+    # 2) Current-period financial bars (middle). The data source is the same
+    # `income_statement.current_year` pool used for Sankey, so the title must
+    # say that period directly rather than always saying "最近季度".
     panel(d, (72, 648, 1008, 922))
-    draw_text(d, (108, 676), f"{fiscal_year(data)} 最近季度收入流", f(30, True), TEXT)
+    draw_text(d, (108, 676), card3_income_flow_title(data), f(30, True), TEXT)
     fin = finance(data)
     chart_labels = get_nested(data.financial_data, "income_statement", "chart_labels", default={}) or {}
     rows = [
@@ -2948,25 +3347,152 @@ def card_3(data: ReportData) -> Image.Image:
         d.rounded_rectangle((244, y + 6, 744, y + 24), radius=9, fill=TRACK)
         bar_color = RED if value < 0 else color
         d.rounded_rectangle((244, y + 6, 244 + int(500 * abs(value) / maxv), y + 24), radius=9, fill=bar_color)
-        draw_text(d, (782, y - 4), f"{value:.1f} 亿{_CURRENCY_LABEL}", f(FONT_CHART_VALUE, True), TEXT)
+        value_text = f"{value:.1f} 亿{_CURRENCY_LABEL}"
+        value_font = fit_font_for_width(d._draw, value_text, 1008 - 782 - 36, (FONT_CHART_VALUE, 26, 24, 22), bold=True)
+        draw_text(d, (782, y - 4), value_text, value_font, TEXT)
 
-    # 3) Revenue explainer panel (bottom).
-    d.rounded_rectangle((72, 940, 1008, CARD3_EXPLAINER_PANEL_BOTTOM), radius=28, fill=PANEL_CREAM)
-    draw_text(d, (108, 968), "收入分析", f(30, True), TEXT)
-    bullets(
-        d,
-        revenue_explainer_points(data),
-        108,
-        CARD3_EXPLAINER_START_Y,
-        880,
-        max_items=3,
-        max_lines=3,
-        gap_after=12,
-        font_size=FONT_BULLET,
-        line_gap=10,
-    )
+    # 3) Frosted-glass 6-metric grid (bottom). See _draw_card3_metrics_panel.
+    _draw_card3_metrics_panel(d, data)
     footer(d, data)
     return finalize_export(img)
+
+
+def _draw_card3_metrics_panel(d: "ScaledDraw", data: ReportData) -> None:
+    """Apple-style frosted-glass 2×3 metric grid at the bottom of Card 3.
+
+    Authoritative source: ``card_slots.financial_metrics_panel`` (6 entries,
+    fixed display order — see assert_card_slots_complete and validate_report).
+
+    Design intent: the panel reads as an elevated, translucent surface above
+    the warm card body. Big numbers carry the hierarchy; the label and period
+    are quiet. Category tells the cell where to draw its accent (left-edge
+    color strip + value color):
+
+      - profitability → GREEN  (mint, comparable across companies)
+      - cash_flow     → BLUE   (capital returns / liquidity)
+      - leverage      → RED    (risk / debt)
+
+    The grid uses hairline dividers rather than gaps between cells, so the six
+    metrics feel like one continuous surface — closer to an Apple Watch
+    activity grid than to six independent tiles. Values follow the convention:
+        % ratios          → "75.7%"   (≤6 chars)
+        亿 currency        → "23.37亿" (≤8 chars; no '$' or '美元' inside cell)
+        Net-cash variant   → label "净现金" + value "24.56亿"
+        Net Debt / EBITDA  → label "净债务/EBITDA" + value "0.5×"
+    """
+    pl = CARD3_METRICS_PANEL_LEFT
+    pt = CARD3_METRICS_PANEL_TOP
+    pr = CARD3_METRICS_PANEL_RIGHT
+    pb = CARD3_METRICS_PANEL_BOTTOM
+
+    # Frosted-glass base: lighter than PANEL_CREAM with a hairline outline.
+    # The outline gives the panel an "Apple card" elevation feel without
+    # needing a real Gaussian-blurred backdrop (which a static PIL canvas
+    # cannot fake convincingly).
+    d.rounded_rectangle((pl, pt, pr, pb), radius=28, fill=PANEL_GLASS)
+    d.rounded_rectangle((pl, pt, pr, pb), radius=28, outline=GLASS_STROKE, width=2)
+
+    metrics = financial_metrics_panel(data)
+    if len(metrics) != 6:
+        # Validator should have caught this; fail loudly here so a malformed
+        # slot file never silently truncates the grid.
+        raise RuntimeError(
+            f"Card 3 financial_metrics_panel must contain exactly 6 entries; got {len(metrics)}."
+        )
+
+    panel_periods = [clean(str(metric.get("period_cn") or "")) for metric in metrics]
+    unique_period_keys = {normalize_period_key(period) for period in panel_periods if period}
+    shared_period = ""
+    if len(unique_period_keys) == 1:
+        shared_period = next((period for period in panel_periods if period), "")
+    if shared_period:
+        period_caption = f"{period_display_cn(shared_period)}口径"
+        caption_font = fit_font_for_width(d._draw, period_caption, 210, (18, 16, 14), bold=True)
+        bbox = d._draw.textbbox((0, 0), period_caption, font=caption_font)
+        caption_w = (bbox[2] - bbox[0]) / LAYOUT_SCALE
+        draw_text(d, (int(pr - CARD3_METRICS_INNER_PAD_X - caption_w), pt + 22), period_caption, caption_font, GLASS_PERIOD)
+
+    # 2 rows × 3 cols
+    inner_left = pl + CARD3_METRICS_INNER_PAD_X
+    inner_right = pr - CARD3_METRICS_INNER_PAD_X
+    inner_top = pt + CARD3_METRICS_INNER_PAD_Y
+    inner_bottom = pb - CARD3_METRICS_INNER_PAD_Y
+    cell_w = (inner_right - inner_left) // 3
+    cell_h = (inner_bottom - inner_top) // 2
+
+    # Hairline dividers — vertical (between cols 1|2 and 2|3) and horizontal
+    # (between row 1 and row 2). Inset slightly from the panel edges so the
+    # divider does not visually touch the rounded border.
+    inset = CARD3_METRICS_DIVIDER_INSET
+    for col in (1, 2):
+        x = inner_left + col * cell_w
+        d.line((x, pt + inset, x, pb - inset), fill=GLASS_DIVIDER, width=2)
+    y_div = inner_top + cell_h
+    d.line((pl + inset, y_div, pr - inset, y_div), fill=GLASS_DIVIDER, width=2)
+
+    accent_for_category = {
+        "profitability": GREEN,
+        "cash_flow": BLUE,
+        "leverage": RED,
+    }
+
+    for idx, metric in enumerate(metrics):
+        row = idx // 3
+        col = idx % 3
+        cell_x = inner_left + col * cell_w
+        cell_y = inner_top + row * cell_h
+        accent = accent_for_category.get(metric.get("category"), TEXT)
+
+        # Left-edge accent strip: 4px wide vertical bar, 60% of cell height,
+        # centered vertically. This is the only chromatic element per cell —
+        # everything else is grayscale typography, so the grid reads as
+        # quiet/elegant rather than busy.
+        strip_height = int(cell_h * 0.58)
+        strip_top = cell_y + (cell_h - strip_height) // 2
+        strip_left = cell_x + 16
+        d.rounded_rectangle(
+            (strip_left, strip_top, strip_left + 5, strip_top + strip_height),
+            radius=3, fill=accent,
+        )
+
+        # Text column starts 24px right of the strip. The available text width
+        # is the distance from text_x to the next column's accent strip (or to
+        # the panel edge for the last column), minus a 16px right gutter.
+        text_x = strip_left + 24
+        cell_right = inner_left + (col + 1) * cell_w
+        text_max_w = cell_right - text_x - 16
+
+        # Label (e.g. 毛利率) — small medium-weight gray. Always fits at 26.
+        label = metric.get("label_cn") or ""
+        draw_text(d, (text_x, cell_y + 14), label, f(26, True), GLASS_LABEL)
+
+        # Value — the big number. Auto-shrink from target_size down to a
+        # readable floor so values like "11.89亿" or longer ratios
+        # (CJK + digits + 亿) actually fit inside the cell. Crude char-length
+        # heuristics fail because CJK glyphs are ~2× as wide as digits in the
+        # default font; bbox-measure to be safe.
+        value = metric.get("value") or ""
+        value_font = None
+        for size in (60, 56, 52, 48, 44, 40, 36, 32, 28):
+            candidate = f(size, True)
+            # ScaledDraw exposes the underlying ImageDraw via ._draw; measure
+            # in logical pixels because LAYOUT_SCALE multiplication is applied
+            # by draw_text/text positioning code.
+            bbox = d._draw.textbbox((0, 0), value, font=candidate)
+            text_w = (bbox[2] - bbox[0]) / LAYOUT_SCALE
+            if text_w <= text_max_w:
+                value_font = candidate
+                break
+        if value_font is None:
+            value_font = f(28, True)
+        draw_text(d, (text_x, cell_y + 52), value, value_font, accent)
+
+        # Period only renders per cell when mixed periods are intentional.
+        # When all six metrics share one FY/LTM/Q period, a single panel-level
+        # caption avoids the visual noise of repeating "FY2025" six times.
+        period = period_display_cn(metric.get("period_cn") or "")
+        if not shared_period:
+            draw_text(d, (text_x, cell_y + cell_h - 34), period, f(18), GLASS_PERIOD)
 
 
 CARD4_CONTENT_X = CARD4_PANEL_LEFT + CARD4_INNER_PAD

@@ -161,22 +161,23 @@ Planning rule:
 - `porter_evidence` — **NEW v2.** Exactly 5 entries, one per force (`rivalry`, `new_entrants`, `supplier_power`, `buyer_power`, `substitutes`). Each entry: `{force, score: 1..5, evidence: ≤70 chars complete sentence}`. The evidence text now sits beside the score bar on the rendered card — score+reason in one read.
 - If `porter_scores` is supplied separately, it overrides the per-force scores in `porter_evidence` for the score bars (label order: 供应商、买方、新进入者、替代品、竞争强度).
 
-### Card 3 Slots (combined: 5-year arc + recent quarter + revenue explainer)
+### Card 3 Slots (v4 财务分析: 5-year arc + recent quarter bars + 6-metric grid)
 
 ```text
-five_year_arc.narrative                 (≤200 chars; 2-3 sentence transformation story)
+five_year_arc.narrative                 (≤140 chars; 2-3 sentence transformation story; subheader "过去 5 年的故事" was removed in v4)
 five_year_arc.inflection_points[3..4]   (≤56 chars each)
-recent_financial_highlights[3..4]       (≤60 chars each)
-revenue_explainer_points[3..4]          (≤58 chars each)
+financial_metrics_panel[=6]             (NEW v4 — fixed CFA-importance order: 3 profitability, 2 cash_flow, 1 leverage)
+recent_financial_highlights[3..4]       (LEGACY v3 — accepted for backward compatibility but not rendered in v4)
+revenue_explainer_points[3..4]          (LEGACY v3 — replaced by financial_metrics_panel; not rendered in v4)
 ```
 
 Planning rule:
 
-- **`five_year_arc.narrative`** is the 5-year transformation story — business-model evolution, margin restructuring, geography or capital-intensity shift. Anchor with comp keywords (peer / 历史 / guidance / consensus / FY-year).
-- **`five_year_arc.inflection_points`** — 3 (preferred) or 4 single-sentence inflection callouts, each tagged with a year + one KPI move.
-- **`recent_financial_highlights`** — 3-4 short headline KPIs from the most recent quarter/year (revenue, margin, segment, FCF, etc.). The Sankey-style bar chart below pulls from `finance()` in the renderer, not these strings; these are headline labels.
-- **`revenue_explainer_points`** — bullet 1 = `key_number.metric` + `our_estimate` vs `consensus`. Bullets 2-3 = two `comp_anchors`. Optional bullet 4 = `key_number.bridge` translated to prose.
-- The renderer still pulls revenue / cogs / gross / op / net bars from `financial_data.income_statement.current_year` (Sankey fallback). Do not allow `0.0` net income or `--` margin cards when source financial data can compute those values.
+- **`five_year_arc.narrative`** is the 5-year transformation story — business-model evolution, margin restructuring, geography or capital-intensity shift. It must be understandable to a Chinese reader without knowing the ticker: use the Chinese short name or `公司`, explain the business shift, then connect it to income statement / cash-flow / balance-sheet results. Anchor with comp keywords (peer / 历史 / guidance / consensus / FY-year). v4 dropped the in-panel subheader "过去 5 年的故事"; the card-level title `财务分析` frames the section now.
+- **`five_year_arc.inflection_points`** — 3 (preferred) or 4 single-sentence inflection callouts, each tagged with Chinese time wording + one KPI move + why it matters. Use `2025财年`, `2026财年一季度`, `2026年下半年`; do not use raw `FY2025`, `2026 Q1`, `2026 H2`, or `同比+115%` in visible Chinese prose.
+- **`financial_metrics_panel`** (v4) — exactly 6 entries in fixed display order. Slots 0..2 = `profitability` (毛利率, 营业利润率, 净利率). Slots 3..4 = `cash_flow` (FCFF, FCFE). Slot 5 = `leverage` (净债务/EBITDA when net debt is positive; 净现金 when the company has net cash). Each entry: `{label_cn (≤12), value (≤14), period_cn (≤14), category}`. Format: percentages `"75.7%"`, currency `"23.37亿"` (no `$`/`美元`/`近似`), ratio `"0.5×"`, net cash as `label_cn: "净现金", value: "11.89亿"`. See `agents/content-production-agent.md` § "Card 3 metrics panel contract" for the formula + fallback rules.
+- The renderer still pulls revenue / cogs / gross / op / net bars from `financial_data.income_statement.current_year` (Sankey fallback). Its title uses that same period directly and localizes it for Chinese cards (for example `2025财年收入流`); it must not call an annual pool "最近季度". Do not allow `0.0` net income or `--` margin cards when source financial data can compute those values.
+- `financial_metrics_panel[].period_cn` remains required for audit, but the renderer collapses a shared period into one localized panel caption (for example `2025财年口径`) instead of repeating it under all six cells. Only genuinely mixed periods should render per-cell footers.
 
 ### Card 4 Slots (CFA lens — NEW v2)
 
@@ -305,7 +306,7 @@ If **Validator 1** or **Validator 2** fails, do not export.
 
 **Every** export uses **`--slots`** and a P0-recorded **`--palette`** (`macaron` | `default` | `b` | `c`). Incomplete JSON is rejected at load time (`assert_card_slots_complete` in `scripts/generate_social_cards.py`) so body copy cannot silently fall back to `company_theme` / `fit_copy` heuristics.
 
-**Required slot keys (non-empty; list lengths as shown):** `intro_sentence`, `company_focus_paragraph`, `metrics_row` (3..4), `industry_paragraph`, `background_bullets` (=4), `porter_evidence` (=5 — one per force), `five_year_arc.narrative`, `five_year_arc.inflection_points` (≥3), `recent_financial_highlights` (≥3), `revenue_explainer_points` (≥3), `cfa_lens.concept_key`, `cfa_lens.concept_name_cn`, `cfa_lens.concept_intro`, `cfa_lens.company_application` (≥3), `cfa_lens.different_angle_insight`, `cfa_lens.takeaway`. **`porter_scores`** is optional (exactly five integers if present); otherwise scores come from `porter_evidence`.
+**Required slot keys (non-empty; list lengths as shown):** `intro_sentence`, `company_focus_paragraph`, `metrics_row` (3..4), `industry_paragraph`, `background_bullets` (=4), `porter_evidence` (=5 — one per force), `five_year_arc.narrative`, `five_year_arc.inflection_points` (≥3), **`financial_metrics_panel` (=6, fixed order: 3 profitability → 2 cash_flow → 1 leverage)**, `cfa_lens.concept_key`, `cfa_lens.concept_name_cn`, `cfa_lens.concept_intro`, `cfa_lens.company_application` (≥3), `cfa_lens.different_angle_insight`. **`porter_scores`** is optional (exactly five integers if present); otherwise scores come from `porter_evidence`. **Legacy v3 slots** `recent_financial_highlights` and `revenue_explainer_points` are accepted (so old slot files still load) but are not required and are not rendered in v4.
 
 **Standard flow (every new `*_Research_CN.html`):**
 
@@ -340,7 +341,6 @@ A parallel JSON file produced by the content production agent + CFA-lens selecto
   "company_focus_paragraph":              { "data_anchor": "...", "variant_view": "...", "catalyst_with_date": { ... } },
   "industry_paragraph":                   { "data_anchor": "...", "variant_view": "...", "falsifier": "..." },
   "five_year_arc.narrative":              { "data_anchor": "...", "variant_view": "...", "catalyst_with_date": { ... } },
-  "revenue_explainer_points":             { "data_anchor": "...", "variant_view": "...", "primary_quote": { ... } },
   "cfa_lens.different_angle_insight":     { "data_anchor": "...", "variant_view": "...", "primary_quote": { ... } }
 }
 ```
