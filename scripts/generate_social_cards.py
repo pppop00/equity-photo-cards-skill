@@ -370,6 +370,17 @@ LIMIT_CARD1_FOCUS_CHARS = 165
 LIMIT_CARD2_INDUSTRY_CHARS = 113
 LIMIT_CARD2_BG_BULLET_CHARS = 60
 LIMIT_CARD2_PORTER_EVIDENCE_CHARS = 70
+# Card 2 right-side background panel geometry. Keep renderer and validator
+# synchronized so stacked bullets cannot pass validation while spilling outside.
+CARD2_BG_PANEL_BOTTOM = 720
+CARD2_BG_PANEL_BOTTOM_INSET = 24
+CARD2_BG_BULLETS_START_Y = 372
+CARD2_BG_BULLETS_WIDTH = 350
+CARD2_BG_BULLETS_TEXT_WIDTH = CARD2_BG_BULLETS_WIDTH - 24
+CARD2_BG_BULLET_MAX_ITEMS = 4
+CARD2_BG_BULLET_MAX_LINES = 4
+CARD2_BG_BULLET_GAP_AFTER = 14
+CARD2_BG_BULLET_LINE_GAP = 10
 LIMIT_CARD3_EXPLAINER_CHARS = 58
 LIMIT_CARD3_FIVE_YEAR_NARRATIVE_CHARS = 140
 LIMIT_CARD3_INFLECTION_CHARS = 56
@@ -2397,6 +2408,18 @@ def measure_bullets(
     return total
 
 
+def card2_background_bullets_end_y(draw: ImageDraw.ImageDraw, items: list[str]) -> int:
+    return CARD2_BG_BULLETS_START_Y + measure_bullets(
+        draw,
+        items[:CARD2_BG_BULLET_MAX_ITEMS],
+        CARD2_BG_BULLETS_WIDTH,
+        f(FONT_BULLET_COMPACT),
+        CARD2_BG_BULLET_LINE_GAP,
+        CARD2_BG_BULLET_GAP_AFTER,
+        CARD2_BG_BULLET_MAX_LINES,
+    )
+
+
 def wrapped_block_height(lines: list[str], font_obj: ImageFont.FreeTypeFont, line_gap: int) -> int:
     if not lines:
         return 0
@@ -2731,8 +2754,16 @@ def validate_report(data: ReportData, brand: str, *, allow_no_logo: bool = False
             issues.append(f"Card 2 background bullet must be a complete sentence: {point}")
         if len(point) > LIMIT_CARD2_BG_BULLET_CHARS:
             issues.append(f"Card 2 background bullet exceeds its character budget: {point}")
-        if has_bad_linebreak(point, 422, f(FONT_BULLET), draw):
+        if has_bad_linebreak(point, CARD2_BG_BULLETS_TEXT_WIDTH, f(FONT_BULLET_COMPACT), draw):
             issues.append(f"Card 2 background bullet contains a punctuation-led line break: {point}")
+    bg_end_y = card2_background_bullets_end_y(draw, bg_points)
+    bg_max_y = CARD2_BG_PANEL_BOTTOM - CARD2_BG_PANEL_BOTTOM_INSET
+    if bg_end_y > bg_max_y:
+        issues.append(
+            "Card 2 background bullets overflow their panel: "
+            f"rendered end-y {bg_end_y} > max {bg_max_y}. "
+            "Shorten bullets or reduce line count before rendering."
+        )
 
     if len(industry) < 80:
         issues.append("Card 2 industry paragraph is too short.")
@@ -3266,7 +3297,18 @@ def card_2(data: ReportData) -> Image.Image:
 
     d.rounded_rectangle((622, 290, 1008, 720), radius=28, fill=PANEL)
     draw_text(d, (656, 320), "背景要点", f(30, True), TEXT)
-    bullets(d, background_points(data), 656, 372, 350, 4, 4, gap_after=14, font_size=FONT_BULLET_COMPACT, line_gap=10)
+    bullets(
+        d,
+        background_points(data),
+        656,
+        CARD2_BG_BULLETS_START_Y,
+        CARD2_BG_BULLETS_WIDTH,
+        CARD2_BG_BULLET_MAX_ITEMS,
+        CARD2_BG_BULLET_MAX_LINES,
+        gap_after=CARD2_BG_BULLET_GAP_AFTER,
+        font_size=FONT_BULLET_COMPACT,
+        line_gap=CARD2_BG_BULLET_LINE_GAP,
+    )
 
     # Bottom: per-force evidence with score bar + evidence text.
     panel(d, (72, 740, 1008, 1240))
