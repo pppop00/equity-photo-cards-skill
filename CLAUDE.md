@@ -71,11 +71,11 @@ python3 scripts/generate_social_cards.py ... --no-copy-slots
 0. **Palette record** — record customer- or `USER.md`-confirmed `macaron` | `default` | `b` | `c`; stop if none is available
 1. Ingest report package (`*_Research_CN.html` + sibling JSON: `financial_data.json`, `financial_analysis.json`, `porter_analysis.json`)
 2. Extract → Normalize → Plan card slots → Logo production (web search; ≥840 px wide)
-3. Content production agent (Cards 1–3) → **CFA lens selector** (Card 4) → Layout fill agent → write `<stem>.card_slots.json` beside HTML
+3. Content production agent writes all five schema-v5 cards plus claim sidecar → Layout fill agent
 4. Hardcode/logic audit
-5. Validator 1: `validate_cards.py` — structure, layout, internal consistency, Cards 1–4 analytical-content gate
+5. Validator 1: `validate_cards.py` — structure, layout, internal consistency, Cards 1–5 claim-evidence gate
 6. Validator 2: web fact-check all material numbers; fix slots and repeat from step 5 until both pass
-7. Export: `generate_social_cards.py` with the same `--palette` used by Validator 1 (produces 4 PNGs)
+7. Export: `generate_social_cards.py` with the same `--palette` used by Validator 1 (produces 5 PNGs)
 
 ### Key files
 
@@ -86,23 +86,23 @@ python3 scripts/generate_social_cards.py ... --no-copy-slots
 | `references/design-spec.md` | Visual rules, copy character budgets, prohibited elements — update here first when layout rules change |
 | `references/card-slots.schema.json` | Machine schema for `*.card_slots.json` |
 | `references/templates/card_slots.template.json` | Starter template; copy to `<stem>.card_slots.json` for each report |
-| `references/examples/pdd_holdings_card_slots.example.json` | Worked example |
-| `scripts/generate_social_cards.py` | Renderer: parses HTML, applies palette, draws all 4 cards |
+| `references/knowledge-map-v5.md` | Active five-card semantics and evidence contract |
+| `scripts/generate_social_cards.py` | Renderer: parses HTML, applies palette, draws all 5 cards |
 | `scripts/validate_cards.py` | Validator 1 wrapper (imports from `generate_social_cards`) |
-| `agents/` | Sub-agent briefs (content-production, cfa-lens-selector, layout-fill, logo-production, hardcode-audit, validation, validator-2) |
+| `agents/` | Sub-agent briefs (content-production, layout-fill, logo-production, hardcode-audit, validation, validator-2) |
 | `evals/evals.json` | Smoke prompts for skill evaluation |
 
 ### Renderer internals
 
 - Logical canvas: 1080×1350. `LAYOUT_SCALE=2` → internal buffer 2160×2700.
 - `apply_palette(name)` in `generate_social_cards.py` switches all global color vars. Must be called once before rendering.
-- `macaron` is one available visual system: warm cream canvas, dark header band, pastel accent strips. `default` and `b` use light headers; `c` uses a dark header. All four cards in one report **must** use the same P0-confirmed palette; palette is **not** stored in `card_slots.json`.
+- `macaron` is one available visual system: warm cream canvas, dark header band, pastel accent strips. `default` and `b` use light headers; `c` uses a dark header. All five cards in one report **must** use the same P0-confirmed palette; palette is **not** stored in `card_slots.json`.
 - `assert_card_slots_complete` runs at slot load time; missing required keys abort execution.
 - `validate_cards.py` imports `load_card_slots`, `parse_html`, `resolve_slots_path`, `set_currency_label`, `validate_report` directly from `generate_social_cards`.
 
 ### Logo save order (mandatory)
 
-1. Determine the final output folder for the 4 PNGs — create it now if it does not exist.
+1. Determine the final output folder for the 5 PNGs — create it now if it does not exist.
 2. Save `logo_official.png` **directly into that output folder** (not the source report folder, not a temp path).
 3. Set `logo_asset_path` in `card_slots.json` to the logo's absolute path inside the output folder.
 4. Only then proceed through normalization, card planning, and copy generation.
@@ -113,10 +113,11 @@ This ensures the logo and PNGs are always co-located for handoff.
 
 | # | File | Content |
 |---|------|---------|
-| 1 | `01_cover.png` | Cover + intro + company-focus paragraph + metrics_row + logo |
-| 2 | `02_porter.png` | Industry paragraph + 4 background bullets + Porter five forces with per-force evidence |
-| 3 | `03_five_year_financials.png` | Five-year arc (narrative + inflection points) + most-recent-quarter financial bars + revenue explainer |
-| 4 | `04_cfa_lens.png` | CFA concept + intro + 3-bullet company application + different-angle insight + 1-line takeaway |
+| 1 | `01_cover.png` | Cover + one-minute business model / two variables / risk + metrics + logo |
+| 2 | `02_porter.png` | Industry paragraph + ordered external-condition → transmission → company-outcome → watch-signal chain + Porter evidence |
+| 3 | `03_five_year_financials.png` | Five-year business-to-financial arc + six-metric panel |
+| 4 | `04_company_quality.png` | Valuation, governance/incentives, capital allocation, accounting quality |
+| 5 | `05_country_lens.png` | Exposure map + six country mechanisms + warnings/unknown |
 
 ### Slot file convention
 
@@ -126,7 +127,7 @@ This ensures the logo and PNGs are always co-located for handoff.
 
 ### Single-card re-render trap
 
-If re-running only one card (e.g. updating `01_cover.png`), use **the same `--palette`** as the original full set. The palette is applied in-process by `apply_palette()` and is **not stored** in `card_slots.json` — Validator 1 and 2 cannot detect a mismatch. Mixing palettes causes the re-rendered card's header to differ visually from the other three.
+If re-running only one card (e.g. updating `01_cover.png`), use **the same `--palette`** as the original full set. The palette is applied in-process by `apply_palette()` and is **not stored** in `card_slots.json` — Validator 1 and 2 cannot detect a mismatch. Mixing palettes causes the re-rendered card's header to differ visually from the other four.
 
 ## When to change code
 

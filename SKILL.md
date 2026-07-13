@@ -1,415 +1,150 @@
 ---
 name: equity-photo-cards
 description: >-
-  P0 HARD GATES (two): (1) Color — ask the customer to explicitly choose macaron / default / b / c
-  before any intake, logo check, extraction, validation, or export; never assume macaron.
-  (2) Logo — after color confirmation, inspect the report/output folder and existing slots for a
-  valid logo asset; if absent, run logo-production web search or get an explicit waiver;
-  `logo_asset_path` + `cover_company_name_cn` before final export (wordmark ≥840px wide);
-  `generate_social_cards.py` and `validate_cards.py` fail by default if the logo is missing
-  (`--allow-no-logo` only if the customer explicitly waives the logo). After gates: equity research HTML → `*.card_slots.json` →
-  Validator 1 → Validator 2 → `generate_social_cards.py --slots … --palette confirmed_palette`.
+  Convert an equity-research HTML package into a deterministic five-card company-to-country
+  knowledge map. Hard gates: the customer must explicitly choose macaron/default/b/c before
+  intake, and final export requires an official logo asset unless the customer explicitly waives
+  it. Produces schema-v5 slots, claim-level evidence notes, two-stage validation, and five
+  2160×2700 PNGs: one-minute company, Porter, five-year financials, company quality, country lens.
 ---
 
-# Equity Photo Cards
+# Equity Photo Cards — knowledge map v5
 
-## P0 硬门禁（违反任一条不得导出成品图）
+## Product task
 
-1. **配色：** 必须先问客户并获得明确选择：`macaron` | `default` | `b` | `c`。客户没有说颜色时，不得读取报告、检查 logo、联网搜索、改 slots、校验或导出。**不允许把未指定自动当成 `macaron`。** Validator 1 与导出必须使用同一 `--palette`。
-2. **Logo（硬门禁）：** **只能在配色确认之后开始。** **P0 指校验/导出门禁**（脚本层默认拦截），不是要求客户事先自带 logo 文件；**合规字标素材由 [logo-production-agent.md](./agents/logo-production-agent.md) 产出或复用文件夹中已存在的合规 logo**。**P0 = 流程不可跳过**：导出前须完成 Logo 检查/生产子流程，或取得客户明确弃权后使用 `--allow-no-logo`；找不到可信官方来源或无法达到规格时 **失败则停**，不得静默跳过。执行流程：
-   - 配色确认后，先检查最终 output folder、报告 folder、以及 `card_slots.logo_asset_path` 是否已有合规 logo 图片；有则校验尺寸并写入/保留 `logo_asset_path` 与 `cover_company_name_cn`。
-   - 如果 folder 中没有合规 logo，运行 [logo-production-agent.md](./agents/logo-production-agent.md)：web 搜索官方 logo，从官方来源再生成清洁透明 PNG（≥840px 宽，水平字标）。
-   - **如果找不到官方 logo：立即停止，等待客户决策。不自动跳过，不继续流程。** 客户需要提供以下之一：
-     - 官方 logo 来源 URL 或文件
-     - 明确确认放弃 logo（书面/对话均可）
-   - Logo 生成后保存到最终 output folder，并在 `card_slots.json` 填写 **`logo_asset_path`** 与 **`cover_company_name_cn`**。
-   - **Validator 1 强制检查**：若 `logo_asset_path` 为空且客户未明确放弃，报错失败。仅当客户**书面确认放弃 logo** 时，才可运行 `validate_cards.py --allow-no-logo` 与 `generate_social_cards.py --allow-no-logo`。
-
-   **Logo 政策变化**：此前脚本仅打印 WARNING 并放行，导致跳过；现已改为：（1）默认报错，（2）仅在客户明确放弃时允许跳过 `--allow-no-logo`。
+通过一家上市公司，帮助读者理解它如何赚钱、哪些变量决定结果、主要风险来自哪里，以及国家制度与文化如何塑造这家公司。
 
-## 配色选择（硬门禁：客户未确认则不得开工）
+The reader outcome is concrete: after sixty seconds, a reader should be able to explain the business model, two core variables, and the primary risk. This is not an investment recommendation or CFA teaching product.
 
-<span id="palette-choice"></span>
+## Blocking P0 gates
 
-**必须先问颜色。** 如果客户没有在当前请求中明确说 `macaron` / `default` / `b` / `c`，先停止并提问；在客户回复前不得进入 intake、logo 检查、web search、slot 写入、Validator 或 export。
+1. **Palette.** Before intake, logo work, extraction, validation, or export, obtain an explicit choice: `macaron` | `default` | `b` | `c`. Never infer a default. Use that value for both validator and renderer.
+2. **Logo.** After palette confirmation, inspect the report/output folder and existing slots. Reuse a compliant official asset or run [logo-production-agent.md](./agents/logo-production-agent.md). Final slots require `logo_asset_path` and `cover_company_name_cn`; only an explicit customer waiver permits `--allow-no-logo`.
 
-将所选配色记为本次任务的**唯一** `--palette` 参数，全程沿用至 Validator 1 与导出。
+The renderer rejects screenshots, missing logo paths, and undersized bitmap wordmarks. Prefer a transparent horizontal wordmark at least 840 px wide at export scale.
 
-| 选项 | `--palette` 参数 | 视觉说明 |
-|------|-------------------|----------|
-| **1** | `macaron` | 新版：米白底 + 深色顶栏 + 粉/桃/薄荷/天空蓝强调 |
-| **2** | `default` | 旧版设计规范原版：灰白底 + 红橙强调 |
-| **3** | `b` | 旧版浅紫底 + 紫/绿强调（偏小红书向） |
-| **4** | `c` | 旧版暖纸色底 + 深色顶栏（杂志感） |
+## Active five-card contract
 
-四种配色均保留在 [scripts/generate_social_cards.py](./scripts/generate_social_cards.py) 的 `apply_palette()` 中。`generate_social_cards.py` 与 `validate_cards.py` 的 `--palette` 必须显式传入；缺失时脚本直接失败，不得隐式默认。
+All new work uses `schema_version: 5`. Archived v3/v4 slots are not silently upgraded and cannot render; rerun content production (P8).
 
----
+1. `01_cover.png` — one-minute company: how it earns, exactly two core variables, primary risk, headline metrics.
+2. `02_porter.png` — industry forces expressed as external variable → transmission → observable risk.
+3. `03_five_year_financials.png` — five-year business change and how it became revenue, profit, cash flow, and leverage.
+4. `04_company_quality.png` — 2×2: valuation, governance/incentives, capital allocation, accounting quality. No composite score.
+5. `05_country_lens.png` — incorporation/listing/operations/revenue geography plus six country dimensions and company-level warnings.
 
-**What you are building:** Agents consume **equity research HTML** (and optional sibling JSON), write copy into a **fixed set of named slots** (`*.card_slots.json`), and the renderer places that text into **predetermined image frames** (**four** cards; **logical** layout 1080×1350, **default PNG export** 2160×2700 for zoom-friendly assets) — not a bespoke layout per company.
+Logical layout is 1080×1350; default PNG export is 2160×2700. The HTML report remains the evidence and audit base; this skill does not change its page skeleton.
 
-## Skill layout (skill-creator anatomy)
+Read [references/knowledge-map-v5.md](./references/knowledge-map-v5.md) for slot semantics, claim evidence, country safeguards, and copy budgets. The machine contract is [references/card-slots.schema.json](./references/card-slots.schema.json); start from [references/templates/card_slots.template.json](./references/templates/card_slots.template.json).
 
-```
-equity-photo-cards/                    # Skill bundle (skill-creator anatomy)
-├── SKILL.md                           # Entry point: workflow + links (keep < ~500 lines; details in references/)
-├── agents/                            # Sub-agent briefs (who writes what before export)
-├── references/
-│   ├── workflow-spec.md               # Pipeline contract + slot keys
-│   ├── workflow-flowchart.md          # Mermaid diagrams for humans (review here)
-│   ├── design-spec.md                 # Visual / copy limits
-│   ├── card-slots.schema.json         # Machine schema for slot JSON
-│   ├── examples/                      # Filled example (e.g. PDD-shaped)
-│   └── templates/                     # Empty-shape starter → copy to <stem>.card_slots.json
-├── scripts/                           # validate_cards.py, generate_social_cards.py (deterministic)
-├── evals/                             # Optional smoke prompts (evals.json)
-└── output/                            # Default PNG output (gitignored; use --output-root to override)
-```
+## Fixed workflow
 
-This skill is not a generic image-generation workflow. It is a deterministic report-to-card pipeline — with explicit customer color confirmation before any other work:
+Follow in order:
 
-0. **confirm palette with the customer** (`macaron` | `default` | `b` | `c`; no default)
-1. extract the report
-2. normalize the facts into a stable internal structure
-3. plan each card's content slots
-4. write publishable copy into those slots
-5. audit hardcoded wording and logic before layout
-6. validate layout (Validator 1) and rewrite until every check passes
-7. Validator 2: externally verify every material fact in the cards via web search; fix and repeat steps 6–7 until fully correct
-8. render the final 6 images (with matching `--palette`)
+0. Confirm palette.
+1. Intake the full report folder. Read sibling JSON before HTML; use HTML for identity, prose, embedded chart variables, and rendering.
+2. Produce/reuse the official logo after the palette gate. Save it in the final output folder and write its absolute path into slots.
+3. Normalize facts. Resolve period, currency, unit, geography, and metric-definition drift before copywriting.
+4. Write a complete `<stem>.card_slots.json` with schema v5.
+5. Write `<stem>.card_slots_worker_notes.json` as the claim-level evidence sidecar.
+6. Run the hardcode/logic audit and Validator 1; rewrite until clean.
+7. Run Validator 2 against primary or authoritative web sources; fix and repeat Validator 1 after every change.
+8. Render five PNGs atomically using the same confirmed palette.
+9. Visually inspect all five at full size and run the parent harness OCR/numerical/web/database audit when invoked through Anamnesis.
 
-The goal is that a new company HTML should normally flow through the same pipeline without adding a company-specific template. Code changes should only be needed when the upstream schema changes or when a truly new business-model pattern requires a new planner branch.
+There is no slotless path. `--slots` is required. Missing content must be shown as `未披露` or `不可比` with a reason in authored copy; never invent a fallback claim.
 
-## Source Of Truth
+## Inputs and outputs
 
-**Specifications (read for schema and visuals):**
+Preferred input is a report folder containing `*_Research_CN.html` and normalized JSON artifacts. For a single HTML, `--slots` may be the JSON file or its directory. For multiple HTML files, `--slots` must be a directory containing one matching `<stem>.card_slots.json` per report.
 
-- Workflow and slot schema: [references/workflow-spec.md](./references/workflow-spec.md)
-- Workflow diagrams — bundle 表 + 端到端 / CLI / 新报告 / 校验分层（Validator 1 + 2）/ 步骤含配色（Mermaid）: [references/workflow-flowchart.md](./references/workflow-flowchart.md)
-- JSON slot contract (machine): [references/card-slots.schema.json](./references/card-slots.schema.json)
-- New-report slot starter (copy → rename to `<stem>.card_slots.json`): [references/templates/card_slots.template.json](./references/templates/card_slots.template.json)
-- Visual and layout rules: [references/design-spec.md](./references/design-spec.md)
-**Agents (who does what before export):**
+Output folder contains exactly the five active PNGs, the slots JSON copied beside them, and the one official logo file actually used. Remove rejected logo variants and temporary downloads after export.
 
-- Agent handoff: [agents/agent-slot-pipeline.md](./agents/agent-slot-pipeline.md)
-- Logo production (web official logo → regenerated clean asset): [agents/logo-production-agent.md](./agents/logo-production-agent.md)
-- Content production (HTML → draft slots): [agents/content-production-agent.md](./agents/content-production-agent.md)
-- CFA lens selector (picks the Card 4 CFA concept): [agents/cfa-lens-selector-agent.md](./agents/cfa-lens-selector-agent.md)
-- Layout fill (draft → validator-clean): [agents/layout-fill-agent.md](./agents/layout-fill-agent.md)
-- Hardcode and logic audit policy: [agents/hardcode-audit-agent.md](./agents/hardcode-audit-agent.md)
-- Validation policy (Validator 1 — `validate_cards.py`): [agents/validation-agent.md](./agents/validation-agent.md)
-- Validator 2 (external fact-check before export): [agents/validator-2-agent.md](./agents/validator-2-agent.md)
+## Claim-level evidence sidecar
 
-**Tools:**
+`card_slots_worker_notes.json` must contain a non-empty `claims` array. Every material visible claim has:
 
-- Renderer: [scripts/generate_social_cards.py](./scripts/generate_social_cards.py)
-- Validator: [scripts/validate_cards.py](./scripts/validate_cards.py)
+- `claim_id`: stable unique id.
+- `slot_path`: exact path into visible schema-v5 slots.
+- `epistemic_type`: one of `company_disclosure | external_fact | analyst_calculation | external_estimate | inference | forecast`.
+- `source_refs`: at least one object with `publisher` and `url` or local `path`.
+- `as_of_date`: `YYYY-MM-DD`.
+- `basis_id`: required for `analyst_calculation` and linked to the Metric Basis Registry upstream.
+- `falsifier`: required for `inference` and `forecast`.
 
-## Operating Principle
+Do not render confidence badges. Make epistemic status legible in natural Chinese: `公司年报披露…`, `按 OCF−Capex 计算…`, `据监管机构数据…`, `据此推断…`, `若…则预计…`. Full provenance stays in the sidecar and database.
 
-Do not treat this skill as "pick an industry and emit canned sentences."
+The blocking claim gate covers Card 1 business model, both variables, primary risk; Card 2 industry mechanism; Card 3 five-year narrative; all four Card 4 panels; Card 5 dimensions, warnings, and country insight.
 
-Use this skill as — with the job palette confirmed first ([配色选择](#palette-choice)):
+## Card-specific rules
 
-0. **`confirm palette`** → ask until the customer explicitly chooses `macaron` | `default` | `b` | `c`; do not start anything else before this
-1. `report folder (JSON-first, HTML as render scaffold) -> structured report facts` (extract then normalize)
-2. `company identity -> official logo asset` via the **logo production agent** ([logo-production-agent.md](./agents/logo-production-agent.md)) — run as soon as company name and ticker are known from extraction; save to the output folder before copy generation begins
-3. `structured report facts -> fixed card slot plan`
-4. `slot plan + logo path -> copy` as **`card_slots.json`** written by the **content** then **layout** agents ([agent-slot-pipeline.md](./agents/agent-slot-pipeline.md)) — **this is the standard for every new report**, not optional
-5. `copy -> hardcode / logic audit` (on the final slot text)
-6. `audited copy -> Validator 1 / rewrite loop` (`validate_cards.py` — **`--slots` 必填**)
-7. `Validator 1 clean -> Validator 2`（联网逐项核对卡片中的数字与事实，见 [validator-2-agent.md](./agents/validator-2-agent.md)；有错则改 slots 并回到步骤 6，直至两轮均通过）
-8. `Validator 1 + Validator 2 passed -> exported cards` (`generate_social_cards.py` — **`--slots` 必填**, **`--palette` 须与客户确认一致**；export 后自动清理未使用 logo 文件，输出固定为 **4** 张 PNG)
+### Card 1
 
-**No alternate path:** The CLI **does not** accept a run without `--slots`. Incomplete JSON is **rejected** (`assert_card_slots_complete`): every required body slot must be present so export never silently falls back to Python template copy.
+`one_minute_summary` replaces the old long company-focus paragraph. `core_variables` contains exactly two entries. Business model and risk may use two rendered lines; each variable must fit its own aligned line. Keep headline metrics to 3–4 `Label|Value` entries.
 
-**Input convention:** Preferred user input is the whole report folder path, e.g. `.../NVIDIA_2026-04-12/`, containing `*_Research_CN.html` plus sibling JSON files. Treat JSON as the primary factual source (`financial_data.json`, `financial_analysis.json`, `porter_analysis.json`, etc.) because it is faster, less lossy, and easier to validate than scraping rendered HTML. Use HTML for identity/date, summary prose, embedded chart variables, and final rendering. If the user provides only one HTML file, still look for sibling JSON in the same folder. If the user provides only JSON without HTML, use it for analysis/copy drafting but ask for or locate the HTML before final PNG export.
+### Card 2
 
-**File convention:** **`Company_Research_CN.card_slots.json`** beside **`Company_Research_CN.html`** in the report folder. For a **single** report you may pass `--slots` as either the JSON file path or that **folder** (resolver loads `<stem>.card_slots.json`). For **`--input` 指向多只 HTML**，`--slots` **必须是目录**，且内含与每个 `stem` 对应的 `*.card_slots.json`。
+The right-side context is an ordered causal chain, not four unrelated facts. `background_bullets` must contain exactly these steps in order: `external_condition` → `transmission` → `company_outcome` → `watch_signal`. Every entry has `step` and `text`; each text must fit two lines. Porter evidence then explains each force separately.
 
-**Logo convention:** Card 1 has a fixed small logo section below `公司看点`, drawn directly on the card background with no white logo container. Start logo work **only after color is confirmed**. First check `card_slots.logo_asset_path`, the final output folder, and the report folder for an existing logo image; if one exists, verify it is a supported image and passes the renderer's size gate before using it. If no valid folder logo exists, run [logo-production-agent.md](./agents/logo-production-agent.md): search the web for official brand / press-kit / IR-media logo sources, regenerate a clean transparent logo asset from the official reference (SVG or high-res PNG; **horizontal wordmarks ≥840 px wide** at default render scale so they are not soft upscales), save it locally, then set `logo_asset_path` in `card_slots.json`. Never use screenshots, search-result thumbnails, or ticker-letter placeholders. `validate_cards.py` rejects logos below the minimum bitmap size. After export, keep only the logo file actually referenced by `logo_asset_path`; delete logo source downloads, alternatives, and temporary logo folders.
+Porter scores remain 1–5 and all five forces must be present exactly once. Evidence must explain a company-result transmission, not merely describe the industry. Separate supplier, buyer, rivalry, entrants, and substitutes.
 
-**Cover Chinese name:** Card 1 red title, footers, and related fallbacks use **`company_short_cn()`** in `generate_social_cards.py`. When **`logo_asset_path`** is set, **`cover_company_name_cn`** is **owned by the logo production agent** (verify vs HTML if already Chinese; translate to short Chinese if HTML is English-only; strip trailing **`公司`** via `display_name`). The renderer uses that slot for the red line whenever a logo path is present. **Without a logo**, Chinese may come from HTML `.company-name-cn` (CJK path) or from **`cover_company_name_cn`** if the content agent fills it for English-only HTML. **`validate_cards.py`:** with a logo path, **`cover_company_name_cn` is required**; the resolved display string must contain CJK and must not end with `公司`.
+### Card 3
 
-**⚠️ Logo check when receiving a pre-existing `card_slots.json`:** If the user provides a folder or JSON file that already contains `card_slots.json`, do **not** assume logo production was already done. Before running Validator 1, inspect `card_slots.json` for a non-empty `logo_asset_path`. If the field is absent or empty, run [logo-production-agent.md](./agents/logo-production-agent.md) first and set it. When `logo_asset_path` **is** set, confirm **`cover_company_name_cn`** is also set (same agent). `validate_cards.py` now **fails by default** when `logo_asset_path` is missing; only allow omission with explicit customer waiver + `--allow-no-logo`.
+The five-year narrative must connect a business-model or revenue-mix shift to revenue, margins, profit, cash flow, or leverage. The bottom grid contains exactly six metrics in fixed category order: three profitability, two cash-flow, one leverage. Use a short basis label only where readers could otherwise confuse definitions.
 
-**Why there is no one "universal" filled `card_slots.json`:** The file is **per-company body copy** (facts, wording, CFA-lens application) read by the renderer into **fixed** card frames. The skill ships a **structure template** you copy for each new stem — [references/templates/card_slots.template.json](./references/templates/card_slots.template.json) — plus machine schema [references/card-slots.schema.json](./references/card-slots.schema.json) and a worked example [references/examples/pdd_holdings_card_slots.example.json](./references/examples/pdd_holdings_card_slots.example.json). Agents still **author** `<stem>.card_slots.json` from the HTML package; the template only avoids starting from a blank file.
+### Card 4
 
-The important boundary is this:
+Each panel has `finding`, `evidence`, and `watch_item`. Valuation also has one or two as-of metrics with `basis_label`. Do not produce a composite quality score. If governance, incentive, accounting, or valuation evidence is insufficient, say `未披露` or `不可比` and explain why.
 
-- Company-specific facts should live in extracted and normalized data
-- Card structure should live in the slot plan
-- Visual constraints should live in the design spec and validation rules
-- Industry tone should only influence framing and emphasis, not replace factual extraction
-- Unified voice is allowed; hardcoded body copy is not
+### Card 5
 
-## Required Workflow
+First distinguish incorporation, listing, operations, and revenue geography. Then use the fixed order:
 
-Follow these steps in order every time a new report arrives. Step 0 is a blocking question, not a default.
+`tax`, `fx_inflation`, `regulation`, `labor`, `consumer_culture`, `minority_shareholder_protection`.
 
-### 0. 配色确认（硬门禁；未完成则禁止进入步骤 1）
+Every dimension uses `country_fact → company_transmission → watch_metric`. Avoid national stereotypes, do not infer operating exposure from incorporation, and do not treat one company as representative without a bounded, sourced mechanism. End with one or two company-level warnings, one country characteristic reflected by this company, and one unknown.
 
-- 先问客户选择 `macaron` | `default` | `b` | `c`；如果客户已经在当前请求明确写出其中之一，可记录该选择。
-- 客户未确认前，禁止 intake、logo 检查、web search、slots 写入、Validator、export。
-- 后续所有 `validate_cards.py` 与 `generate_social_cards.py` 调用必须与之保持一致。
+## Validation and export
 
-### 1. Intake
-
-- Prefer a report folder path over a standalone HTML path when the user can provide it
-- Confirm the folder contains one report HTML, not an arbitrary marketing page or random article
-- Check for sibling JSON files before reading the HTML body
-- Treat the HTML plus sibling JSON as one report package, with JSON as the primary source for financial facts
-- If the HTML exists but supporting JSON is missing, continue with best-effort extraction and flag the missing fields
-- If JSON exists but HTML is missing, use JSON for analysis/copy drafting but do not export PNGs until the report HTML is located
-
-### 2. Extraction
-
-- Read sibling JSON files first when present; they are the preferred source for financial data, margins, segments, cash flow, Porter scores, and latest operating updates
-- Read the report HTML after JSON to pull summary prose, rendered section text, identity/date, and embedded data blocks such as `sankeyActualData`
-- Prefer over-extraction to under-extraction at this stage
-- Do not write card copy yet
-
-Required extraction targets:
-
-- company identity
-- report date / fiscal period
-- summary paragraphs
-- highlights
-- risks
-- thesis or key claim
-- Porter analysis text and scores
-- revenue / margin / cash-flow facts
-- segment or product mix
-- operating KPIs
-- competitor set and substitution pressure
-- five-year business-model / revenue-mix / margin-structure changes
-- operating geography and revenue geography, kept separate when both are available
-- forward outlook variables for the next 1-2 years
-- official logo source candidates from web search
-
-### 2.5 Logo Production
-
-本节即 §P0 Logo 门禁的**实施步骤**：只在步骤 0 配色确认后执行；素材在这里生成或复用并写入 `logo_asset_path`。
-
-After color confirmation and company identity extraction, run the **[logo production agent](./agents/logo-production-agent.md)** before normalization and card planning. Logo search/check is independent of financial analysis, so doing it early avoids a late bottleneck before copy generation.
-
-- First check the final output folder, report folder, and `card_slots.logo_asset_path` for an existing valid logo image.
-- If no valid logo image exists in the folder/slots, search the web for the official brand / press-kit / IR-media logo source.
-- Regenerate a clean transparent PNG/WEBP from the official reference (**horizontal wordmarks ≥ 840 px wide**; never upscale a small bitmap).
-- Do not use screenshots, browser crops, search thumbnails, or ticker-letter placeholders.
-- After export, keep only the file referenced by `logo_asset_path`; delete source downloads, rejected variants, and temporary folders.
-
-**Logo save order (mandatory):**
-1. Determine the final output folder for the 4 PNGs — create it now if it does not exist.
-2. Save `logo_official.png` directly into that output folder (not the source report folder, not a temp path).
-3. Set `logo_asset_path` in `card_slots.json` to the logo's absolute path inside the output folder.
-4. Only then proceed through normalization, card planning, and copy generation.
-
-Saving to the output folder first guarantees the logo and the 4 PNGs are always co-located — nothing needs to be moved manually after export.
-
-**⚠️ If starting from a pre-existing `card_slots.json`:** Check that `logo_asset_path` is set and the file exists before proceeding to §6. An absent or empty field means logo production/check was skipped — after color confirmation, inspect the output/report folder for a valid logo; if absent, run web logo production.
-
-### 3. Normalization
-
-- Convert all extracted facts into one canonical report model before any copywriting
-- Resolve schema drift here, not in the card templates
-- Compute missing but derivable facts such as YoY growth when current and prior values exist
-- Normalize business lines, product lines, and KPI labels into publishable Chinese phrasing
-- Produce a stable internal shape even if the upstream file names or field names vary
-
-If the source uses different names such as `revenue_growth_yoy_pct` vs `yoy_revenue_pct`, or `capex` vs `capex_purchases`, fix it in normalization. Do not leak source-specific field names into card logic.
-
-### 4. Card Planning
-
-- Build a slot plan for all 4 cards using the normalized model
-- Decide what each card must say before writing polished copy
-- Treat the cards as fixed containers with placeholders to fill, not as blank canvases
-- Every slot should be backed by a fact, a compressed inference, or a curated framing sentence
-
-The slot schema is defined in [references/workflow-spec.md](./references/workflow-spec.md). Use it every time.
-
-### 5. Copy Generation (standard = materialize `card_slots.json`)
-
-- **Copy writing order:** content production agent (Cards 1–3) → **CFA lens selector** (Card 4) → **hardcode & logic audit** → layout fill agent. `logo_asset_path` must already be set in `card_slots.json` from §2.5 before content production begins; all body copy must be complete before any PNG export. See [content-production-agent.md](./agents/content-production-agent.md), [cfa-lens-selector-agent.md](./agents/cfa-lens-selector-agent.md), [hardcode-audit-agent.md](./agents/hardcode-audit-agent.md), and [layout-fill-agent.md](./agents/layout-fill-agent.md). Running the audit before layout means bad copy is caught while still full-length — layout compression makes the same problem harder to spot and fix.
-- **Card 4 CFA-lens (required):** The CFA lens selector picks ONE concept from the owner's current CFA syllabus (sourced from `--cfa-progress` CLI flag → `CFA_PROGRESS` env var → `USER.md` sticky → agent default) and applies it to this company. The concept must be **formula-bearing** — pure qualitative frameworks are excluded. The `cfa_lens` sub-slots in schema v3 are: `concept_intro` (what the concept does), `formula` (Unicode-math, must contain `=` and an operator), `company_calculation` (1–3 lines plugging real company numbers into the formula — this is the AUTHORITY slot; requires `primary_quote`), `company_application` (3 bullets — how to map the concept to this company), and `different_angle_insight` (what the lens reveals that consensus misses). See [cfa-lens-selector-agent.md](./agents/cfa-lens-selector-agent.md).
-- **`card_slots.json` 必须填满** 所有脚本要求的槽位（见 `assert_card_slots_complete`）；不允许依赖内置 `fit_copy` / `company_theme` 自动糊字作为交付物。
-- Write copy slot by slot, not card by card in one pass
-- Use report facts first, thematic framing second
-- It is acceptable to standardize voice cues such as `说白了` or `别只看`, but the substance after that cue must come from the current report package
-- Do not reuse the same explanatory sentence across different companies unless it is a true fallback and source text is unavailable
-- Control slot length by explicit character budget first; do not rely on sentence count as the primary guardrail
-- Prefer complete Chinese sentences that sound publishable and human
-- Avoid dead analyst boilerplate and avoid empty editorial fluff
-- If a slot looks sparse, expand the factual explanation before shrinking fonts
-- If a slot overflows, rewrite or compress the copy before touching layout
-
-### 6. Validator 1 And Rewrite Loop
-
-- Run the hardcode and logic audit before layout validation
-- Run **`validate_cards.py`** (Validator 1) before Validator 2 and before final export
-- If any check fails, rewrite the slot copy and run Validator 1 again
-- Do not accept a card simply because it renders without crashing
-- A card with weak density, clipped text, broken line wraps, or corpse-like prose is a failure
-- A slot that still reads like reusable template copy, or that contradicts the report facts, is also a failure
-
-### 7. Validator 2（外部事实核查）
-
-- After Validator 1 passes, run **[validator-2-agent.md](./agents/validator-2-agent.md)**: build a claim inventory from `card_slots.json` (and any figures pulled into cards from HTML/JSON), verify each material number and fact against **authoritative public sources** (filings, IR, official releases) via web search
-- If anything is wrong or unverifiable at false precision, fix the slots (and note sibling JSON issues if needed), then **run Validator 1 again**, then **Validator 2 again** — repeat until both pass
-- **Do not** run `generate_social_cards.py` until Validator 2 passes
-
-Rewrite priority:
-
-1. fix factual slot mapping mistakes
-2. fix incomplete sentences
-3. fix density and whitespace issues
-4. fix human tone
-5. only then consider shortening copy
-
-### 8. Export
-
-- Only export once **Validator 1 and Validator 2** have passed with the **intended** `card_slots.json`
-- Export all 4 images for the report as one set (`generate_social_cards.py --input … --slots … --palette …`)，其中 **`--palette` 必须与步骤 0 中用户选择的配色一致**。
-- Keep the file naming convention stable
-
-## Fixed Card Schema
-
-The fixed output is always:
-
-| # | File | Role |
-|---|------|------|
-| 1 | `01_cover.png` | Cover + 公司定位 + 核心张力 + logo + metrics_row |
-| 2 | `02_porter.png` | Industry structure + 4 background bullets + Porter five forces (per-force evidence) |
-| 3 | `03_five_year_financials.png` | 5-year arc (转型/拐点) + 最近季度财务 bars + revenue explainer |
-| 4 | `04_cfa_lens.png` | CFA 镜头 — 概念 + 公式 + 公司带数计算 + 应用 + 不同角度（一张合并奶油色面板） |
-
-Do not change the card count or reorder the card roles unless the design spec is explicitly revised.
-
-## Placeholder Logic
-
-The correct mental model is "fill placeholders," not "invent six unrelated pages."
-
-For each new report:
-
-1. create the normalized report model
-2. fill the card slot placeholders from that model
-3. rewrite any slot that fails density, tone, or wrapping constraints
-4. render after the placeholders are stable
-
-Examples of placeholders:
-
-- `intro_sentence`
-- `company_focus_paragraph`
-- `metrics_row`
-- `background_bullets`
-- `industry_paragraph`
-- `porter_evidence`
-- `five_year_arc.narrative` and `five_year_arc.inflection_points`
-- `recent_financial_highlights`
-- `revenue_explainer_points`
-- `cfa_lens.concept_intro`
-- `cfa_lens.formula`
-- `cfa_lens.company_calculation`
-- `cfa_lens.company_application`
-- `cfa_lens.different_angle_insight`
-
-These placeholders must always be filled from normalized facts first. Theme or sector logic should only help decide emphasis, ordering, and wording.
-
-## When To Change Code
-
-Do not patch the skill for every company.
-
-Change code only when one of these is true:
-
-- the upstream HTML structure changed
-- the sibling JSON schema changed
-- normalization cannot recover a required field
-- a new business model repeatedly fails the same card planner
-- validation reveals a systematic formatting gap that should become an explicit rule
-
-Do not change code merely because one company's current wording feels bland. First fix the planner or copy generation logic at the slot level.
-
-## Renderer Usage
-
-**Standard (every new report):** validate and render **with** `card_slots.json` next to the HTML (adjust paths):
+From this skill directory:
 
 ```bash
-python3 scripts/validate_cards.py \
-  --input "/abs/path/Tesla_Research_CN.html" \
-  --slots "/abs/path/Tesla_Research_CN.card_slots.json" \
-  --brand "金融豹" \
-  --palette <confirmed_palette>
+python scripts/validate_cards.py \
+  --input /abs/path/Company_Research_CN.html \
+  --slots /abs/path/Company_Research_CN.card_slots.json \
+  --palette macaron
 
-python3 scripts/generate_social_cards.py \
-  --input "/abs/path/Tesla_Research_CN.html" \
-  --slots "/abs/path/Tesla_Research_CN.card_slots.json" \
-  --brand "金融豹" \
-  --palette <confirmed_palette>
+python scripts/generate_social_cards.py \
+  --input /abs/path/Company_Research_CN.html \
+  --slots /abs/path/Company_Research_CN.card_slots.json \
+  --output-root /abs/path/output \
+  --palette macaron
 ```
 
-**配色：** 必须由客户先明确选择 `macaron|default|b|c`，并在 Validator 1 与导出时显式传同一 `--palette`；未指定不得默认。**Logo：** 默认要求 `logo_asset_path`；仅在客户明确放弃时，校验与导出均加 **`--allow-no-logo`**。
+Use `--allow-no-logo` only after explicit waiver. Do not pass or recreate `--cfa-progress`; CFA Lens is historical and absent from schema v5.
 
-**单张 PNG 重渲（常见坑）：** 若只重跑某一张（例如只更新 `01_cover.png`），**必须使用与整套四张相同的 `--palette`**。`generate_social_cards.py` 在进程内调用 `apply_palette()`；`macaron` 和 `c` 均有深色顶栏，`default` / `b` 顶栏为浅色。混用会导致 **Card 1 顶栏与其他卡片不一致**。`card_slots.json` **不记录** palette，须靠流程约定或整套重渲。
+Validator 1 checks schema, completeness, copy/geometry budgets, visible attribution, claim coverage, logo, period localization, and contradiction guards. Validator 2 independently verifies material names, dates, numbers, definitions, valuation time points, governance claims, accounting-quality claims, and country facts. A change after Validator 2 returns to Validator 1.
 
-## Output Folder Organization
+## Agent handoff
 
-**Standard export folder naming:**
+- [agent-slot-pipeline.md](./agents/agent-slot-pipeline.md) — ownership and handoff.
+- [content-production-agent.md](./agents/content-production-agent.md) — normalized facts → v5 slots + evidence sidecar.
+- [layout-fill-agent.md](./agents/layout-fill-agent.md) — copy fit without changing meaning.
+- [hardcode-audit-agent.md](./agents/hardcode-audit-agent.md) — company specificity and logic.
+- [validation-agent.md](./agents/validation-agent.md) — deterministic validation.
+- [validator-2-agent.md](./agents/validator-2-agent.md) — external fact-check.
+- [logo-production-agent.md](./agents/logo-production-agent.md) — official identity asset.
 
-```
-{output-root}/{CompanyName}_{ExportDate}_Cards/
-  ├── 01_cover.png
-  ├── 02_porter.png
-  ├── 03_five_year_financials.png
-  ├── 04_cfa_lens.png
-  └── logo_official.png
-```
+The old CFA selector may remain in repository history for archived schemas, but no active workflow references or invokes it.
 
-**Rules:**
-- **`{CompanyName}`**: Extract from HTML `.company-name-cn` (preferred) or `.company-name-en`; use the short company name without trailing `公司`.
-- **`{ExportDate}`**: Use the **date when cards are generated** (today's date in YYYY-MM-DD format), **not** the report date. Example: if report is from 2026-04-08 but cards are generated on 2026-04-14, folder name is `{CompanyName}_2026-04-14_Cards`.
-- PNG files are **always** named per `CARD_FILENAMES` in `scripts/generate_social_cards.py`: `01_cover.png`, `02_porter.png`, `03_five_year_financials.png`, `04_cfa_lens.png` (fixed, no variation).
-- Logo file is **always** named `logo_official.png`.
-- **`card_slots.json` stays in the parent directory** alongside the report HTML (use `--no-copy-slots` to prevent copying into the Cards folder).
-- Default `{output-root}` is this skill repo's `output/` directory; override with `--output-root {path}`.
+## Acceptance checklist
 
-**Example:**
-```
-/Users/user/projects/workspace/
-  ├── StateGrid_2026-04-08/                        (Report folder)
-  │   ├── StateGrid_Research_CN.html
-  │   ├── StateGrid_Research_CN.card_slots.json
-  │   ├── financial_data.json
-  │   ├── financial_analysis.json
-  │   └── ...
-  │
-  └── StateGrid_2026-04-14_Cards/                  (Export folder, generated today)
-      ├── 01_cover.png
-      ├── 02_porter.png
-      ├── 03_five_year_financials.png
-      ├── 04_cfa_lens.png
-      └── logo_official.png
-```
-
-**CLI invocation:**
-```bash
-python3 scripts/generate_social_cards.py \
-  --input "/path/to/StateGrid_Research_CN.html" \
-  --slots "/path/to/StateGrid_Research_CN.card_slots.json" \
-  --brand "金融豹" \
-  --palette <confirmed_palette> \
-  --output-root "/Users/user/projects/workspace" \
-  --no-copy-slots
-```
-
-**Where `card_slots.json` lives:** The **authoritative** file stays beside the HTML in the report package (version control, re-validation). Use `--no-copy-slots` to prevent it from being copied into the Cards export folder.
-
-**Folder batch（多只 `*.html`）:** `--slots` 传 **父目录**，其中包含 `Tesla_Research_CN.card_slots.json`、`Amazon_Research_CN.card_slots.json` 等与各 HTML **stem 一一对应** 的文件。不得用单个 JSON 路径套批多只无关报告。
-
-## Maintenance Standard
-
-- Keep extraction, normalization, planning, writing, validation, and rendering as separate concerns
-- Update [references/workflow-spec.md](./references/workflow-spec.md) first when the pipeline contract changes
-- Update [references/design-spec.md](./references/design-spec.md) first when visual rules change
-- Keep the renderer aligned with the workflow and the validator
-- Add new validation rules when a failure pattern repeats; extend [validator-2-agent.md](./agents/validator-2-agent.md) when repeated factual error classes appear
-- Treat excessive whitespace, broken wraps, and stiff filler copy as product failures, not cosmetic issues
+- Explicit palette decision recorded before work.
+- Official logo present, or explicit waiver recorded.
+- Slots are schema v5; no `cfa_lens`.
+- Sidecar claim coverage passes and every calculation references a basis id.
+- Five filenames are continuous and exact.
+- Cards contain no visible confidence badges or composite quality score.
+- Registration/listing/operations/revenue geography are not conflated.
+- Validator 1 and Validator 2 pass after the last copy change.
+- Five images inspected at 2160×2700 with no clipping or unreadable text.

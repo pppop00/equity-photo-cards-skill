@@ -1,105 +1,38 @@
-# Equity Photo Cards Skill
+# Equity Photo Cards
 
-Agent skill and Python tooling that turn **equity research HTML** (plus optional sibling JSON) into **four fixed-layout social images** (e.g. Xiaohongshu / Douyin), with slot-based copy and **layout validation** before export.
+Deterministic tooling that converts a listed-company research package into five fixed-layout company-to-country knowledge-map images. Active inputs use schema v5 plus a claim-evidence sidecar; archived v3/v4 CFA assets do not render.
 
-**中文简介：** 将权益类研报 HTML 规范化为固定 **4 张卡片** 的图文素材。**唯一支持路径：** 多 Agent 生成 **完整** `html_stem.card_slots.json` → **`validate_cards.py`（Validator 1）** → **Validator 2 联网事实核查** → `generate_social_cards.py`；后两者 **必须带 `--slots`**；脚本在加载时会拒绝缺字段的 JSON，**不存在**「不写 slots、只靠 Python 模板糊字」的出口。
+## Outputs
 
-**Pipeline:** HTML in → logo agent → content agent → layout agent → hardcode/logic audit → **`validate_cards.py` (Validator 1)** → **Validator 2 (web fact-check; [agents/validator-2-agent.md](agents/validator-2-agent.md))** → `generate_social_cards.py` (CLIs require `--slots`; slots map copy into fixed card frames).
+| File | Role |
+|---|---|
+| `01_cover.png` | One-minute business model, two variables, primary risk, headline metrics |
+| `02_porter.png` | Industry forces, transmission, observable risk |
+| `03_five_year_financials.png` | Five-year business change translated into financial outcomes |
+| `04_company_quality.png` | Valuation, governance/incentives, capital allocation, accounting quality |
+| `05_country_lens.png` | Exposure map, six country mechanisms, warnings and unknown |
 
-- **Repository:** [pppop00/equity-photo-cards-skill](https://github.com/pppop00/equity-photo-cards-skill)  
-- **License:** [Apache-2.0](LICENSE)
+Logical size is 1080×1350; default export is 2160×2700. All five use one explicitly confirmed palette.
 
-## What you get
+## Workflow
 
-| Output | File | Role |
-|--------|------|------|
-| Card 1 | `01_cover.png` | Cover + intro + company-focus paragraph + metrics row |
-| Card 2 | `02_porter.png` | Industry paragraph + 4 background bullets + Porter five forces with per-force evidence |
-| Card 3 | `03_five_year_financials.png` | 5-year arc + inflection points + most-recent-quarter financial bars + revenue explainer |
-| Card 4 | `04_cfa_lens.png` | CFA concept applied to this company (concept intro + 3-bullet application + different-angle insight + takeaway) |
+Palette gate → official logo → normalized facts → complete schema-v5 slots and claim sidecar → hardcode/layout audit → Validator 1 → Validator 2 → five-card render.
 
-Layout coordinates: **1080 × 1350** (logical). Default PNG export: **2160 × 2700** (full render resolution; use `generate_social_cards.py --export-logical-size` for 1080×1350). Details: [references/design-spec.md](references/design-spec.md).
-
-## Repository layout
-
-Follows **skill-creator** bundle layout: **`SKILL.md`** (entry) → **`references/`** (progressive disclosure) → **`agents/`** (sub-agent instructions) → **`scripts/`** (CLI) → **`evals/`** (optional tests). Default PNGs go to **`output/<stem>/`** (gitignored).
-
-| Path | Purpose |
-|------|---------|
-| [SKILL.md](SKILL.md) | Agent skill contract: intake → extract → normalize → plan → copy → Validator 1 → Validator 2 → export |
-| [references/workflow-spec.md](references/workflow-spec.md) | Pipeline and slot schema |
-| [references/workflow-flowchart.md](references/workflow-flowchart.md) | Mermaid：bundle 表、端到端、CLI、`card_slots` 启动、校验分层、十步（含配色确认） |
-| [references/templates/README.md](references/templates/README.md) | 模版目录说明（template vs example） |
-| [references/design-spec.md](references/design-spec.md) | Typography, colors, spacing, copy limits |
-| [references/card-slots.schema.json](references/card-slots.schema.json) | JSON Schema for slot file |
-| [references/templates/card_slots.template.json](references/templates/card_slots.template.json) | Copy to `<stem>.card_slots.json` for each new report, then replace placeholders |
-| [references/examples/pdd_holdings_card_slots.example.json](references/examples/pdd_holdings_card_slots.example.json) | Example slot file (PDD-shaped) |
-| [agents/agent-slot-pipeline.md](agents/agent-slot-pipeline.md) | Agent handoff → `card_slots.json` → render |
-| [agents/logo-production-agent.md](agents/logo-production-agent.md) | Web official logo → regenerated clean logo asset |
-| [agents/content-production-agent.md](agents/content-production-agent.md) | HTML → Card 1–3 slot copy |
-| [agents/cfa-lens-selector-agent.md](agents/cfa-lens-selector-agent.md) | Pick the Card 4 CFA concept + apply it to this company |
-| [agents/layout-fill-agent.md](agents/layout-fill-agent.md) | Fit copy to layout rules |
-| [agents/hardcode-audit-agent.md](agents/hardcode-audit-agent.md) | Hardcode / logic audit before validation |
-| [agents/validation-agent.md](agents/validation-agent.md) | Validator 1 — what `validate_cards.py` enforces |
-| [agents/validator-2-agent.md](agents/validator-2-agent.md) | Validator 2 — web fact-check all card data before export |
-| [scripts/generate_social_cards.py](scripts/generate_social_cards.py) | Parse HTML and render PNGs |
-| [scripts/validate_cards.py](scripts/validate_cards.py) | Run checks before export |
-| [evals/evals.json](evals/evals.json) | Optional smoke-test prompts for the skill |
-
-## Using this as an Agent Skill
-
-Copy or symlink this repo (or its files) into your agent’s skills directory, following your tool’s layout rules (e.g. Cursor / Codex skill folders). The entry point for the model is **`SKILL.md`**.
-
-## Python environment
-
-**Requirements:** Python 3.9+ recommended.
-
-**Dependencies:**
+Use [SKILL.md](SKILL.md) as the agent entry, [references/knowledge-map-v5.md](references/knowledge-map-v5.md) for semantics, [references/card-slots.schema.json](references/card-slots.schema.json) for the machine contract, and [references/templates/card_slots.template.json](references/templates/card_slots.template.json) as the starter.
 
 ```bash
-pip install beautifulsoup4 pillow
+python scripts/validate_cards.py \
+  --input /absolute/path/Company_Research_CN.html \
+  --slots /absolute/path/Company_Research_CN.card_slots.json \
+  --palette macaron
+
+python scripts/generate_social_cards.py \
+  --input /absolute/path/Company_Research_CN.html \
+  --slots /absolute/path/Company_Research_CN.card_slots.json \
+  --output-root /absolute/path/output \
+  --palette macaron
 ```
 
-**Fonts:** The renderer defaults to **Arial Unicode** on macOS:
+`--slots` and `--palette` are mandatory. `--allow-no-logo` is permitted only after explicit customer waiver. There is no active CFA progress option.
 
-`/System/Library/Fonts/Supplemental/Arial Unicode.ttf`
-
-On other systems, install a compatible font and adjust the `ARIAL` path in `scripts/generate_social_cards.py` if needed.
-
-## Commands
-
-Run **`validate_cards`** from the **repository root** so `scripts/` imports resolve. **`generate_social_cards`** may be run from any working directory: unless you pass `--output-root`, PNG sets are written under this repo’s **`output/<report_stem>/`** (path is fixed relative to the script location, not your shell cwd).
-
-### Validate + render (`--slots` 必填)
-
-Produce a **complete** JSON per [content-production-agent.md](agents/content-production-agent.md) and [layout-fill-agent.md](agents/layout-fill-agent.md). Incomplete files fail at load (`assert_card_slots_complete`).
-
-**单份 HTML：** `--slots` 传 **`Company_Research_CN.card_slots.json` 的路径**，或传其**所在目录**（脚本会找 `<stem>.card_slots.json`）。
-
-```bash
-python3 scripts/validate_cards.py \
-  --input "/absolute/path/to/Company_Research_CN.html" \
-  --slots "/absolute/path/to/Company_Research_CN.card_slots.json" \
-  --brand "金融豹" \
-  --palette <confirmed_palette>
-
-python3 scripts/generate_social_cards.py \
-  --input "/absolute/path/to/Company_Research_CN.html" \
-  --slots "/absolute/path/to/Company_Research_CN.card_slots.json" \
-  --brand "金融豹" \
-  --palette <confirmed_palette>
-```
-
-（配色须先确认，并在 Validator 1 与导出中显式传入同一个值：`macaron` | `default` | `b` | `c`；见 [SKILL.md](SKILL.md) 配色一节。）
-
-**批量多只 HTML：** `--input` 指向含多个 `*.html` 的目录时，`--slots` **必须为目录**，且内含与每个 `stem` 对应的 `<stem>.card_slots.json`。
-
-**与 PNG 同目录的 JSON：** 主副本仍在报告文件夹（与 HTML 并列）；`generate_social_cards.py` 默认会把同名的 `*.card_slots.json` **再复制一份**到 `output/<stem>/`，便于打包发图。不需要复制时加 `--no-copy-slots`。
-
-Override output with `--output-root /other/path` if needed.
-
-Optional JSON next to the HTML (when your report package provides them): `financial_data.json`, `financial_analysis.json`, `porter_analysis.json`. The workflow is described in [references/workflow-spec.md](references/workflow-spec.md).
-
-## Contributing
-
-Maintain separation between extraction, normalization, planning, copy, validation, and rendering. When changing the pipeline contract, update `references/workflow-spec.md` first; for visual rules, update `references/design-spec.md` first ([SKILL.md](SKILL.md) maintenance section).
+License: [Apache-2.0](LICENSE).

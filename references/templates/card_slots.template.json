@@ -1,66 +1,59 @@
 {
-  "schema_version": 4,
-
-  "logo_asset_path": "可选：logo-production-agent 联网查官方来源并重新生成的透明 logo 文件绝对路径（横版字标建议宽≥840px，见 validate_cards）；没有可信官方 logo 时删除本字段。",
-  "cover_company_name_cn": "有 logo 时必填：由 logo production agent 写入（核对/翻译 HTML .company-name-cn 后的中文短名，去掉尾缀「公司」）。无 logo 时：若 HTML 已为中文可省略；若 HTML 为英文则由 content agent 填入。",
-
-  "intro_sentence": "Card 1：一句话点出市场当下的定价锚与本次报告核心张力，含一个可核对数字与一个comp（peer/历史/guidance/consensus）。",
-  "company_focus_paragraph": "Card 1 黄色看点框，150-165 字。consensus_view + key_number（含 metric / our_estimate / consensus）+ 一条 comp，再保留一条经营驱动作为锚。",
-  "metrics_row": [
-    "FY/季度 总收入|XXX 亿XXX",
-    "净利润|XXX 亿XXX",
-    "毛利率|XX.X%",
-    "经营现金流|XXX 亿XXX"
-  ],
-
-  "industry_paragraph": "Card 2 行业结构段落，≤113 字。先点最强压力，再写 consensus vs variant view，给出会改变力量平衡的二阶变量。",
+  "schema_version": 5,
+  "logo_asset_path": "/absolute/path/to/official-transparent-wordmark.png",
+  "cover_company_name_cn": "公司中文短名",
+  "intro_sentence": "公司年报披露的关键数字，说明当前最需要理解的经营张力。",
+  "one_minute_summary": {
+    "business_model": "公司年报披露：向谁提供什么，并通过何种收费方式赚钱。",
+    "core_variables": ["据此推断，变量一决定需求或价格。", "据此推断，变量二决定成本或效率。"],
+    "primary_risk": "据监管机构数据，最主要风险将通过某指标传导。"
+  },
+  "metrics_row": ["收入|XXX亿", "净利润|XX亿", "毛利率|XX.X%", "经营现金流|XX亿"],
+  "industry_paragraph": "据行业与监管数据，最强外部力量如何通过价格、份额、成本或资本开支影响公司结果。",
   "background_bullets": [
-    "供应商：一条具体证据 + 数字 + comp，说明对成本/交付/毛利的影响。",
-    "买方：一条具体证据 + 数字 + comp，说明对定价/份额/回款的影响。",
-    "竞争强度：一条具体证据 + 数字 + comp，说明对增长或利润率的影响。",
-    "护城河/替代/进入者：一条具体证据 + 数字 + comp，说明为什么会改变风险或估值。"
+    {"step":"external_condition","text":"据行业或监管数据，指出最重要的外部条件。"},
+    {"step":"transmission","text":"说明该条件如何经过价格、需求、成本或资本传导。"},
+    {"step":"company_outcome","text":"说明传导最终改变公司的收入、利润或现金流。"},
+    {"step":"watch_signal","text":"给出下一期可验证这条链条的观察指标。"}
   ],
-  "porter_scores": [3, 3, 3, 3, 3],
   "porter_evidence": [
-    {"force": "rivalry",         "score": 3, "evidence": "竞争强度 — 一句话证据（份额/价格战/补贴节奏 + 数字 + comp）。"},
-    {"force": "new_entrants",    "score": 3, "evidence": "新进入者 — 一句话证据（资金/监管/技术门槛 + 数字 + comp）。"},
-    {"force": "supplier_power",  "score": 3, "evidence": "供应商 — 一句话证据（集中度/产能/合同期 + 数字 + comp）。"},
-    {"force": "buyer_power",     "score": 3, "evidence": "买方 — 一句话证据（议价/迁移成本/集中度 + 数字 + comp）。"},
-    {"force": "substitutes",     "score": 3, "evidence": "替代品 — 一句话证据（同等功能/价格比/技术路线 + 数字 + comp）。"}
+    {"force":"rivalry","score":3,"evidence":"据行业数据，竞争变量及其可观察风险。"},
+    {"force":"new_entrants","score":3,"evidence":"据监管或资本数据，新进入者变量及其传导。"},
+    {"force":"supplier_power","score":3,"evidence":"据公司披露，供应商变量及其传导。"},
+    {"force":"buyer_power","score":3,"evidence":"据公司披露，买方变量及其传导。"},
+    {"force":"substitutes","score":3,"evidence":"据行业数据，替代变量及其传导。"}
   ],
-
   "five_year_arc": {
-    "narrative": "Card 3 上半：用中文短名说明过去5年从什么业务/收入结构变成什么，怎样落到收入/利润/现金流，下一阶段看什么变量。",
-    "inflection_points": [
-      "2025财年：一条KPI变化 + 含义（如收入同比增长115%，利润转正）",
-      "2026财年一季度：一条结构变化 + 含义（如需求由AI机架拉动）",
-      "2026年下半年：一条产品/产能/客户验证变量 + 含义"
-    ]
+    "narrative":"公司年报披露：过去五年商业模式从何处转向何处，并如何落到收入、利润和现金流。",
+    "inflection_points":["2023财年：披露的转折与财务含义。","2024财年：披露的转折与财务含义。","2025财年：披露的转折与财务含义。"]
   },
   "financial_metrics_panel": [
-    {"label_cn": "毛利率",        "value": "XX.X%",      "period_cn": "FYxxxx",   "category": "profitability"},
-    {"label_cn": "营业利润率",    "value": "XX.X%",      "period_cn": "FYxxxx",   "category": "profitability"},
-    {"label_cn": "净利率",        "value": "XX.X%",      "period_cn": "FYxxxx",   "category": "profitability"},
-    {"label_cn": "FCFF",          "value": "XX.X亿",     "period_cn": "FYxxxx",   "category": "cash_flow"},
-    {"label_cn": "FCFE",          "value": "XX.X亿",     "period_cn": "FYxxxx",   "category": "cash_flow"},
-    {"label_cn": "净债务/EBITDA", "value": "0.5×",       "period_cn": "FYxxxx",   "category": "leverage"}
+    {"label_cn":"毛利率","value":"XX.X%","period_cn":"2025财年","category":"profitability"},
+    {"label_cn":"营业利润率","value":"XX.X%","period_cn":"2025财年","category":"profitability"},
+    {"label_cn":"净利率","value":"XX.X%","period_cn":"2025财年","category":"profitability"},
+    {"label_cn":"FCFF","value":"XX.X亿","period_cn":"2025财年","category":"cash_flow"},
+    {"label_cn":"经营现金流","value":"XX.X亿","period_cn":"2025财年","category":"cash_flow"},
+    {"label_cn":"净现金","value":"XX.X亿","period_cn":"2025财年","category":"leverage"}
   ],
-
-  "cfa_lens": {
-    "concept_key": "operating_leverage",
-    "concept_name_cn": "经营杠杆",
-    "concept_intro": "Card 4：1-2 句通俗解释这个 CFA 概念在做什么（不超过 110 字）。必须能配一个含 '=' 的公式。",
-    "formula": "DOL = %ΔEBIT / %ΔRevenue",
-    "company_calculation": [
-      "示例：FY 营收同比+20%、营业利润同比+30%",
-      "DOL ≈ 30 / 20 = 1.5（替换为本公司真实数字；至少 1 行必须含数字）"
+  "company_quality": {
+    "valuation":{"finding":"据市场数据，当前定价反映什么预期。","evidence":"按统一估值口径计算并注明时点。","watch_item":"观察预期与实际的偏差。","metrics":[{"label_cn":"市盈率","value":"XX.X×","basis_label":"未来12个月","as_of_date":"2026-07-13"}]},
+    "governance_incentives":{"finding":"据公司披露，控制权与激励如何影响决策。","evidence":"董事会、持股或薪酬计划证据。","watch_item":"观察治理事件或激励指标。"},
+    "capital_allocation":{"finding":"据公司披露，现金优先用于何处。","evidence":"资本开支、并购、回购或分红证据。","watch_item":"观察投入回报与资金纪律。"},
+    "accounting_quality":{"finding":"据审计财报，利润与现金的匹配程度。","evidence":"应计、一次性项目或审计证据。","watch_item":"观察现金转换与关键估计。"},
+    "unknown":"未披露或不可比的公司质量事项及原因。"
+  },
+  "country_lens": {
+    "exposure_map":{"incorporation":"注册地","listing":"上市地","operations":"主要经营地","revenue":"主要收入地"},
+    "dimensions":[
+      {"key":"tax","label_cn":"税制","country_fact":"据税务机关数据的国家事实。","company_transmission":"据此推断对税率或现金的传导。","watch_metric":"实际税率"},
+      {"key":"fx_inflation","label_cn":"汇率与通胀","country_fact":"据央行或统计机构数据的国家事实。","company_transmission":"据此推断对收入、成本或需求的传导。","watch_metric":"汇率敏感度"},
+      {"key":"regulation","label_cn":"监管","country_fact":"据监管机构规则的国家事实。","company_transmission":"据此推断对准入、定价或资本的传导。","watch_metric":"许可与合规成本"},
+      {"key":"labor","label_cn":"劳动制度","country_fact":"据劳动法规或统计数据的国家事实。","company_transmission":"据此推断对工资、排班或产能的传导。","watch_metric":"人工成本率"},
+      {"key":"consumer_culture","label_cn":"消费者文化","country_fact":"据调查或消费数据的国家事实。","company_transmission":"据此推断对产品、渠道或忠诚度的传导。","watch_metric":"客单价或复购率"},
+      {"key":"minority_shareholder_protection","label_cn":"少数股东保护","country_fact":"据法律与治理规则的国家事实。","company_transmission":"据此推断对关联交易或资本回报的传导。","watch_metric":"关联交易与投票权"}
     ],
-    "company_application": [
-      "用这个概念看这家公司：把哪个业务/估值假设套进二叉树？关键节点是什么？",
-      "节点的概率/payoff 怎么估？哪些 KPI 决定上行/下行节点的值？",
-      "倒推出来的隐含价值 vs 当前市价，gap 是多少？给一个量级。"
-    ],
-    "different_angle_insight": "Card 4 不同角度：用这个 CFA 镜头看，能看到 surface 上看不到的什么？authority slot 已移动到 company_calculation —— primary_quote 必须支撑公式数据来源。",
-    "cfa_progress_source": "default"
+    "top_warnings":["据此推断的公司级国家风险预警。"],
+    "company_to_country_insight":"据此推断，该公司反映出的一个国家制度或文化特征。",
+    "unknown":"仍缺少、无法归因或不可比较的国家语境。"
   }
 }

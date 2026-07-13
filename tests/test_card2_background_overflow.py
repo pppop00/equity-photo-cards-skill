@@ -17,10 +17,10 @@ def _draw() -> ScaledDraw:
 
 def test_card2_background_bullets_detects_stacked_overflow() -> None:
     overflowing_points = [
-        "2025财年收入28.84亿美元，同比增2.7%，净利润1.63亿美元。",
-        "2026财年一季度主站GMS为24.60亿美元，同比增5.5%。",
-        "活跃买家环比恢复增长，单买家消费连续改善。",
-        "2025财年自由现金流6.78亿美元，现金缓冲仍充足。",
+        {"step": "external_condition", "text": "据行业与监管数据，外部需求、供应约束、通胀、汇率和政策条件正在同时发生变化并形成压力。"},
+        {"step": "transmission", "text": "这些变化先经过价格、销量、采购成本、工资和资本开支，再逐层传导到公司的经营结果。"},
+        {"step": "company_outcome", "text": "公司收入增长但毛利率和自由现金流承压，区域之间的经营质量也出现明显而持续的分化。"},
+        {"step": "watch_signal", "text": "下一期同时观察同店销售、全价售罄率、采购成本率、经营现金流与资本回报是否沿这条路径变化。"},
     ]
 
     max_y = CARD2_BG_PANEL_BOTTOM - CARD2_BG_PANEL_BOTTOM_INSET
@@ -30,10 +30,10 @@ def test_card2_background_bullets_detects_stacked_overflow() -> None:
 
 def test_card2_background_bullets_accepts_compact_copy() -> None:
     fitting_points = [
-        "2025财年收入28.84亿美元，净利1.63亿美元。",
-        "一季度主站GMS同比增长5.5%。",
-        "活跃买家环比恢复，单买家消费改善。",
-        "2025财年FCF为6.78亿美元。",
+        {"step": "external_condition", "text": "据行业数据，服装需求转弱。"},
+        {"step": "transmission", "text": "折扣先压低全价售罄率。"},
+        {"step": "company_outcome", "text": "毛利率与现金流随之承压。"},
+        {"step": "watch_signal", "text": "观察同店客流与折扣率。"},
     ]
 
     max_y = CARD2_BG_PANEL_BOTTOM - CARD2_BG_PANEL_BOTTOM_INSET

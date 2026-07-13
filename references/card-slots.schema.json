@@ -1,165 +1,190 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/pppop00/equity-photo-cards-skill/card-slots.schema.json",
-  "title": "Equity photo card slot overrides (4-card layout, v4 财务分析)",
+  "title": "Anamnesis five-card company-country knowledge map slots (v5)",
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "schema_version",
-    "intro_sentence",
-    "company_focus_paragraph",
-    "metrics_row",
-    "industry_paragraph",
-    "background_bullets",
-    "porter_evidence",
-    "five_year_arc",
-    "financial_metrics_panel",
-    "cfa_lens"
+    "schema_version", "intro_sentence", "one_minute_summary", "metrics_row",
+    "industry_paragraph", "background_bullets", "porter_evidence",
+    "five_year_arc", "financial_metrics_panel", "company_quality", "country_lens"
   ],
   "properties": {
-    "schema_version": { "type": "integer", "minimum": 3, "maximum": 4 },
-
+    "schema_version": { "const": 5 },
     "logo_asset_path": { "type": "string" },
     "cover_company_name_cn": { "type": "string" },
-
-    "intro_sentence": { "type": "string" },
-    "company_focus_paragraph": { "type": "string" },
-    "metrics_row": {
-      "type": "array",
-      "items": { "type": "string" },
-      "minItems": 3,
-      "maxItems": 4
+    "intro_sentence": { "type": "string", "minLength": 1 },
+    "one_minute_summary": {
+      "type": "object", "additionalProperties": false,
+      "required": ["business_model", "core_variables", "primary_risk"],
+      "properties": {
+        "business_model": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "core_variables": { "type": "array", "minItems": 2, "maxItems": 2, "items": { "type": "string", "minLength": 1, "maxLength": 32 } },
+        "primary_risk": { "type": "string", "minLength": 1, "maxLength": 64 }
+      }
     },
-
-    "industry_paragraph": { "type": "string" },
+    "metrics_row": { "type": "array", "minItems": 3, "maxItems": 4, "items": { "type": "string", "pattern": ".+\\|.+" } },
+    "industry_paragraph": { "type": "string", "minLength": 1 },
     "background_bullets": {
-      "type": "array",
-      "items": { "type": "string" },
-      "minItems": 4,
-      "maxItems": 4
+      "type": "array", "minItems": 4, "maxItems": 4,
+      "prefixItems": [
+        { "$ref": "#/$defs/externalCondition" },
+        { "$ref": "#/$defs/transmission" },
+        { "$ref": "#/$defs/companyOutcome" },
+        { "$ref": "#/$defs/watchSignal" }
+      ],
+      "items": false
     },
-    "porter_scores": {
-      "type": "array",
-      "items": { "type": "integer", "minimum": 1, "maximum": 5 },
-      "minItems": 5,
-      "maxItems": 5
-    },
+    "porter_scores": { "type": "array", "minItems": 5, "maxItems": 5, "items": { "type": "integer", "minimum": 1, "maximum": 5 } },
     "porter_evidence": {
-      "type": "array",
-      "minItems": 5,
-      "maxItems": 5,
+      "type": "array", "minItems": 5, "maxItems": 5,
       "items": {
-        "type": "object",
-        "additionalProperties": false,
+        "type": "object", "additionalProperties": false,
         "required": ["force", "score", "evidence"],
         "properties": {
-          "force": {
-            "type": "string",
-            "enum": ["rivalry", "new_entrants", "supplier_power", "buyer_power", "substitutes"]
-          },
+          "force": { "enum": ["rivalry", "new_entrants", "supplier_power", "buyer_power", "substitutes"] },
           "score": { "type": "integer", "minimum": 1, "maximum": 5 },
-          "evidence": { "type": "string" }
+          "evidence": { "type": "string", "minLength": 1 }
         }
       }
     },
-
     "five_year_arc": {
-      "type": "object",
-      "additionalProperties": false,
+      "type": "object", "additionalProperties": false,
       "required": ["narrative", "inflection_points"],
       "properties": {
-        "narrative": { "type": "string" },
-        "inflection_points": {
-          "type": "array",
-          "items": { "type": "string" },
-          "minItems": 3,
-          "maxItems": 4
-        }
+        "narrative": { "type": "string", "minLength": 1 },
+        "inflection_points": { "type": "array", "minItems": 3, "maxItems": 4, "items": { "type": "string", "minLength": 1 } }
       }
-    },
-    "recent_financial_highlights": {
-      "type": "array",
-      "items": { "type": "string" },
-      "minItems": 3,
-      "maxItems": 4,
-      "description": "Legacy v3 slot. Card 3 v4 (财务分析) no longer renders it; field is accepted for backward compatibility but ignored at render time."
-    },
-    "revenue_explainer_points": {
-      "type": "array",
-      "items": { "type": "string" },
-      "minItems": 3,
-      "maxItems": 4,
-      "description": "Legacy v3 slot — replaced by financial_metrics_panel in v4. Accepted for backward compatibility but no longer rendered."
     },
     "financial_metrics_panel": {
-      "description": "Card 3 v4 bottom-panel 6-metric grid. Fixed display order, ranked by CFA importance: slots 0..2 = profitability (毛利率, 营业利润率, 净利率), slots 3..4 = cash_flow (FCFF, FCFE), slot 5 = leverage (Net Debt / EBITDA when net debt is positive; 净现金 when net cash). All 6 must be present so the renderer never silently truncates the grid.",
-      "type": "array",
-      "minItems": 6,
-      "maxItems": 6,
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["label_cn", "value", "period_cn", "category"],
-        "properties": {
-          "label_cn": {
-            "type": "string",
-            "maxLength": 12,
-            "description": "Short metric label, e.g. 毛利率, 营业利润率, 净利率, FCFF, FCFE, 净债务/EBITDA, 净现金."
-          },
-          "value": {
-            "type": "string",
-            "maxLength": 14,
-            "description": "Formatted metric value. Percentages: '75.7%'. Currency: '23.37亿' (no '$', '美元', or '近似' inside cell). Ratios: '0.5×'. Net cash uses label_cn='净现金' and value='11.89亿'."
-          },
-          "period_cn": {
-            "type": "string",
-            "maxLength": 14,
-            "description": "Fiscal context for audit, e.g. 'FY2025', 'Q1 FY2026', '近12个月'. Renderer localizes visible labels and collapses a shared period into one panel caption."
-          },
-          "category": {
-            "type": "string",
-            "enum": ["profitability", "cash_flow", "leverage"],
-            "description": "Category drives cell accent color: profitability=GREEN, cash_flow=BLUE, leverage=RED. Display order is fixed (see top-level description)."
-          }
-        }
+      "type": "array", "minItems": 6, "maxItems": 6,
+      "prefixItems": [
+        { "$ref": "#/$defs/profitabilityMetric" }, { "$ref": "#/$defs/profitabilityMetric" }, { "$ref": "#/$defs/profitabilityMetric" },
+        { "$ref": "#/$defs/cashFlowMetric" }, { "$ref": "#/$defs/cashFlowMetric" }, { "$ref": "#/$defs/leverageMetric" }
+      ],
+      "items": false
+    },
+    "company_quality": {
+      "type": "object", "additionalProperties": false,
+      "required": ["valuation", "governance_incentives", "capital_allocation", "accounting_quality", "unknown"],
+      "properties": {
+        "valuation": { "$ref": "#/$defs/valuationPanel" },
+        "governance_incentives": { "$ref": "#/$defs/qualityPanel" },
+        "capital_allocation": { "$ref": "#/$defs/qualityPanel" },
+        "accounting_quality": { "$ref": "#/$defs/qualityPanel" },
+        "unknown": { "type": "string", "minLength": 1 }
       }
     },
-
-    "cfa_lens": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "concept_key",
-        "concept_name_cn",
-        "concept_intro",
-        "formula",
-        "company_calculation",
-        "company_application",
-        "different_angle_insight"
-      ],
+    "country_lens": {
+      "type": "object", "additionalProperties": false,
+      "required": ["exposure_map", "dimensions", "top_warnings", "company_to_country_insight", "unknown"],
       "properties": {
-        "concept_key": { "type": "string" },
-        "concept_name_cn": { "type": "string" },
-        "concept_intro": { "type": "string" },
-        "formula": { "type": "string" },
-        "company_calculation": {
-          "type": "array",
-          "items": { "type": "string" },
-          "minItems": 1,
-          "maxItems": 3
+        "exposure_map": {
+          "type": "object", "additionalProperties": false,
+          "required": ["incorporation", "listing", "operations", "revenue"],
+          "properties": {
+            "incorporation": { "type": "string", "minLength": 1 }, "listing": { "type": "string", "minLength": 1 },
+            "operations": { "type": "string", "minLength": 1 }, "revenue": { "type": "string", "minLength": 1 }
+          }
         },
-        "company_application": {
-          "type": "array",
-          "items": { "type": "string" },
-          "minItems": 3,
-          "maxItems": 4
+        "dimensions": {
+          "type": "array", "minItems": 6, "maxItems": 6,
+          "prefixItems": [
+            { "$ref": "#/$defs/taxDimension" }, { "$ref": "#/$defs/fxDimension" }, { "$ref": "#/$defs/regulationDimension" },
+            { "$ref": "#/$defs/laborDimension" }, { "$ref": "#/$defs/cultureDimension" }, { "$ref": "#/$defs/minorityDimension" }
+          ],
+          "items": false
         },
-        "different_angle_insight": { "type": "string" },
-        "cfa_progress_source": {
-          "type": "string",
-          "enum": ["USER.md", "CLI", "env", "default"]
-        }
+        "top_warnings": { "type": "array", "minItems": 1, "maxItems": 2, "items": { "type": "string", "minLength": 1 } },
+        "company_to_country_insight": { "type": "string", "minLength": 1 },
+        "unknown": { "type": "string", "minLength": 1 }
       }
     }
+  },
+  "$defs": {
+    "backgroundChainEntry": {
+      "type": "object", "additionalProperties": false,
+      "required": ["step", "text"],
+      "properties": {
+        "step": { "type": "string" },
+        "text": { "type": "string", "minLength": 1, "maxLength": 60 }
+      }
+    },
+    "externalCondition": {
+      "allOf": [
+        { "$ref": "#/$defs/backgroundChainEntry" },
+        { "properties": { "step": { "const": "external_condition" } } }
+      ]
+    },
+    "transmission": {
+      "allOf": [
+        { "$ref": "#/$defs/backgroundChainEntry" },
+        { "properties": { "step": { "const": "transmission" } } }
+      ]
+    },
+    "companyOutcome": {
+      "allOf": [
+        { "$ref": "#/$defs/backgroundChainEntry" },
+        { "properties": { "step": { "const": "company_outcome" } } }
+      ]
+    },
+    "watchSignal": {
+      "allOf": [
+        { "$ref": "#/$defs/backgroundChainEntry" },
+        { "properties": { "step": { "const": "watch_signal" } } }
+      ]
+    },
+    "metricBase": {
+      "type": "object", "additionalProperties": false,
+      "required": ["label_cn", "value", "period_cn", "category"],
+      "properties": {
+        "label_cn": { "type": "string", "minLength": 1, "maxLength": 12 },
+        "value": { "type": "string", "minLength": 1, "maxLength": 14 },
+        "period_cn": { "type": "string", "minLength": 1, "maxLength": 14 },
+        "category": { "type": "string" }
+      }
+    },
+    "profitabilityMetric": { "allOf": [{ "$ref": "#/$defs/metricBase" }, { "properties": { "category": { "const": "profitability" } } }] },
+    "cashFlowMetric": { "allOf": [{ "$ref": "#/$defs/metricBase" }, { "properties": { "category": { "const": "cash_flow" } } }] },
+    "leverageMetric": { "allOf": [{ "$ref": "#/$defs/metricBase" }, { "properties": { "category": { "const": "leverage" } } }] },
+    "qualityPanel": {
+      "type": "object", "additionalProperties": false,
+      "required": ["finding", "evidence", "watch_item"],
+      "properties": {
+        "finding": { "type": "string", "minLength": 1 }, "evidence": { "type": "string", "minLength": 1 }, "watch_item": { "type": "string", "minLength": 1 }
+      }
+    },
+    "valuationMetric": {
+      "type": "object", "additionalProperties": false,
+      "required": ["label_cn", "value", "basis_label", "as_of_date"],
+      "properties": {
+        "label_cn": { "type": "string", "minLength": 1 }, "value": { "type": "string", "minLength": 1 },
+        "basis_label": { "type": "string", "minLength": 1 }, "as_of_date": { "type": "string", "format": "date" }
+      }
+    },
+    "valuationPanel": {
+      "type": "object", "additionalProperties": false,
+      "required": ["finding", "evidence", "watch_item", "metrics"],
+      "properties": {
+        "finding": { "type": "string", "minLength": 1 }, "evidence": { "type": "string", "minLength": 1 },
+        "watch_item": { "type": "string", "minLength": 1 },
+        "metrics": { "type": "array", "minItems": 1, "maxItems": 2, "items": { "$ref": "#/$defs/valuationMetric" } }
+      }
+    },
+    "countryDimension": {
+      "type": "object", "additionalProperties": false,
+      "required": ["key", "label_cn", "country_fact", "company_transmission", "watch_metric"],
+      "properties": {
+        "key": { "type": "string" }, "label_cn": { "type": "string", "minLength": 1 },
+        "country_fact": { "type": "string", "minLength": 1 }, "company_transmission": { "type": "string", "minLength": 1 },
+        "watch_metric": { "type": "string", "minLength": 1 }
+      }
+    },
+    "taxDimension": { "allOf": [{ "$ref": "#/$defs/countryDimension" }, { "properties": { "key": { "const": "tax" } } }] },
+    "fxDimension": { "allOf": [{ "$ref": "#/$defs/countryDimension" }, { "properties": { "key": { "const": "fx_inflation" } } }] },
+    "regulationDimension": { "allOf": [{ "$ref": "#/$defs/countryDimension" }, { "properties": { "key": { "const": "regulation" } } }] },
+    "laborDimension": { "allOf": [{ "$ref": "#/$defs/countryDimension" }, { "properties": { "key": { "const": "labor" } } }] },
+    "cultureDimension": { "allOf": [{ "$ref": "#/$defs/countryDimension" }, { "properties": { "key": { "const": "consumer_culture" } } }] },
+    "minorityDimension": { "allOf": [{ "$ref": "#/$defs/countryDimension" }, { "properties": { "key": { "const": "minority_shareholder_protection" } } }] }
   }
 }

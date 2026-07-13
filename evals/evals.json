@@ -3,33 +3,33 @@
   "evals": [
     {
       "id": 1,
-      "prompt": "I have Tesla_Research_CN.html in my report folder with financial_data.json next to it. Generate a complete Tesla_Research_CN.card_slots.json (v2, 4-card schema) beside it, then tell me the exact validate_cards.py and generate_social_cards.py commands with --slots so I get all four PNGs (01_cover, 02_porter, 03_five_year_financials, 04_cfa_lens).",
-      "expected_output": "Ask which color palette (macaron / default / b / c) before any work; complete v2 card_slots.json (intro_sentence, company_focus_paragraph, metrics_row, industry_paragraph, background_bullets, porter_evidence, five_year_arc, recent_financial_highlights, revenue_explainer_points, cfa_lens); both CLI commands with absolute paths and --brand; generate_social_cards.py must include --palette matching the customer choice; no export without --slots.",
+      "prompt": "Generate the current card pack for Tesla from its research HTML and normalized JSONs.",
+      "expected_output": "Asks for palette before work; produces schema-v5 slots plus claim evidence and five continuous PNG filenames; no CFA field or flag.",
       "files": []
     },
     {
       "id": 2,
-      "prompt": "Put the key takeaways from this equity research HTML into the fixed social card slots — same four-card layout as always — and make sure nothing clips before you export.",
-      "expected_output": "Follows the pipeline (content production for Cards 1–3, then CFA-lens selector for Card 4, then layout fill), full slot JSON v2, validation loop, then render; references design-spec budgets including LIMIT_CARD2_PORTER_EVIDENCE_CHARS and LIMIT_CARD4_* family.",
+      "prompt": "Make Card 1 teach the business in one minute and add company quality and country context without confidence badges.",
+      "expected_output": "Uses one_minute_summary with exactly two variables, a four-panel company_quality card, six-dimension country_lens, and natural-language epistemic attribution.",
       "files": []
     },
     {
       "id": 3,
-      "prompt": "Batch folder has three *_Research_CN.html files. Each needs its own card_slots.json. How do I pass --input and --slots to validate and render all three?",
-      "expected_output": "--input directory of HTMLs; --slots as directory containing matching <stem>.card_slots.json per file; no single JSON for unrelated stems.",
+      "prompt": "Batch folder has three reports. How do I validate and render them?",
+      "expected_output": "Uses matching per-stem schema-v5 slots and worker notes, same explicit palette, Validator 1 then Validator 2, then five cards per report.",
       "files": []
     },
     {
       "id": 4,
-      "prompt": "Export the four PNGs now — here is the path to my HTML and card_slots.json.",
-      "expected_output": "Do not run validate/generate until the customer has explicitly chosen macaron, default, b, or c; then pass --palette accordingly on generate_social_cards.py.",
+      "prompt": "This company is incorporated in Cayman, listed in the US, operates mainly in China, and earns revenue globally. Build its country card.",
+      "expected_output": "Keeps all four geographies separate; uses fact-to-transmission-to-watch-metric panels; avoids stereotypes and records unknowns.",
       "files": []
     },
     {
       "id": 5,
-      "prompt": "Pick the Card 4 CFA concept for this NVIDIA report. I'm currently studying Level 2 Fixed Income / binomial tree. Build the cfa_lens block.",
-      "expected_output": "Reads --cfa-progress / CFA_PROGRESS env / USER.md sticky; pick binomial tree if it maps to NVDA (state-contingent payoffs for inference vs training scenarios) or default to a more equity-relevant L2 concept (real options for NVDA) if binomial tree is a poor fit; justify why the chosen concept maps to THIS company; fill concept_intro, company_application (≥3 bullets with mapped variables + numbers), different_angle_insight (must include primary_quote from CFO/CEO/filing), takeaway; record cfa_progress_source.",
-      "files": ["agents/cfa-lens-selector-agent.md"]
+      "prompt": "Reuse my old schema-v4 card slots and render them without rewriting.",
+      "expected_output": "Refuses active render with a clear rerun-P8 migration instruction; does not silently upgrade or invoke CFA selector.",
+      "files": []
     }
   ]
 }
