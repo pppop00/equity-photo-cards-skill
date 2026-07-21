@@ -947,6 +947,7 @@ def resolve_slots_path(html_path: Path, slots_arg: Path, *, multiple_html: bool)
 class ReportData:
     stem: str
     source_dir: Path
+    report_language: str
     company_cn: str
     company_en: str
     ticker: str
@@ -1073,6 +1074,8 @@ def as_float(value: Any) -> float | None:
 def parse_html(path: Path) -> ReportData:
     raw = path.read_text(encoding="utf-8")
     soup = BeautifulSoup(raw, "lxml")
+    html_lang = clean(str(soup.html.get("lang") or "")) if soup.html else ""
+    report_language = "en" if html_lang.lower().startswith("en") else "cn"
     company_cn_node = soup.select_one(".company-name-cn")
     company_en_node = soup.select_one(".company-name-en")
     company_cn = clean(company_cn_node.get_text()) if company_cn_node else ""
@@ -1091,6 +1094,7 @@ def parse_html(path: Path) -> ReportData:
     return ReportData(
         stem=path.stem,
         source_dir=source_dir,
+        report_language=report_language,
         company_cn=company_cn,
         company_en=company_en,
         ticker=ticker,
@@ -4253,12 +4257,22 @@ def _country_dimension_panel(
     block(d, "观察：" + clean(str(entry.get("watch_metric") or "")), left + 22, y, right - left - 44, f(16), MUTED, 4, 2)
 
 
+def card_5_title(report_language: str) -> str:
+    return (
+        "How institutions and culture shape the company"
+        if report_language == "en"
+        else "国家如何塑造公司"
+    )
+
+
 def card_5_country_lens(data: ReportData) -> Image.Image:
     """Card 5: balanced country institutions → company transmission map."""
     img = background()
     d = ScaledDraw(ImageDraw.Draw(img), LAYOUT_SCALE)
     header(d, 5)
-    draw_text(d, (72, 198), "从公司看国家", f(58, True), TEXT)
+    title = card_5_title(data.report_language)
+    title_font = fit_font_for_width(d._draw, title, 936, (58, 52, 48, 44, 40, 36), bold=True)
+    draw_text(d, (72, 198), title, title_font, TEXT)
     lens = country_lens_data(data)
     exposure = lens["exposure_map"]
     exposure_text = (

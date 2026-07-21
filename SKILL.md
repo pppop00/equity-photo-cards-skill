@@ -98,6 +98,8 @@ Each panel has `finding`, `evidence`, and `watch_item`. Valuation also has one o
 
 ### Card 5
 
+Render the title as `国家如何塑造公司` for Chinese reports and `How institutions and culture shape the company` for English reports.
+
 First distinguish incorporation, listing, operations, and revenue geography. Then use the fixed order:
 
 `tax`, `fx_inflation`, `regulation`, `labor`, `consumer_culture`, `minority_shareholder_protection`.

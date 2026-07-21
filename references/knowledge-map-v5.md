@@ -12,7 +12,7 @@ The cards use one listed company to explain how a business and its country conte
 | 2 | `02_porter.png` | Which external forces transmit into results? |
 | 3 | `03_five_year_financials.png` | How did the model become financial outcomes? |
 | 4 | `04_company_quality.png` | What do pricing, governance, capital, and accounting reveal? |
-| 5 | `05_country_lens.png` | How do institutions and culture shape this company? |
+| 5 | `05_country_lens.png` | How institutions and culture shape the company |
 
 Archived four-card slots do not render. Schema v5 has no CFA field.
 
@@ -49,6 +49,7 @@ Do not paste the upstream Metric Basis Registry onto cards. Show a short `basis_
 
 ## Country safeguards
 
+- Title Card 5 `国家如何塑造公司` in Chinese and `How institutions and culture shape the company` in English.
 - Treat incorporation, listing, operations, and revenue geography as distinct facts.
 - Prefer regulator, statistics agency, central bank, labor authority, legal text, and company disclosures.
 - State a bounded mechanism: country fact → company transmission → observable metric.
