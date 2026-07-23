@@ -16,6 +16,9 @@ Reject:
 - national stereotypes or consumer-culture assertions without behavioral evidence;
 - `analyst_calculation` claims without `basis_id`, and inference/forecast claims without falsifier;
 - visible copy whose attribution language disagrees with its sidecar type;
+- U+2212 or another unsupported mathematical glyph in card-visible formulas;
+- Card 5 dimension transmissions, warnings, or country insight that repeatedly begin with `据此推断`;
+- composed punctuation (`。；`, `；；`, punctuation separated by whitespace) or malformed Chinese word order such as `把……易误读为……`;
 - any active `cfa_lens`, CFA selector output, or CFA progress metadata.
 
 Unknown evidence is not a failure when written honestly as `未披露/不可比` with a reason and search boundary. A fabricated answer is a blocking failure.

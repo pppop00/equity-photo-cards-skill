@@ -72,7 +72,7 @@ Output folder contains exactly the five active PNGs, the slots JSON copied besid
 - `basis_id`: required for `analyst_calculation` and linked to the Metric Basis Registry upstream.
 - `falsifier`: required for `inference` and `forecast`.
 
-Do not render confidence badges. Make epistemic status legible in natural Chinese: `公司年报披露…`, `按 OCF−Capex 计算…`, `据监管机构数据…`, `据此推断…`, `若…则预计…`. Full provenance stays in the sidecar and database.
+Do not render confidence badges. Make epistemic status legible in natural Chinese: `公司年报披露…`, `按经营现金流减资本开支计算…`, `据监管机构数据…`, `据此推断…`, `若…则预计…`. Full provenance stays in the sidecar and database. Use Unicode mathematical minus `−` (U+2212) only in non-rendered source notes; card-visible formulas must use Chinese `减` or ASCII ` - ` so the export font cannot render a missing-glyph box.
 
 The blocking claim gate covers Card 1 business model, both variables, primary risk; Card 2 industry mechanism; Card 3 five-year narrative; all four Card 4 panels; Card 5 dimensions, warnings, and country insight.
 
@@ -96,6 +96,8 @@ The five-year narrative must connect a business-model or revenue-mix shift to re
 
 Each panel has `finding`, `evidence`, and `watch_item`. Valuation also has one or two as-of metrics with `basis_label`. Do not produce a composite quality score. If governance, incentive, accounting, or valuation evidence is insufficient, say `未披露` or `不可比` and explain why.
 
+Write visible formulas as grammatical prose. Prefer `按经营现金流减资本开支计算` in Chinese; `OCF - Capex` is acceptable when brevity is essential. Never use U+2212 in slots, and do not compress a formula label and an unrelated calculation into malformed punctuation.
+
 ### Card 5
 
 Render the title as `国家如何塑造公司` for Chinese reports and `How institutions and culture shape the company` for English reports.
@@ -105,6 +107,8 @@ First distinguish incorporation, listing, operations, and revenue geography. The
 `tax`, `fx_inflation`, `regulation`, `labor`, `consumer_culture`, `minority_shareholder_protection`.
 
 Every dimension uses `country_fact → company_transmission → watch_metric`. Avoid national stereotypes, do not infer operating exposure from incorporation, and do not treat one company as representative without a bounded, sourced mechanism. End with one or two company-level warnings, one country characteristic reflected by this company, and one unknown.
+
+The arrow, `公司级预警`, and `国家观察` labels already make inference status visible. Do not begin every `company_transmission`, warning, or country insight with `据此推断`; reserve that phrase for slots whose layout does not otherwise signal interpretation. Write warning array items without trailing separators so the renderer can join them once. Make the country insight a complete bounded sentence with a concrete institution or market mechanism; reject malformed word order such as `把……易误读为……` and avoid duplicating a company warning as a national generalization.
 
 ## Validation and export
 
@@ -148,5 +152,6 @@ The old CFA selector may remain in repository history for archived schemas, but 
 - Five filenames are continuous and exact.
 - Cards contain no visible confidence badges or composite quality score.
 - Registration/listing/operations/revenue geography are not conflated.
+- Card 4 contains no U+2212 missing-glyph risk; Card 5 contains no repeated inference opener or composed punctuation such as `。；`.
 - Validator 1 and Validator 2 pass after the last copy change.
 - Five images inspected at 2160×2700 with no clipping or unreadable text.

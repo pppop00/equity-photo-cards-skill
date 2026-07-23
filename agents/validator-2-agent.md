@@ -13,6 +13,6 @@ Verify:
 7. accounting-quality evidence, one-off items, audit wording, cash conversion, and estimate dependence;
 8. incorporation, listing, operations, and revenue geography separately;
 9. Card 5 country facts from regulators, statistics agencies, central banks, labor/legal sources, or equivalent authorities;
-10. every inference's stated mechanism and falsifier, including stereotype and overgeneralization risk.
+10. every inference's stated mechanism and falsifier, including stereotype and overgeneralization risk; confirm Card 5's bounded country insight is not merely a duplicated company warning or an ungrammatical national generalization.
 
 If a source does not support the precision or scope, correct the slot or downgrade it to `未披露/不可比` with a reason. Then rerun Validator 1 and repeat this review. Only a final clean pair permits rendering.

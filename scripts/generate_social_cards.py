@@ -1018,7 +1018,16 @@ def _mixed_textlength(text: str, size: int, bold: bool = False) -> float:
 
 
 def clean(text: str) -> str:
-    return re.sub(r"\s+", " ", text or "").strip()
+    # U+2212 is absent from the export font used by some card runs and renders
+    # as a tofu box. Keep source JSON validation strict, but make rendering
+    # defensive for archived slots that still contain the mathematical minus.
+    renderer_safe = re.sub(
+        r"(?<![A-Za-z0-9_])OCF\s*[\u2212-]\s*Capex(?![A-Za-z0-9_])",
+        "OCF - Capex",
+        text or "",
+        flags=re.IGNORECASE,
+    ).replace("\u2212", "-")
+    return re.sub(r"\s+", " ", renderer_safe).strip()
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -1415,6 +1424,47 @@ def ensure_terminal_punct(text: str, punct: str = "。") -> str:
     if not text:
         return ""
     return text if text.endswith(tuple(SENTENCE_END)) else text + punct
+
+
+_CARD5_INFERENCE_OPENER_RE = re.compile(
+    r"^\s*(?:据此推断|由此推断|据此判断|由此判断)\s*[，,:：]?\s*"
+)
+_CARD5_LAYOUT_INFERENCE_PREFIXES = (
+    "country_lens.dimensions",
+    "country_lens.top_warnings",
+    "country_lens.company_to_country_insight",
+)
+_COMPOSED_PUNCT_RE = re.compile(r"(?:[。！？]\s*[；;]|[；;]\s*[。！？；;]|[，,]\s*[。！？；;])")
+_BA_EASY_MISREAD_RE = re.compile(r"把[^。！？；]{1,48}(?:易|容易)误(?:读|判)为")
+
+
+def strip_card5_inference_opener(text: str) -> str:
+    """Remove the stiff inference prefix where Card 5 layout already conveys it."""
+    return clean(_CARD5_INFERENCE_OPENER_RE.sub("", text or ""))
+
+
+def card5_display_sentence(text: str) -> str:
+    """Return one clean Card 5 sentence without duplicated inference boilerplate."""
+    return ensure_terminal_punct(strip_card5_inference_opener(text))
+
+
+def join_card5_warnings(items: list[Any]) -> str:
+    """Compose warning clauses once; never emit `。；` or duplicate separators."""
+    clauses: list[str] = []
+    for item in items:
+        clause = strip_card5_inference_opener(str(item)).rstrip("。！？；;，,:： ")
+        if clause:
+            clauses.append(clause)
+    return "；".join(clauses) + ("。" if clauses else "")
+
+
+def _card5_layout_conveys_inference(slot_path: str) -> bool:
+    return any(
+        slot_path == prefix
+        or slot_path.startswith(prefix + ".")
+        or slot_path.startswith(prefix + "[")
+        for prefix in _CARD5_LAYOUT_INFERENCE_PREFIXES
+    )
 
 
 def sentence_parts(text: str) -> list[str]:
@@ -1873,7 +1923,8 @@ def validate_card1_5_analytical_content(card_slots: dict, worker_notes: dict | N
             issues.append(f"{prefix}.falsifier: at least 12 characters required for {kind}")
         visible = _visible_text_for_claim(card_slots, slot_path)
         markers = _ATTRIBUTION_MARKERS.get(kind, ())
-        if visible and markers and not any(marker in visible for marker in markers):
+        layout_conveys_inference = kind == "inference" and _card5_layout_conveys_inference(slot_path)
+        if visible and markers and not layout_conveys_inference and not any(marker in visible for marker in markers):
             issues.append(
                 f"{prefix}: visible copy must naturally attribute {kind}; expected one of {markers} in {slot_path}"
             )
@@ -1890,6 +1941,23 @@ def validate_card1_5_analytical_content(card_slots: dict, worker_notes: dict | N
     all_text = " ".join(text for _, text in prose)
     first_mentions = {m.group(1) for m in _STYLE_FIRST_MENTION_RE.finditer(all_text)}
     for path, text in prose:
+        if "\u2212" in text:
+            issues.append(
+                f"card_slots.{path}: Unicode mathematical minus U+2212 is not renderer-safe; "
+                "use Chinese '减' or ASCII ' - '."
+            )
+        if _COMPOSED_PUNCT_RE.search(text):
+            issues.append(f"card_slots.{path}: contains composed or duplicated punctuation.")
+        if path.startswith("country_lens.") and _CARD5_INFERENCE_OPENER_RE.match(text):
+            issues.append(
+                f"card_slots.{path}: Card 5 layout already conveys inference; "
+                "remove the repeated '据此推断' opener."
+            )
+        if path == "country_lens.company_to_country_insight" and _BA_EASY_MISREAD_RE.search(text):
+            issues.append(
+                "card_slots.country_lens.company_to_country_insight: malformed '把……易误读为……' "
+                "word order; write '市场容易把……误读为……' or a more bounded mechanism."
+            )
         for phrase in _BANNED_PHRASES:
             if phrase in text:
                 issues.append(f"card_slots.{path}: contains banned phrase '{phrase}'")
@@ -2337,16 +2405,24 @@ def yi(value: float) -> float:
 
 
 def chart_value_as_yi(value: float) -> float:
-    """Headline amounts for Card 3 bars: millions → 亿 via yi(); native亿元 uses value as-is."""
+    """Headline amounts for Card 3 bars.
+
+    - millions → 亿 via yi() (millions/100)
+    - billions → 千亿 (billions/10); bar labels then prefer 万亿 via money_text
+    - native 亿元 (`yi` scale) uses value as-is
+    """
     global _MONEY_VALUE_SCALE
     if _MONEY_VALUE_SCALE == "yi":
         return float(value)
+    if _MONEY_VALUE_SCALE == "billions":
+        return float(value) / 10.0  # → 千亿 units for relative bar width
     return yi(value)
 
 
 _CURRENCY_LABEL: str = "美元"
 # "millions": value is millions of reporting currency (yi = millions/100).
-# "yi": value is already 亿元人民币 (亿元); sankey / finance() use same scale.
+# "billions": value is billions (十亿) of reporting currency.
+# "yi": value is already 亿元 (亿元); sankey / finance() use same scale.
 _MONEY_VALUE_SCALE: str = "millions"
 
 
@@ -2358,25 +2434,30 @@ def set_currency_label(data: "ReportData") -> None:
         "RMB": "元",
         "CNY": "元",
         "人民币": "元",
+        "KRW": "韩元",
         "AUD": "澳元",
         "EUR": "欧元",
         "CHF": "瑞郎",
         "HKD": "港元",
         "JPY": "日元",
         "GBP": "英镑",
+        "TWD": "新台币",
+        "NTD": "新台币",
+        "新台币": "新台币",
     }
     _CURRENCY_LABEL = mapping.get(currency, "美元")
     unit = str(get_nested(data.financial_data, "income_statement", "unit", default="")).lower()
     # e.g. "billions CNY (亿元人民币)" — amounts are already in 亿元
-    _MONEY_VALUE_SCALE = (
-        "yi"
-        if ("亿元" in unit or "亿人民币" in unit) and "百万" not in unit and "万元" not in unit
-        else "millions"
-    )
+    if ("亿元" in unit or "亿人民币" in unit) and "百万" not in unit and "万元" not in unit and "billion" not in unit:
+        _MONEY_VALUE_SCALE = "yi"
+    elif "billion" in unit or "十亿" in unit:
+        _MONEY_VALUE_SCALE = "billions"
+    else:
+        _MONEY_VALUE_SCALE = "millions"
 
 
 def money_text(value: float) -> str:
-    """Format headline money: millions path uses yi = millions/100; 亿元-native uses value as 亿."""
+    """Format headline money for the active currency + value scale."""
     global _MONEY_VALUE_SCALE
     if _MONEY_VALUE_SCALE == "yi":
         v = float(value)
@@ -2389,6 +2470,17 @@ def money_text(value: float) -> str:
         if av < 0.1:
             return f"{v:.2f} 亿{_CURRENCY_LABEL}"
         return f"{v:.1f} 亿{_CURRENCY_LABEL}"
+    if _MONEY_VALUE_SCALE == "billions":
+        # 1 billion = 0.001 万亿 = 10 亿 = 0.1 千亿
+        v = float(value)
+        av = abs(v)
+        if av >= 100.0:
+            return f"{v / 1000.0:.1f} 万亿{_CURRENCY_LABEL}"
+        if av >= 1.0:
+            return f"{v / 10.0:.1f} 千亿{_CURRENCY_LABEL}"
+        if av >= 0.01:
+            return f"{v * 10.0:.1f} 亿{_CURRENCY_LABEL}"
+        return f"{v * 100000.0:.0f} 万{_CURRENCY_LABEL}"
     y = yi(value)
     ay = abs(y)
     if ay < 0.01:
@@ -2747,9 +2839,8 @@ def recent_financial_highlights(data: ReportData) -> list[str]:
 
 _FORMULA_GLYPH_FALLBACKS = {
     # The default macOS Hiragino face that backs ARIAL/ARIAL_BOLD lacks
-    # U+2212 (MINUS SIGN); substitute the ASCII hyphen-minus so the formula
-    # renders. JSON keeps U+2212 for semantic correctness; this is a
-    # render-time-only normalization.
+    # U+2212 (MINUS SIGN). Validation rejects it in new slot payloads; this
+    # fallback keeps archived payloads renderable.
     "−": "-",
 }
 
@@ -3324,11 +3415,12 @@ def validate_report(data: ReportData, brand: str, *, allow_no_logo: bool = False
                 "label_cn='净现金' and keep value as a plain amount like '11.89亿'."
             )
         if idx == 5:
-            if label == "净债务/EBITDA" and "×" not in value:
-                issues.append(
-                    "Card 3 financial_metrics_panel[5] label '净债务/EBITDA' requires a ratio "
-                    "value like '0.5×'. Use label '净现金' for net-cash companies."
-                )
+            if label == "净债务/EBITDA":
+                if "×" not in value:
+                    issues.append(
+                        "Card 3 financial_metrics_panel[5] label '净债务/EBITDA' requires a ratio "
+                        "value like '0.5×'. Use label '净现金' for net-cash companies."
+                    )
             elif label in {"净现金", "净现金头寸"}:
                 if "亿" not in value or "×" in value:
                     issues.append(
@@ -3406,16 +3498,16 @@ def validate_report(data: ReportData, brand: str, *, allow_no_logo: bool = False
     # Pixel-fit the middle revenue-flow value column. The text is renderer
     # generated, so slot reconciliation alone will not catch long currency
     # labels running past the panel.
-    chart_labels = [
-        chart_value_as_yi(fin["revenue"]),
-        chart_value_as_yi(fin["cogs"]),
-        chart_value_as_yi(fin["gross"]),
-        chart_value_as_yi(fin["op"]),
-        chart_value_as_yi(fin["net"]),
+    chart_raws = [
+        fin["revenue"],
+        fin["cogs"],
+        fin["gross"],
+        fin["op"],
+        fin["net"],
     ]
     chart_value_w = 1008 - 782 - 36
-    for value in chart_labels:
-        value_text = f"{value:.1f} 亿{_CURRENCY_LABEL}"
+    for raw in chart_raws:
+        value_text = money_text(float(raw))
         value_font = fit_font_for_width(draw, value_text, chart_value_w, (FONT_CHART_VALUE, 26, 24, 22), bold=True)
         value_bbox = draw._draw.textbbox((0, 0), value_text, font=value_font)
         value_w = (value_bbox[2] - value_bbox[0]) / LAYOUT_SCALE
@@ -3448,7 +3540,7 @@ def validate_report(data: ReportData, brand: str, *, allow_no_logo: bool = False
             text = clean(str(entry.get(field) or ""))
             if len(text) > limit:
                 issues.append(f"Card 5 country_lens.dimensions[{idx}].{field} exceeds {limit} characters: {text}")
-    if len("；".join(clean(str(x)) for x in country.get("top_warnings") or [])) > 100:
+    if len(join_card5_warnings(country.get("top_warnings") or [])) > 100:
         issues.append("Card 5 country_lens.top_warnings exceed the bottom-panel budget.")
     for field in ("company_to_country_insight", "unknown"):
         if len(clean(str(country.get(field) or ""))) > 90:
@@ -3855,20 +3947,21 @@ def card_3(data: ReportData) -> Image.Image:
     fin = finance(data)
     chart_labels = get_nested(data.financial_data, "income_statement", "chart_labels", default={}) or {}
     rows = [
-        (str(chart_labels.get("revenue") or "总收入"), chart_value_as_yi(fin["revenue"]), GOLD),
-        (str(chart_labels.get("cogs") or "营业成本"), chart_value_as_yi(fin["cogs"]), RED),
-        (str(chart_labels.get("gross") or "毛利润"), chart_value_as_yi(fin["gross"]), GREEN),
-        (str(chart_labels.get("op") or "营业利润"), chart_value_as_yi(fin["op"]), BLUE),
-        (str(chart_labels.get("net") or "净利润"), chart_value_as_yi(fin["net"]), TEXT),
+        (str(chart_labels.get("revenue") or "总收入"), chart_value_as_yi(fin["revenue"]), GOLD, fin["revenue"]),
+        (str(chart_labels.get("cogs") or "营业成本"), chart_value_as_yi(fin["cogs"]), RED, fin["cogs"]),
+        (str(chart_labels.get("gross") or "毛利润"), chart_value_as_yi(fin["gross"]), GREEN, fin["gross"]),
+        (str(chart_labels.get("op") or "营业利润"), chart_value_as_yi(fin["op"]), BLUE, fin["op"]),
+        (str(chart_labels.get("net") or "净利润"), chart_value_as_yi(fin["net"]), TEXT, fin["net"]),
     ]
-    maxv = max(abs(v) for _, v, _ in rows) or 1
-    for idx, (label, value, color) in enumerate(rows):
+    maxv = max(abs(v) for _, v, _, _ in rows) or 1
+    for idx, (label, value, color, raw) in enumerate(rows):
         y = 724 + idx * 38
         draw_text(d, (108, y), label, f(FONT_CHART_LABEL), "#475467")
         d.rounded_rectangle((244, y + 6, 744, y + 24), radius=9, fill=TRACK)
         bar_color = RED if value < 0 else color
         d.rounded_rectangle((244, y + 6, 244 + int(500 * abs(value) / maxv), y + 24), radius=9, fill=bar_color)
-        value_text = f"{value:.1f} 亿{_CURRENCY_LABEL}"
+        # I-013: use currency+scale-aware money_text — never hardcode 亿+美元 for KRW billions.
+        value_text = money_text(float(raw))
         value_font = fit_font_for_width(d._draw, value_text, 1008 - 782 - 36, (FONT_CHART_VALUE, 26, 24, 22), bold=True)
         draw_text(d, (782, y - 4), value_text, value_font, TEXT)
 
@@ -4252,7 +4345,8 @@ def _country_dimension_panel(
     draw_text(d, (left + 22, top + 20), clean(str(entry.get("label_cn") or "")), f(24, True), accent)
     y = block(d, clean(str(entry.get("country_fact") or "")), left + 22, top + 62, right - left - 44, f(18), TEXT, 5, 3)
     y += 9
-    y = block(d, "→ " + clean(str(entry.get("company_transmission") or "")), left + 22, y, right - left - 44, f(18, True), "#344054", 5, 3)
+    transmission = card5_display_sentence(str(entry.get("company_transmission") or ""))
+    y = block(d, "→ " + transmission, left + 22, y, right - left - 44, f(18, True), "#344054", 5, 3)
     y += 9
     block(d, "观察：" + clean(str(entry.get("watch_metric") or "")), left + 22, y, right - left - 44, f(16), MUTED, 4, 2)
 
@@ -4293,9 +4387,10 @@ def card_5_country_lens(data: ReportData) -> Image.Image:
         top = grid_top + row * (cell_h + gap)
         _country_dimension_panel(d, (left, top, left + cell_w, top + cell_h), entry, accents[idx])
 
-    warnings = "；".join(clean(str(x)) for x in lens.get("top_warnings") or [])
+    warnings = join_card5_warnings(lens.get("top_warnings") or [])
+    country_insight = card5_display_sentence(str(lens.get("company_to_country_insight") or ""))
     block(d, f"公司级预警：{warnings}", 88, 1054, 904, f(19, True), RED, 6, 2)
-    block(d, f"国家特征：{lens.get('company_to_country_insight')}", 88, 1120, 904, f(18), TEXT, 6, 2)
+    block(d, f"国家观察：{country_insight}", 88, 1120, 904, f(18), TEXT, 6, 2)
     block(d, f"仍未知：{lens.get('unknown')}", 88, 1184, 904, f(18), MUTED, 6, 2)
     footer(d, data)
     return finalize_export(img)

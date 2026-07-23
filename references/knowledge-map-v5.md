@@ -45,7 +45,7 @@ Deterministic pixel checks in the renderer remain the final authority when a tex
 
 ## Metric basis labels
 
-Do not paste the upstream Metric Basis Registry onto cards. Show a short `basis_label` only for an easy-to-confuse metric, such as `未来12个月`, `OCF−Capex`, `公司口径`, or `固定汇率`. The sidecar claim links calculations through `basis_id`; the Anamnesis harness validates that id against `metric_basis.json`.
+Do not paste the upstream Metric Basis Registry onto cards. Show a short `basis_label` only for an easy-to-confuse metric, such as `未来12个月`, `OCF - Capex`, `公司口径`, or `固定汇率`. In Chinese prose prefer `经营现金流减资本开支`. Never put Unicode mathematical minus `−` (U+2212) in visible slots because the export font may render a missing-glyph box. The sidecar claim links calculations through `basis_id`; the Anamnesis harness validates that id against `metric_basis.json`.
 
 ## Country safeguards
 
@@ -53,6 +53,8 @@ Do not paste the upstream Metric Basis Registry onto cards. Show a short `basis_
 - Treat incorporation, listing, operations, and revenue geography as distinct facts.
 - Prefer regulator, statistics agency, central bank, labor authority, legal text, and company disclosures.
 - State a bounded mechanism: country fact → company transmission → observable metric.
+- Let the arrow and `公司级预警` / `国家观察` labels carry inference semantics; do not repeat `据此推断` in every Card 5 field.
+- Keep warning items free of terminal separators before composition; reject `。；`, `；；`, and malformed `把……易误读为……` order.
 - Do not turn one company into a claim about an entire country.
 - Consumer culture claims need behavioral evidence; nationality-based adjectives are not evidence.
 - If evidence is weak, write the unknown rather than filling the panel with a stereotype.

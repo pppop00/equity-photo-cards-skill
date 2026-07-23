@@ -109,6 +109,39 @@ def test_claim_level_gate_accepts_full_visible_coverage() -> None:
     assert module.validate_card1_5_analytical_content(slots_v5(), valid_worker_notes()) == []
 
 
+def test_claim_gate_rejects_unicode_math_minus_in_visible_copy() -> None:
+    slots = slots_v5()
+    slots["company_quality"]["capital_allocation"]["evidence"] = "按OCF−Capex计算自由现金流。"
+    issues = module.validate_card1_5_analytical_content(slots, valid_worker_notes())
+    assert any("U+2212" in issue for issue in issues)
+    assert module.clean("按OCF−Capex计算") == "按OCF - Capex计算"
+
+
+def test_card5_rejects_repeated_inference_openers() -> None:
+    slots = slots_v5()
+    slots["country_lens"]["dimensions"][0]["company_transmission"] = "据此推断，税率变化影响现金。"
+    slots["country_lens"]["top_warnings"][0] = "据此推断，现金流可能承压。"
+    slots["country_lens"]["company_to_country_insight"] = "据此推断，公司受本国规则影响。"
+    issues = module.validate_card1_5_analytical_content(slots, valid_worker_notes())
+    assert sum("Card 5 layout already conveys inference" in issue for issue in issues) == 3
+
+
+def test_card5_warning_join_normalizes_prefixes_and_punctuation() -> None:
+    text = module.join_card5_warnings([
+        "据此推断，第一项预警。",
+        "据此推断，第二项预警；",
+    ])
+    assert text == "第一项预警；第二项预警。"
+    assert "。；" not in text
+
+
+def test_card5_rejects_malformed_ba_easy_misread_word_order() -> None:
+    slots = slots_v5()
+    slots["country_lens"]["company_to_country_insight"] = "公司反映资本市场把再投资型现金流转负易误读为经营危机。"
+    issues = module.validate_card1_5_analytical_content(slots, valid_worker_notes())
+    assert any("malformed '把……易误读为……'" in issue for issue in issues)
+
+
 def test_claim_level_gate_requires_basis_for_calculation() -> None:
     notes = copy.deepcopy(valid_worker_notes())
     notes["claims"][6]["epistemic_type"] = "analyst_calculation"

@@ -9,6 +9,8 @@ Rules:
 - Shorten mechanism wording before deleting the observable metric or attribution phrase.
 - Never remove `未披露/不可比` reasons to save space.
 - Keep `公司披露 / 据…数据 / 按…计算 / 据此推断 / 若…则预计` wording consistent with the sidecar.
+- Preserve renderer-safe operators: Chinese Card 4 uses `经营现金流减资本开支` or ASCII `OCF - Capex`, never U+2212.
+- On Card 5, do not re-add `据此推断` to fields whose arrow or section label already conveys interpretation. Strip terminal separators from individual warning items; do not hand-compose them with `；`.
 - Do not put full metric registry records, source URLs, confidence labels, or composite scores on cards.
 - If a panel cannot fit without changing meaning, return it to content production instead of forcing a tiny font.
 

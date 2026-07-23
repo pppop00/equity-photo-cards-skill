@@ -38,22 +38,22 @@
   "company_quality": {
     "valuation":{"finding":"据市场数据，当前定价反映什么预期。","evidence":"按统一估值口径计算并注明时点。","watch_item":"观察预期与实际的偏差。","metrics":[{"label_cn":"市盈率","value":"XX.X×","basis_label":"未来12个月","as_of_date":"2026-07-13"}]},
     "governance_incentives":{"finding":"据公司披露，控制权与激励如何影响决策。","evidence":"董事会、持股或薪酬计划证据。","watch_item":"观察治理事件或激励指标。"},
-    "capital_allocation":{"finding":"据公司披露，现金优先用于何处。","evidence":"资本开支、并购、回购或分红证据。","watch_item":"观察投入回报与资金纪律。"},
+    "capital_allocation":{"finding":"据公司披露，现金优先用于何处。","evidence":"按经营现金流减资本开支计算，并列示并购、回购或分红证据。","watch_item":"观察投入回报与资金纪律。"},
     "accounting_quality":{"finding":"据审计财报，利润与现金的匹配程度。","evidence":"应计、一次性项目或审计证据。","watch_item":"观察现金转换与关键估计。"},
     "unknown":"未披露或不可比的公司质量事项及原因。"
   },
   "country_lens": {
     "exposure_map":{"incorporation":"注册地","listing":"上市地","operations":"主要经营地","revenue":"主要收入地"},
     "dimensions":[
-      {"key":"tax","label_cn":"税制","country_fact":"据税务机关数据的国家事实。","company_transmission":"据此推断对税率或现金的传导。","watch_metric":"实际税率"},
-      {"key":"fx_inflation","label_cn":"汇率与通胀","country_fact":"据央行或统计机构数据的国家事实。","company_transmission":"据此推断对收入、成本或需求的传导。","watch_metric":"汇率敏感度"},
-      {"key":"regulation","label_cn":"监管","country_fact":"据监管机构规则的国家事实。","company_transmission":"据此推断对准入、定价或资本的传导。","watch_metric":"许可与合规成本"},
-      {"key":"labor","label_cn":"劳动制度","country_fact":"据劳动法规或统计数据的国家事实。","company_transmission":"据此推断对工资、排班或产能的传导。","watch_metric":"人工成本率"},
-      {"key":"consumer_culture","label_cn":"消费者文化","country_fact":"据调查或消费数据的国家事实。","company_transmission":"据此推断对产品、渠道或忠诚度的传导。","watch_metric":"客单价或复购率"},
-      {"key":"minority_shareholder_protection","label_cn":"少数股东保护","country_fact":"据法律与治理规则的国家事实。","company_transmission":"据此推断对关联交易或资本回报的传导。","watch_metric":"关联交易与投票权"}
+      {"key":"tax","label_cn":"税制","country_fact":"据税务机关数据的国家事实。","company_transmission":"税制变化通过有效税率或现金税传至利润与现金。","watch_metric":"实际税率"},
+      {"key":"fx_inflation","label_cn":"汇率与通胀","country_fact":"据央行或统计机构数据的国家事实。","company_transmission":"汇率与物价通过折算、成本或需求影响公司结果。","watch_metric":"汇率敏感度"},
+      {"key":"regulation","label_cn":"监管","country_fact":"据监管机构规则的国家事实。","company_transmission":"规则变化通过准入、定价或资本要求影响公司。","watch_metric":"许可与合规成本"},
+      {"key":"labor","label_cn":"劳动制度","country_fact":"据劳动法规或统计数据的国家事实。","company_transmission":"劳动规则通过工资、排班或产能影响公司。","watch_metric":"人工成本率"},
+      {"key":"consumer_culture","label_cn":"消费者文化","country_fact":"据调查或消费数据的国家事实。","company_transmission":"可观察行为通过产品、渠道或复购影响需求。","watch_metric":"客单价或复购率"},
+      {"key":"minority_shareholder_protection","label_cn":"少数股东保护","country_fact":"据法律与治理规则的国家事实。","company_transmission":"治理规则通过关联交易或资本回报影响股东。","watch_metric":"关联交易与投票权"}
     ],
-    "top_warnings":["据此推断的公司级国家风险预警。"],
-    "company_to_country_insight":"据此推断，该公司反映出的一个国家制度或文化特征。",
+    "top_warnings":["公司特定风险如何经国家制度或跨境机制放大"],
+    "company_to_country_insight":"从公司证据可见，一项具名制度或市场机制如何影响经营结果。",
     "unknown":"仍缺少、无法归因或不可比较的国家语境。"
   }
 }
